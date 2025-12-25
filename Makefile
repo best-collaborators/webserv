@@ -7,7 +7,7 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/main.cpp 
+	$(SRC_DIR)/http-parser/main.cpp 
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
@@ -23,6 +23,7 @@ $(NAME): $(OBJS)
 -include $(DEPS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
