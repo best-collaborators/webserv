@@ -2,6 +2,7 @@
 *.d
 
 # Compiled Object files
+build
 *.slo
 *.lo
 *.o
@@ -39,3 +40,9 @@
 
 # debug information files
 *.dwo
+
+# executable
+webserv
+
+# vscode
+.vscode

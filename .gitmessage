@@ -1,0 +1,28 @@
+# <type>(optional-scope): <short summary>
+#
+# |<----  Maximum 50 characters  ---->|
+#
+# Example: feat(parser): add HTTP header parsing
+#
+# Types:
+#   feat:     New feature
+#   fix:      Bug fix
+#   refactor: Code refactoring (no behavior change)
+#   docs:     Documentation updates
+#   style:    Code formatting (no logic change)
+#   test:     Adding or updating tests
+#   chore:    Maintenance tasks
+#   perf:     Performance improvements
+#   ci:       CI/CD changes
+#
+# Common Scopes for webserv:
+#   parser, server, config, response, request, cgi, 
+#   multiplexing, utils, socket, mime, structure, build
+#
+# Remember:
+#   - Use imperative mood: "add" not "added" or "adds"
+#   - Capitalize first letter after colon
+#   - No period at the end
+#   - Body: explain WHY, not WHAT (wrap at 72 characters)
+#
+# --- COMMIT MESSAGE ABOVE THIS LINE ---
