@@ -1,8 +1,0 @@
-DELETE /index.html HTTP/1.1
-Host:   www.example.com
-Content-Length: 351111
-User-Agent:   MyClient/1.
-Accept: text/html
-Connection: close
-Transfer-Encoding: gzip
-Transfer-Encoding: gzip
