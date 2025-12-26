@@ -122,6 +122,12 @@ int content_length_validation(
 			// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
 			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
+
+		// max size is 1mb = 1048576b
+		if (test_length < 0 || test_length > 1048576) {
+			std::cerr << "413 Request Entity Too Large" << std::endl; return 413;
+		}
+
 	}
 	catch(const std::exception& e) {
 		// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
@@ -144,10 +150,39 @@ int main()
 		return 400;
 	}
 
+	if (http_request_values["version"] != "HTTP/1.1") {
+		std::cerr << "505 HTTP Version Not Supported" << std::endl;
+		return 505;
+	}
+
+	if (http_request_values["request-target"].length() > 4096){
+		std::cerr << "414 URI Too Long" << std::endl;
+		return 414;
+	}
+
+	if (http_request_values["method"] != "GET"
+		&& http_request_values["method"] != "POST"
+		&& http_request_values["method"] != "DELETE") {
+		std::cerr << "405 Not Allowed" << std::endl;
+		return 405;
+	}
+
 	while (getline(ifs, buffer)) {
 		if (!is_valid_header(buffer, http_request_values)) {
 			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
+		if (http_request_values.size() >= 256) {
+			std::cerr << "431 Request Header Fields Too Large" << std::endl; return 400;
+		}
+		if (!http_request_values["content-length"].empty()) {
+			if (int status_code = content_length_validation(http_request_values)) {
+				return status_code;
+			}
+		}
+	}
+
+	if (http_request_values["method"] != "POST" && http_request_values["content-length"].empty()) {
+		std::cerr << "411 Length Required" << std::endl; return 411;
 	}
 
 	ifs.close();
