@@ -1,16 +1,16 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes -Iincludes/http-request-parser
 
 SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/http-parser/main.cpp \
-	$(SRC_DIR)/http-parser/HttpStatus.cpp \
-	$(SRC_DIR)/http-parser/ResponseGenerator.cpp \
-	$(SRC_DIR)/http-parser/RequestParser.cpp
+	$(SRC_DIR)/http-request-parser/main.cpp \
+	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
+	$(SRC_DIR)/http-request-parser/ResponseGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/RequestParser.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
