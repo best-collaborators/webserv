@@ -7,7 +7,10 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/http-parser/main.cpp 
+	$(SRC_DIR)/http-parser/main.cpp \
+	$(SRC_DIR)/http-parser/HttpStatus.cpp \
+	$(SRC_DIR)/http-parser/ResponseGenerator.cpp \
+	$(SRC_DIR)/http-parser/RequestParser.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)

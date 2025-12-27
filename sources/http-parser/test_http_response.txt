@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Server: webserv/42.0.0
+Date: Sat, 27 Dec 2025 13:08:54 GMT
+Content-Type: application/text
+Content-Length: 109
+Last-Modified: Sat Dec 27 12:58:03 2025
+
+Connection: close
+
+i'mtexti'mtext
+i'mtexti'mtexti'mtext
+i'mtexti'mtexti'mtext
+
+i'mtexti'mtexti'mtexti'mtexti'mtexti'mtexti'mtext
