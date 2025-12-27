@@ -1,13 +1,13 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes -Iincludes/sockets
 
 SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/main.cpp 
+	$(SRC_DIR)/sockets/socket.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
@@ -23,6 +23,7 @@ $(NAME): $(OBJS)
 -include $(DEPS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
