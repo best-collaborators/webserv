@@ -61,7 +61,7 @@ int	main( void )
 		if (reuse_address_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "setsockopt SO_REUSEADDR failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
@@ -72,7 +72,7 @@ int	main( void )
 		if (ipv6_only_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "setsockopt IPV6_V6ONLY failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
