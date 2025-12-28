@@ -7,18 +7,18 @@
 # include <sys/socket.h>
 
 // getaddrinfo, freeaddrinfo, gai_strerror, addrinfo, address_info, AI_PASSIVE, IPPROTO_IPV6, IPV6_V6ONLY
-#include <netdb.h>
+# include <netdb.h>
 
 // strlen, strerror
-#include <cstring>
+# include <cstring>
 
 // close
-#include <unistd.h>
+# include <unistd.h>
 
 // fcntl, F_SETFL, O_NONBLOCK
-#include <fcntl.h>
+# include <fcntl.h>
 
-#define MAX_CONNECTIONS 10
-#define PORT "3490"
+# define MAX_CONNECTIONS 10
+# define PORT "3490"
 
 #endif
