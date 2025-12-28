@@ -15,10 +15,15 @@
 // close
 # include <unistd.h>
 
+// epoll_create1, epoll_ctl, epoll_wait, epoll_event, EPOLLIN, EPOLL_CTL_ADD
+# include <sys/epoll.h>
+
 // fcntl, F_SETFL, O_NONBLOCK
 # include <fcntl.h>
 
 # define MAX_CONNECTIONS 10
 # define PORT "3490"
+# define MAX_TRIGGERED_EVENTS 10
+# define TIMEOUT -1
 
 #endif
