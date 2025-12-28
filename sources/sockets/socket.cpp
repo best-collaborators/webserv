@@ -99,7 +99,10 @@ int	main( void )
 	if (address_node == nullptr)
 	{
 		std::cerr << "Bind failed" << std::endl;
-		close(listen_fd);
+		if (listen_fd != -1)
+		{
+			close(listen_fd);
+		}
 		return 1;
 	}
 
