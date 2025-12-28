@@ -120,7 +120,6 @@ int	main( void )
 		std::cout << "Listening..." << std::endl;
 	}
 
-
 	int epoll_fd = epoll_create1(0);
 
 	if (epoll_fd == -1)
@@ -145,6 +144,8 @@ int	main( void )
 	{
 		int	errsv = errno;
 		std::cerr << "Epoll ctl on listen_fd failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+		close(listen_fd);
+		close(epoll_fd);
 		return 1;
 	}
 	else
@@ -153,9 +154,9 @@ int	main( void )
 	}
 
 	int					client_fd;
-	sockaddr_storage	client_address;
-	socklen_t			client_address_size;
-	epoll_event			triggered_events[MAX_TRIGGERED_EVENTS];
+	sockaddr_storage	client_address {};
+	socklen_t			client_address_size {};
+	epoll_event			triggered_events[MAX_TRIGGERED_EVENTS] {};
 
 	while (true)
 	{
@@ -170,12 +171,12 @@ int	main( void )
 		std::cout << "epoll_wait return " << event_amount << " triggered events." << std::endl;
 		for (int i = 0; i < event_amount; ++i)
 		{
-			std::cout << "event_amount " << event_amount << std::endl;
-			std::cout << "triggered_events->data.fd " << triggered_events[i].data.fd << std::endl;
-			std::cout << "listen_fd " << listen_fd << std::endl;
+			// std::cout << "event_amount " << event_amount << std::endl;
+			// std::cout << "triggered_events->data.fd " << triggered_events[i].data.fd << std::endl;
+			// std::cout << "listen_fd " << listen_fd << std::endl;
+
 			if (triggered_events[i].data.fd == listen_fd)
 			{
-				std::cout << "WORK" << std::endl;
 				client_address_size = static_cast<socklen_t>(sizeof(client_address));
 
 				std::cout << "Before accept..." << std::endl;
@@ -204,16 +205,17 @@ int	main( void )
 					std::cout << "Set client_fd " << client_fd << " to non-blocking mode success" << std::endl;
 				}
 
-				event.events = EPOLLIN;
-				event.data.fd = client_fd;
+				epoll_event	client_event {};
+				client_event.events = EPOLLIN;
+				client_event.data.fd = client_fd;
 
-				int epoll_ctl_status = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
+				int epoll_ctl_status = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &client_event);
 
 				if (epoll_ctl_status == -1)
 				{
 					int	errsv = errno;
 					std::cerr << "Epoll ctl on client_fd " << client_fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-					return 1;
+					continue;
 				}
 				else
 				{
@@ -222,48 +224,125 @@ int	main( void )
 			}
 			else
 			{
-				std::cout << "Before recv..." << std::endl;
-				char	buffer[1000];
-				int		received_bytes = recv(triggered_events[i].data.fd, buffer, sizeof(buffer), 0);
-				std::cout << "After recv..." << std::endl;
-
-				if (received_bytes == 0)
+				if (triggered_events[i].events & EPOLLIN)
 				{
-					std::cout << "Socket " << triggered_events[i].data.fd << " closed." << std::endl;
+					std::cout << "EPOLLIN event triggered" << std::endl;
+					// sleep(5);
+					std::cout << "Before recv..." << std::endl;
+					char	buffer[BUFFER_SIZE];
+					int		received_bytes = recv(triggered_events[i].data.fd, buffer, sizeof(buffer), 0);
+					std::cout << "After recv..." << std::endl;
+
+					if (received_bytes == 0)
+					{
+						std::cout << "Socket " << triggered_events[i].data.fd << " closed." << std::endl;
+						close(triggered_events[i].data.fd);
+					}
+					else if (received_bytes < 0)
+					{
+						// n < 0: Treat this as a "Spurious Wakeup" or "Wait State" and return to the loop.
+						// Note: Since the socket was marked readable, this shouldn't happen often. Without errno, you have to assume the connection is still alive but temporarily unavailable, or treat it as a fatal error depending on your tolerance.
+						std::cerr << "Error occurred while recv..." << std::endl;
+					}
+					else if (received_bytes > 0)
+					{
+						if (received_bytes < BUFFER_SIZE)
+						{
+							std::cout << "Content received fully." << std::endl;
+						}
+						else if (received_bytes == BUFFER_SIZE)
+						{
+							std::cout << "Content received partially." << std::endl;
+						}
+						std::cout << "\nreceived_bytes: " << received_bytes << "\nbuffer_len: " << strlen(buffer) << "\n===============\n";
+						std::string buff = buffer;
+						std::cout << buff.substr(0, received_bytes) << "===============" << std::endl;
+
+						epoll_event	ev {};
+
+						ev.events = EPOLLIN | EPOLLOUT;
+						ev.data.fd = triggered_events[i].data.fd;
+
+						int mod_status = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, triggered_events[i].data.fd, &ev);
+						if (mod_status == -1)
+						{
+							int	errsv = errno;
+							std::cerr << "Setting EPOLL_CTL_MOD to EPOLLIN | EPOLLOUT for " << triggered_events[i].data.fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+							return 1; //! Clean fds
+						}
+						else
+						{
+							std::cout << "Epoll EPOLL_CTL_MOD to EPOLLIN | EPOLLOUT for " << triggered_events[i].data.fd << " success..." << std::endl;
+						}
+					}
 				}
-				else if (received_bytes < 0)
+				if (triggered_events[i].events & EPOLLOUT)
 				{
-					std::cerr << "Error occurred while recv..." << std::endl;
+					std::cout << "EPOLLOUT event triggered" << std::endl;
+					std::string body =
+						"<html>\n"
+						"<head><title>200 OK</title></head>\n"
+						"<body>\n"
+						"<center><h1>200 OK</h1></center>\n"
+						"</body>\n"
+						"</html>\n";
+	
+					std::string headers =
+						"HTTP/1.1 200 OK\r\n"
+						"Content-Type: text/html\r\n"
+						"Content-Length: " + std::to_string(body.size()) + "\r\n"
+						"Connection: Close\r\n"
+						"\r\n";
+	
+					std::string msg = headers + body;
+	
+					std::cout << "Before send..." << std::endl;
+					ssize_t sent_bytes = send(triggered_events[i].data.fd, msg.c_str(), msg.length(), 0);
+					std::cout << "After send..." << std::endl;
+
+					if (sent_bytes == static_cast<ssize_t>(msg.length()))
+					{
+						std::cout << "Content sent fully." << std::endl;
+					}
+					else if (sent_bytes <= 0)
+					{
+						std::cout << "Buffer Full / Error" << std::endl;
+					}
+					else if (sent_bytes < static_cast<ssize_t>(msg.length()))
+					{
+						std::cout << "Content sent partially." << std::endl;
+					}
+
+					if (sent_bytes == static_cast<ssize_t>(msg.length()))
+					{
+						epoll_event	ev {};
+		
+						ev.events = EPOLLIN;
+						ev.data.fd = triggered_events[i].data.fd;
+		
+						int mod_status = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, triggered_events[i].data.fd, &ev);
+						if (mod_status == -1)
+						{
+							int	errsv = errno;
+							std::cerr << "Setting EPOLL_CTL_MOD to only EPOLLIN for " << triggered_events[i].data.fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+							return 1; //! Clean fds
+						}
+						else
+						{
+							std::cout << "Epoll EPOLL_CTL_MOD to only EPOLLIN for " << triggered_events[i].data.fd << " success..." << std::endl;
+						}
+					}
 				}
-				else
+				if (triggered_events[i].events & EPOLLERR)
 				{
-					std::cout << "Content received successfully." << std::endl;
+					std::cout << "EPOLLERR event triggered" << std::endl;
+					close(triggered_events[i].data.fd);
 				}
-
-				std::cout << "\nreceived_bytes: " << received_bytes << "\nbuffer_len: " << strlen(buffer) << "\n===============\n";
-				std::string buff = buffer;
-				std::cout << buff.substr(0, received_bytes) << "===============" << std::endl;
-				received_bytes = recv(client_fd, buffer, sizeof(buffer), 0);
-				// std::string body =
-				// 	"<html>\n"
-				// 	"<head><title>200 OK</title></head>\n"
-				// 	"<body>\n"
-				// 	"<center><h1>200 OK</h1></center>\n"
-				// 	"</body>\n"
-				// 	"</html>\n";
-
-				// std::string headers =
-				// 	"HTTP/1.1 200 OK\r\n"
-				// 	"Content-Type: text/html\r\n"
-				// 	"Content-Length: " + std::to_string(body.size()) + "\r\n"
-				// 	"Connection: Close\r\n"
-				// 	"\r\n";
-
-				// std::string msg = headers + body;
-
-				// std::cout << "Before send..." << std::endl;
-				// send(triggered_events[i].data.fd, msg.c_str(), msg.length(), 0);
-				// std::cout << "After send..." << std::endl;
+				if (triggered_events[i].events & EPOLLHUP)
+				{
+					std::cout << "EPOLLHUP event triggered" << std::endl;
+					close(triggered_events[i].data.fd);
+				}
 			}
 		}
 	}
