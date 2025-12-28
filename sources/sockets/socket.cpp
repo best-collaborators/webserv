@@ -17,7 +17,7 @@ int	main( void )
 		return 1;
 	}
 
-	int			connection_fd = -1;
+	int			listen_fd = -1;
 	addrinfo *	address_node = nullptr;
 
 	for (address_node = address_info; address_node != nullptr; address_node = address_node->ai_next)
@@ -28,9 +28,9 @@ int	main( void )
 			continue;
 		}
 
-		connection_fd = socket(address_node->ai_family, address_node->ai_socktype, address_node->ai_protocol);
+		listen_fd = socket(address_node->ai_family, address_node->ai_socktype, address_node->ai_protocol);
 
-		if (connection_fd == -1)
+		if (listen_fd == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "Socket failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
@@ -41,49 +41,49 @@ int	main( void )
 			std::cout << "Created socket..." << std::endl;
 		}
 
-		int fcntl_status = fcntl(connection_fd, F_SETFL, O_NONBLOCK);
+		int fcntl_status = fcntl(listen_fd, F_SETFL, O_NONBLOCK);
 
 		if (fcntl_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "fcntl failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			close(connection_fd);
+			close(listen_fd);
 			continue;
 		}
 		else
 		{
-			std::cout << "Set connection_fd to non-blocking mode success" << std::endl;
+			std::cout << "Set listen_fd to non-blocking mode success" << std::endl;
 		}
 
 		int	enable_reuse_address = 1;
-		int set_reuse_status = setsockopt(connection_fd, SOL_SOCKET, SO_REUSEADDR, &enable_reuse_address, sizeof(enable_reuse_address));
+		int set_reuse_status = setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable_reuse_address, sizeof(enable_reuse_address));
 
 		if (set_reuse_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			close(connection_fd);
+			close(listen_fd);
 			continue;
 		}
 
 		int	disable_only_ipv6 = 0;
-		int disable_only_status = setsockopt(connection_fd, IPPROTO_IPV6, IPV6_V6ONLY, &disable_only_ipv6, sizeof(disable_only_ipv6));
+		int disable_only_status = setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &disable_only_ipv6, sizeof(disable_only_ipv6));
 
 		if (disable_only_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			close(connection_fd);
+			close(listen_fd);
 			continue;
 		}
 
-		int	bind_status = bind(connection_fd, address_node->ai_addr, address_node->ai_addrlen);
+		int	bind_status = bind(listen_fd, address_node->ai_addr, address_node->ai_addrlen);
 
 		if (bind_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "Bind failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			close(connection_fd);
+			close(listen_fd);
 			continue;
 		}
 		else
@@ -99,17 +99,17 @@ int	main( void )
 	if (address_node == nullptr)
 	{
 		std::cerr << "Bind failed" << std::endl;
-		close(connection_fd);
+		close(listen_fd);
 		return 1;
 	}
 
-	int	listen_status = listen(connection_fd, MAX_CONNECTIONS);
+	int	listen_status = listen(listen_fd, MAX_CONNECTIONS);
 
 	if (listen_status == -1)
 	{
 		int	errsv = errno;
 		std::cerr << "Listen failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-		close(connection_fd);
+		close(listen_fd);
 		return 1;
 	}
 	else
@@ -117,6 +117,6 @@ int	main( void )
 		std::cout << "Listening..." << std::endl;
 	}
 
-	close(connection_fd);
+	close(listen_fd);
 	return 0;
 }
