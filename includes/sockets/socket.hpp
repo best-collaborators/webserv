@@ -6,7 +6,7 @@
 // socket, setsockopt, bind, listen, accept, recv, AF_UNSPEC, SOCK_STREAM, AF_INET, SOL_SOCKET, SO_REUSEADDR
 # include <sys/socket.h>
 
-// getaddrinfo, freeaddrinfo, gai_strerror, addrinfo, address_info, AI_PASSIVE, IPPROTO_IPV6, IPV6_V6ONLY
+// getaddrinfo, freeaddrinfo, gai_strerror, addrinfo, AI_PASSIVE, IPPROTO_IPV6, IPV6_V6ONLY
 # include <netdb.h>
 
 // strlen, strerror
