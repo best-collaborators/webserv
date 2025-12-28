@@ -25,6 +25,6 @@
 # define PORT "3490"
 # define MAX_TRIGGERED_EVENTS 10
 # define TIMEOUT -1
-# define BUFFER_SIZE 4096
+# define READ_BUFFER_SIZE 4096
 
 #endif

@@ -13,7 +13,7 @@ int	main( void )
 	status = getaddrinfo(NULL, PORT, &hints, &address_info);
 	if (status != 0)
 	{
-		std::cerr << "gai error: " << gai_strerror(status) << std::endl;
+		std::cerr << "[gai] Resolution failed: " << gai_strerror(status) << std::endl;
 		return 1;
 	}
 
@@ -24,7 +24,7 @@ int	main( void )
 	{
 		if (address_node->ai_family == AF_INET)
 		{
-			std::cout << "Skipping IPv4 address_node." << std::endl;
+			std::cout << "[listen] Skipping IPv4 candidate." << std::endl;
 			continue;
 		}
 
@@ -33,12 +33,12 @@ int	main( void )
 		if (listen_fd == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "Socket failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[listen] socket() failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			continue;
 		}
 		else
 		{
-			std::cout << "Created socket..." << std::endl;
+			std::cout << "[listen] Socket created." << std::endl;
 		}
 
 		int fcntl_status = fcntl(listen_fd, F_SETFL, O_NONBLOCK);
@@ -46,13 +46,13 @@ int	main( void )
 		if (fcntl_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "fcntl failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[listen] fcntl(O_NONBLOCK) failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
 		else
 		{
-			std::cout << "Set listen_fd to non-blocking mode success" << std::endl;
+			std::cout << "[listen] listen_fd set to non-blocking." << std::endl;
 		}
 
 		int	reuse_address = 1;
@@ -61,7 +61,7 @@ int	main( void )
 		if (reuse_address_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "setsockopt SO_REUSEADDR failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[listen] setsockopt(SO_REUSEADDR) failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
@@ -72,7 +72,7 @@ int	main( void )
 		if (ipv6_only_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "setsockopt IPV6_V6ONLY failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[listen] setsockopt(IPV6_V6ONLY) failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
@@ -82,13 +82,13 @@ int	main( void )
 		if (bind_status == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "Bind failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[listen] bind() failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			close(listen_fd);
 			continue;
 		}
 		else
 		{
-			std::cout << "Bound..." << std::endl;
+			std::cout << "[listen] Socket bound." << std::endl;
 		}
 
 		break; //! Break after successfully bound to first address
@@ -98,7 +98,7 @@ int	main( void )
 
 	if (address_node == nullptr)
 	{
-		std::cerr << "Bind failed" << std::endl;
+		std::cerr << "[listen] Bind failed for all addresses." << std::endl;
 		if (listen_fd != -1)
 		{
 			close(listen_fd);
@@ -111,13 +111,13 @@ int	main( void )
 	if (listen_status == -1)
 	{
 		int	errsv = errno;
-		std::cerr << "Listen failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+		std::cerr << "[listen] listen() failed (" << errsv << "): " << strerror(errsv) << std::endl;
 		close(listen_fd);
 		return 1;
 	}
 	else
 	{
-		std::cout << "Listening..." << std::endl;
+		std::cout << "\n[listen] Listening on port " << PORT << "..." << std::endl;
 	}
 
 	int epoll_fd = epoll_create1(0);
@@ -125,12 +125,12 @@ int	main( void )
 	if (epoll_fd == -1)
 	{
 		int	errsv = errno;
-		std::cerr << "Epoll instance creation failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+		std::cerr << "[epoll] epoll_create1 failed (" << errsv << "): " << strerror(errsv) << std::endl;
 		return 1;
 	}
 	else
 	{
-		std::cout << "Epoll instance created with fd " << epoll_fd << "..." << std::endl;
+		std::cout << "[epoll] Created instance fd=" << epoll_fd << "." << std::endl;
 	}
 
 	epoll_event	event;
@@ -143,14 +143,14 @@ int	main( void )
 	if (epoll_ctl_status == -1)
 	{
 		int	errsv = errno;
-		std::cerr << "Epoll ctl on listen_fd failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+		std::cerr << "[epoll] EPOLL_CTL_ADD listen_fd failed (" << errsv << "): " << strerror(errsv) << std::endl;
 		close(listen_fd);
 		close(epoll_fd);
 		return 1;
 	}
 	else
 	{
-		std::cout << "Epoll EPOLL_CTL_ADD on listen_fd " << listen_fd << " success..." << std::endl;
+		std::cout << "[epoll] Added listen_fd " << listen_fd << " (EPOLLIN)." << std::endl;
 	}
 
 	int					client_fd;
@@ -164,45 +164,41 @@ int	main( void )
 		if (event_amount == -1)
 		{
 			int	errsv = errno;
-			std::cerr << "epoll_wait failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			std::cerr << "[epoll] epoll_wait failed (" << errsv << "): " << strerror(errsv) << std::endl;
 			continue;
 		}
 
-		std::cout << "epoll_wait return " << event_amount << " triggered events." << std::endl;
+		std::cout << "\n[epoll] epoll_wait returned " << event_amount << " event(s)." << std::endl;
 		for (int i = 0; i < event_amount; ++i)
 		{
-			// std::cout << "event_amount " << event_amount << std::endl;
-			// std::cout << "triggered_events->data.fd " << triggered_events[i].data.fd << std::endl;
-			// std::cout << "listen_fd " << listen_fd << std::endl;
-
 			if (triggered_events[i].data.fd == listen_fd)
 			{
 				client_address_size = static_cast<socklen_t>(sizeof(client_address));
 
-				std::cout << "Before accept..." << std::endl;
+				std::cout << "\n[accept] Waiting for connection..." << std::endl;
 				client_fd = accept(listen_fd, (sockaddr *)&client_address, &client_address_size);
-				std::cout << "After accept..." << std::endl;
+				std::cout << "[accept] accept() returned." << std::endl;
 
 				if (client_fd == - 1)
 				{
 					int	errsv = errno;
-					std::cerr << "Accept failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+					std::cerr << "[accept] Failed (" << errsv << "): " << strerror(errsv) << std::endl;
 					continue;
 				}
 
-				std::cout << "New connection on socket " << client_fd << std::endl;
+				std::cout << "[accept] New client fd=" << client_fd << std::endl;
 
 				int fcntl_status = fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
 				if (fcntl_status == -1)
 				{
 					int	errsv = errno;
-					std::cerr << "fcntl failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+					std::cerr << "[accept] fcntl(O_NONBLOCK) failed (" << errsv << "): " << strerror(errsv) << std::endl;
 					continue;
 				}
 				else
 				{
-					std::cout << "Set client_fd " << client_fd << " to non-blocking mode success" << std::endl;
+					std::cout << "[accept] client_fd " << client_fd << " set to non-blocking." << std::endl;
 				}
 
 				epoll_event	client_event {};
@@ -214,47 +210,46 @@ int	main( void )
 				if (epoll_ctl_status == -1)
 				{
 					int	errsv = errno;
-					std::cerr << "Epoll ctl on client_fd " << client_fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+					std::cerr << "[epoll] EPOLL_CTL_ADD client_fd " << client_fd << " failed (" << errsv << "): " << strerror(errsv) << std::endl;
 					continue;
 				}
 				else
 				{
-					std::cout << "Epoll EPOLL_CTL_ADD on client_fd " << client_fd << " success..." << std::endl;
+					std::cout << "[epoll] Added client_fd " << client_fd << " (EPOLLIN)." << std::endl;
 				}
 			}
 			else
 			{
 				if (triggered_events[i].events & EPOLLIN)
 				{
-					std::cout << "EPOLLIN event triggered" << std::endl;
-					// sleep(5);
-					std::cout << "Before recv..." << std::endl;
-					char	buffer[BUFFER_SIZE];
+					std::cout << "\n[io] EPOLLIN triggered for fd " << triggered_events[i].data.fd << std::endl;
+					std::cout << "[io] recv() starting..." << std::endl;
+					char	buffer[READ_BUFFER_SIZE];
 					int		received_bytes = recv(triggered_events[i].data.fd, buffer, sizeof(buffer), 0);
-					std::cout << "After recv..." << std::endl;
+					std::cout << "[io] recv() completed." << std::endl;
 
 					if (received_bytes == 0)
 					{
-						std::cout << "Socket " << triggered_events[i].data.fd << " closed." << std::endl;
+						std::cout << "[io] Peer closed fd " << triggered_events[i].data.fd << "." << std::endl;
 						close(triggered_events[i].data.fd);
 					}
 					else if (received_bytes < 0)
 					{
 						// n < 0: Treat this as a "Spurious Wakeup" or "Wait State" and return to the loop.
 						// Note: Since the socket was marked readable, this shouldn't happen often. Without errno, you have to assume the connection is still alive but temporarily unavailable, or treat it as a fatal error depending on your tolerance.
-						std::cerr << "Error occurred while recv..." << std::endl;
+						std::cerr << "[io] recv() error." << std::endl;
 					}
 					else if (received_bytes > 0)
 					{
-						if (received_bytes < BUFFER_SIZE)
+						if (received_bytes < READ_BUFFER_SIZE)
 						{
-							std::cout << "Content received fully." << std::endl;
+							std::cout << "[io] Request received (complete)." << std::endl;
 						}
-						else if (received_bytes == BUFFER_SIZE)
+						else if (received_bytes == READ_BUFFER_SIZE)
 						{
-							std::cout << "Content received partially." << std::endl;
+							std::cout << "[io] Request received (partial buffer)." << std::endl;
 						}
-						std::cout << "\nreceived_bytes: " << received_bytes << "\nbuffer_len: " << strlen(buffer) << "\n===============\n";
+						std::cout << "\n[io] received_bytes: " << received_bytes << "\n[io] buffer_len: " << strlen(buffer) << "\n===============\n";
 						std::string buff = buffer;
 						std::cout << buff.substr(0, received_bytes) << "===============" << std::endl;
 
@@ -267,18 +262,18 @@ int	main( void )
 						if (mod_status == -1)
 						{
 							int	errsv = errno;
-							std::cerr << "Setting EPOLL_CTL_MOD to EPOLLIN | EPOLLOUT for " << triggered_events[i].data.fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+							std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN|EPOLLOUT for fd " << triggered_events[i].data.fd << " failed (" << errsv << "): " << strerror(errsv) << std::endl;
 							return 1; //! Clean fds
 						}
 						else
 						{
-							std::cout << "Epoll EPOLL_CTL_MOD to EPOLLIN | EPOLLOUT for " << triggered_events[i].data.fd << " success..." << std::endl;
+							std::cout << "[epoll] Updated fd " << triggered_events[i].data.fd << " to EPOLLIN|EPOLLOUT." << std::endl;
 						}
 					}
 				}
 				if (triggered_events[i].events & EPOLLOUT)
 				{
-					std::cout << "EPOLLOUT event triggered" << std::endl;
+					std::cout << "\n[io] EPOLLOUT triggered for fd " << triggered_events[i].data.fd << std::endl;
 					std::string body =
 						"<html>\n"
 						"<head><title>200 OK</title></head>\n"
@@ -291,26 +286,26 @@ int	main( void )
 						"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
 						"Content-Length: " + std::to_string(body.size()) + "\r\n"
-						"Connection: Close\r\n"
+						"Connection: keep-alive\r\n"
 						"\r\n";
 	
 					std::string msg = headers + body;
 	
-					std::cout << "Before send..." << std::endl;
+					std::cout << "[io] send() starting..." << std::endl;
 					ssize_t sent_bytes = send(triggered_events[i].data.fd, msg.c_str(), msg.length(), 0);
-					std::cout << "After send..." << std::endl;
+					std::cout << "[io] send() completed." << std::endl;
 
 					if (sent_bytes == static_cast<ssize_t>(msg.length()))
 					{
-						std::cout << "Content sent fully." << std::endl;
+						std::cout << "[io] Response sent (complete)." << std::endl;
 					}
 					else if (sent_bytes <= 0)
 					{
-						std::cout << "Buffer Full / Error" << std::endl;
+						std::cout << "[io] Send failed or would block." << std::endl;
 					}
 					else if (sent_bytes < static_cast<ssize_t>(msg.length()))
 					{
-						std::cout << "Content sent partially." << std::endl;
+						std::cout << "[io] Response sent partially." << std::endl;
 					}
 
 					if (sent_bytes == static_cast<ssize_t>(msg.length()))
@@ -324,23 +319,23 @@ int	main( void )
 						if (mod_status == -1)
 						{
 							int	errsv = errno;
-							std::cerr << "Setting EPOLL_CTL_MOD to only EPOLLIN for " << triggered_events[i].data.fd << " failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+							std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN for fd " << triggered_events[i].data.fd << " failed (" << errsv << "): " << strerror(errsv) << std::endl;
 							return 1; //! Clean fds
 						}
 						else
 						{
-							std::cout << "Epoll EPOLL_CTL_MOD to only EPOLLIN for " << triggered_events[i].data.fd << " success..." << std::endl;
+							std::cout << "[epoll] Updated fd " << triggered_events[i].data.fd << " to EPOLLIN only." << std::endl;
 						}
 					}
 				}
 				if (triggered_events[i].events & EPOLLERR)
 				{
-					std::cout << "EPOLLERR event triggered" << std::endl;
+					std::cout << "[io] EPOLLERR on fd " << triggered_events[i].data.fd << std::endl;
 					close(triggered_events[i].data.fd);
 				}
 				if (triggered_events[i].events & EPOLLHUP)
 				{
-					std::cout << "EPOLLHUP event triggered" << std::endl;
+					std::cout << "[io] EPOLLHUP on fd " << triggered_events[i].data.fd << std::endl;
 					close(triggered_events[i].data.fd);
 				}
 			}
