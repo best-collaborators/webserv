@@ -17,7 +17,7 @@ int	main( void )
 		return 1;
 	}
 
-	int			connection_fd;
+	int			connection_fd = -1;
 	addrinfo *	address_node = nullptr;
 
 	for (address_node = address_info; address_node != nullptr; address_node = address_node->ai_next)
@@ -47,6 +47,7 @@ int	main( void )
 		{
 			int	errsv = errno;
 			std::cerr << "fcntl failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+			close(connection_fd);
 			continue;
 		}
 		else
@@ -61,7 +62,8 @@ int	main( void )
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			return 1;
+			close(connection_fd);
+			continue;
 		}
 
 		int	disable_only_ipv6 = 0;
@@ -71,7 +73,8 @@ int	main( void )
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
-			return 1;
+			close(connection_fd);
+			continue;
 		}
 
 		int	bind_status = bind(connection_fd, address_node->ai_addr, address_node->ai_addrlen);
@@ -96,6 +99,8 @@ int	main( void )
 	if (address_node == nullptr)
 	{
 		std::cerr << "Bind failed" << std::endl;
+		close(connection_fd);
+		return 1;
 	}
 
 	int	listen_status = listen(connection_fd, MAX_CONNECTIONS);
@@ -104,6 +109,7 @@ int	main( void )
 	{
 		int	errsv = errno;
 		std::cerr << "Listen failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
+		close(connection_fd);
 		return 1;
 	}
 	else
@@ -111,5 +117,6 @@ int	main( void )
 		std::cout << "Listening..." << std::endl;
 	}
 
+	close(connection_fd);
 	return 0;
 }
