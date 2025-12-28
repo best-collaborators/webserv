@@ -55,10 +55,10 @@ int	main( void )
 			std::cout << "Set listen_fd to non-blocking mode success" << std::endl;
 		}
 
-		int	enable_reuse_address = 1;
-		int set_reuse_status = setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable_reuse_address, sizeof(enable_reuse_address));
+		int	reuse_address = 1;
+		int reuse_address_status = setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse_address, sizeof(reuse_address));
 
-		if (set_reuse_status == -1)
+		if (reuse_address_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
@@ -66,10 +66,10 @@ int	main( void )
 			continue;
 		}
 
-		int	disable_only_ipv6 = 0;
-		int disable_only_status = setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &disable_only_ipv6, sizeof(disable_only_ipv6));
+		int	ipv6_only = 0;
+		int ipv6_only_status = setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only));
 
-		if (disable_only_status == -1)
+		if (ipv6_only_status == -1)
 		{
 			int	errsv = errno;
 			std::cerr << "setsockopt failed with error code " << errsv << ": " << strerror(errsv) << std::endl;
