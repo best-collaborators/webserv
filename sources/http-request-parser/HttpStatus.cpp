@@ -10,6 +10,9 @@ std::string_view HttpStatus::get_status_code_name(e_code s)
 		case e_code::BAD_REQUEST:
 			return "Bad Request";
 			break;
+		case e_code::CREATED:
+			return "Created";
+			break;
 		case e_code::NOT_FOUND:
 			return "Not found";
 			break;

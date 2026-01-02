@@ -1,7 +1,7 @@
 #include "ResponseGenerator.hpp"
 
-ResponseGenerator::ResponseGenerator(uint status_code, std::string content, std::string_view content_type, bool is_a_file)
-	: _status_code(status_code), _content(content), _content_type(content_type), _is_a_file(is_a_file) {}
+ResponseGenerator::ResponseGenerator(uint status_code, std::string content, std::string_view content_type, std::string_view method, bool is_a_file)
+	: _status_code(status_code), _content(content), _content_type(content_type), _method(method), _is_a_file(is_a_file) {}
 
 std::string ResponseGenerator::get_file_last_modified_date(const char *filename)
 {
@@ -72,10 +72,66 @@ std::string ResponseGenerator::serve_html_error_page(std::string errmsg)
 			"</html>\n";
 }
 
+std::string ResponseGenerator::serve_html_success_page(std::string message)
+{
+	std::string str(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)));
+
+	return "<!DOCTYPE html>\n"
+		"<html lang=\"en\">\n"
+		"<head>\n"
+		"    <meta charset=\"UTF-8\">\n"
+		"    <title>Success</title>\n"
+		"    <style>\n"
+		"        body {\n"
+		"            font-family: Arial, sans-serif;\n"
+		"            background-color: #e9f7ef;\n"
+		"            color: #2c3e50;\n"
+		"            text-align: center;\n"
+		"            padding: 50px;\n"
+		"        }\n"
+		"        h1 {\n"
+		"            font-size: 72px;\n"
+		"            margin: 0;\n"
+		"            color: #27ae60;\n"
+		"        }\n"
+		"        h2 {\n"
+		"            font-size: 24px;\n"
+		"            margin: 10px 0 20px 0;\n"
+		"        }\n"
+		"        p {\n"
+		"            font-size: 16px;\n"
+		"            color: #555;\n"
+		"        }\n"
+		"        a {\n"
+		"            color: #2980b9;\n"
+		"            text-decoration: none;\n"
+		"        }\n"
+		"        a:hover {\n"
+		"            text-decoration: underline;\n"
+		"        }\n"
+		"        .container {\n"
+		"            display: inline-block;\n"
+		"            text-align: left;\n"
+		"        }\n"
+		"    </style>\n"
+		"</head>\n"
+		"<body>\n"
+		"<div class=\"container\">\n"
+		"    <h1>✓</h1>\n"
+		"    <h2>" + str + "</h2>\n"
+		"    <p>" + message + "</p>\n"
+		"    <p><a href=\"/\">Return to Home</a></p>\n"
+		"</div>\n"
+		"</body>\n"
+		"</html>\n";
+}
+
 std::string ResponseGenerator::create_body()
 {
 	if (!_is_a_file) return "";
 	if (_status_code > 300) return serve_html_error_page("Sorry.");
+	if (_method == "POST") return serve_html_success_page("Success.");
+	if (_status_code == 304 || _status_code == 204) return serve_html_success_page("Other message.");
 
 	std::ifstream ifs (_content);
 	char *buffer = nullptr;
@@ -131,7 +187,7 @@ void ResponseGenerator::form_reponse()
 		_length = buffer.size();
 	}
 
-	std::string response_file = "./sources/http-parser/test_http_response.txt";
+	std::string response_file = "./sources/http-request-parser/test_http_response.txt";
 	std::ofstream ofs(response_file);
 	if (!ofs)
 	{
