@@ -7,7 +7,10 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/sockets/socket.cpp
+	$(SRC_DIR)/sockets/main.cpp \
+	$(SRC_DIR)/sockets/SocketUtils.cpp \
+	$(SRC_DIR)/sockets/Listener.cpp \
+	$(SRC_DIR)/sockets/EventLoop.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
