@@ -1,0 +1,4 @@
+POST / HTTP/1.1
+Host: api.example.com
+Connection: close
+User-Agent: MyClient/1.0

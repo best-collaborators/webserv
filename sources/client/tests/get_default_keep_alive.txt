@@ -1,0 +1,5 @@
+GET /users/123 HTTP/1.1
+Host: api.example.com
+Accept: application/json
+User-Agent: MyClient/1.0
+Connection: close

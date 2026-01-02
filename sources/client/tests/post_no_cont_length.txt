@@ -1,0 +1,7 @@
+POST /no_body HTTP/1.1
+Host: api.example.com
+Connection: close
+User-Agent: MyClient/1.0
+Content-type: text
+
+Some data
