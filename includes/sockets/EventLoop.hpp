@@ -20,35 +20,27 @@
 #include <map>
 
 #include "Connection.hpp"
+#include "Poller.hpp"
 
 class EventLoop
 {
 private:
-	static constexpr int		MAX_TRIGGERED_EVENTS = 10;
-	static constexpr int		TIMEOUT = -1;
-
+	Poller						_poller;
 	int	const					_listen_fd;
-	int							_epoll_fd;
-	epoll_event					triggered_events[MAX_TRIGGERED_EVENTS];
 	std::map<int, Connection>	connections;
-
-	void					createEpollInstance();
-	void					registerListenSocket();
-
-	int						monitorEvents( int & event_count );
 
 	bool					acceptNewConnection( int & connection_fd );
 	void					registerNewConnection( int & fd ) noexcept;
-	void					handleClientEvent( epoll_event & event ) noexcept;
+	void					handleClientEvent( epoll_event const & event ) noexcept;
 
 	void					registerEventToReadWrite( int fd ) noexcept;
 	void					registerEventToReadOnly( int fd ) noexcept;
 
 	void					closeConnection( int fd ) noexcept;
+
 public:
 	EventLoop( int listen_fd );
 	~EventLoop();
 
-	void					init();
-	void					monitor();
+	void	run();
 };

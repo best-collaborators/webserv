@@ -1,9 +1,9 @@
 #include "Connection.hpp"
 
-Connection::Connection() : _fd(-1), _read_bytes(0)
+Connection::Connection() : _fd(-1), _read_bytes(0), _stored_bytes(0)
 {}
 
-Connection::Connection( int fd ) : _fd(fd), _read_bytes(0)
+Connection::Connection( int fd ) : _fd(fd), _read_bytes(0), _stored_bytes(0)
 {}
 
 Connection::~Connection()
@@ -15,9 +15,9 @@ IoState	Connection::_saveToBuffer() noexcept
 	{
 		std::cout << "\n[io] read_bytes: " << _read_bytes << "\n===============\n";
 		
-		this->_read_buffer.append(_temp_buffer, _read_bytes);
-
-		std::cout << "connection fd " << _fd << "\n=================\n" << this->_read_buffer.substr(0, this->_read_bytes) << "===============" << std::endl;
+		_read_buffer.append(_temp_buffer, _read_bytes);
+		_stored_bytes += _read_bytes;
+		std::cout << "connection fd " << _fd << "\n=================\n" << _read_buffer.substr(0, _stored_bytes) << "===============" << std::endl;
 
 		if (_read_bytes < READ_BUFFER_SIZE)
 		{

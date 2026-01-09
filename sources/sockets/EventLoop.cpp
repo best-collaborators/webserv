@@ -1,34 +1,33 @@
 #include "../includes/sockets/EventLoop.hpp"
 #include "../includes/sockets/SocketUtils.hpp"
+#include "Poller.hpp"
 
 EventLoop::EventLoop( int listen_fd ) : _listen_fd(listen_fd)
-{}
+{
+	if (_poller.add(_listen_fd, EPOLLIN) == false)
+	{
+		throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
+	}
+
+	std::cout << "[epoll] Added _listen_fd " << _listen_fd << " (EPOLLIN)." << std::endl;
+}
 
 EventLoop::~EventLoop()
-{
-	SocketUtils::safeCloseFD(_epoll_fd);
-}
+{}
 
-void	EventLoop::init()
-{
-	createEpollInstance();
-	registerListenSocket();
-}
-
-void	EventLoop::monitor()
+void	EventLoop::run()
 {
 	std::cout << "\n[accept] Waiting for connection..." << std::endl;
 
 	while (true)
 	{
-		int	event_count;
-
-		if (!monitorEvents(event_count))
-			continue;
+		int event_count = _poller.wait();
 
 		for (int i = 0; i < event_count; ++i)
 		{
-			if (triggered_events[i].data.fd == _listen_fd)
+			epoll_event const & event = _poller.getEvent(i);
+
+			if (event.data.fd == _listen_fd)
 			{
 				int	connection_fd;
 
@@ -39,49 +38,10 @@ void	EventLoop::monitor()
 			}
 			else
 			{
-				handleClientEvent(triggered_events[i]);
+				handleClientEvent(event);
 			}
 		}
 	}
-}
-
-void	EventLoop::createEpollInstance()
-{
-	int status = epoll_create1(0);
-
-	SocketUtils::checkStatus(status, "[epoll] epoll_create failed");
-
-	_epoll_fd = status;
-
-	std::cout << "[epoll] Created instance fd=" << _epoll_fd << "." << std::endl;
-}
-
-void	EventLoop::registerListenSocket()
-{
-	epoll_event	event;
-
-	event.events = EPOLLIN;
-	event.data.fd = _listen_fd;
-
-	int status = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _listen_fd, &event);
-
-	SocketUtils::checkStatus(status, "[epoll] EPOLL_CTL_ADD listen_fd failed");
-
-	std::cout << "[epoll] Added _listen_fd " << _listen_fd << " (EPOLLIN)." << std::endl;
-}
-
-int		EventLoop::monitorEvents( int & event_count )
-{
-	event_count = epoll_wait(_epoll_fd, triggered_events, MAX_TRIGGERED_EVENTS, TIMEOUT);
-
-	if (event_count == -1)
-	{
-		std::cerr << "[epoll] epoll_wait failed (" << errno << "): " << strerror(errno) << std::endl;
-		return false;
-	}
-
-	std::cout << "\n[epoll] epoll_wait returned " << event_count << " event(s)." << std::endl;
-	return true;
 }
 
 bool	EventLoop::acceptNewConnection( int & connection_fd )
@@ -112,16 +72,8 @@ bool	EventLoop::acceptNewConnection( int & connection_fd )
 
 void	EventLoop::registerNewConnection( int & fd ) noexcept
 {
-	epoll_event	client_event {};
-
-	client_event.events = EPOLLIN;
-	client_event.data.fd = fd;
-
-	int status = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, fd, &client_event);
-
-	if (status == -1)
+	if (!_poller.add(fd, EPOLLIN))
 	{
-		std::cerr << "[epoll] EPOLL_CTL_ADD fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
 		close(fd);
 	}
 	else
@@ -133,13 +85,13 @@ void	EventLoop::registerNewConnection( int & fd ) noexcept
 	}
 }
 
-void	EventLoop::handleClientEvent( epoll_event & event ) noexcept
+void	EventLoop::handleClientEvent( epoll_event const & event ) noexcept
 {
 	int	fd = event.data.fd;
 
 	if (event.events & EPOLLIN)
 	{
-		IoState state = connections.find(fd).receiveData();
+		IoState state = connections.at(fd).receiveData();
 
 		if (state == IoState::Error || state == IoState::Closed)
 		{
@@ -153,7 +105,7 @@ void	EventLoop::handleClientEvent( epoll_event & event ) noexcept
 	}
 	if (event.events & EPOLLOUT)
 	{
-		IoState state = connections.find(fd).sendData();
+		IoState state = connections.at(fd).sendData();
 
 		if (state == IoState::Error || state == IoState::Closed)
 		{
@@ -174,36 +126,20 @@ void	EventLoop::handleClientEvent( epoll_event & event ) noexcept
 
 void	EventLoop::registerEventToReadWrite( int fd ) noexcept
 {
-	epoll_event	event {};
-
-	event.events = EPOLLIN | EPOLLOUT;
-	event.data.fd = fd;
-
-	int status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
-
-	if (status == -1)
+	if (_poller.mod(fd, EPOLLIN | EPOLLOUT) == false)
 	{
-		std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN|EPOLLOUT for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
 		closeConnection(fd);
 	}
 	else
 	{
-		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN|EPOLLOUT." << std::endl;
+		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN | EPOLLOUT." << std::endl;
 	}
 }
 
 void	EventLoop::registerEventToReadOnly( int fd ) noexcept
 {
-	epoll_event	event {};
-
-	event.events = EPOLLIN;
-	event.data.fd = fd;
-
-	int	status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
-
-	if (status == -1)
+	if (_poller.mod(fd, EPOLLIN) == false)
 	{
-		std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
 		closeConnection(fd);
 	}
 	else
@@ -216,13 +152,7 @@ void	EventLoop::closeConnection( int fd ) noexcept
 {
 	if (fd != -1)
 	{
-		int	status = epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-		
-		if (status == -1)
-		{
-			std::cerr << "[epoll] EPOLL_CTL_DELL for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
-		}
-		else
+		if (_poller.del(fd))
 		{
 			close(fd);
 			connections.erase(fd);

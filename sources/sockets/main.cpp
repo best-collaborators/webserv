@@ -18,18 +18,17 @@ int	main( void )
 		return 1;
 	}
 
-	EventLoop	eventLoop(listener.getListenFd());
-
 	try
 	{
-		eventLoop.init();
+		EventLoop	eventLoop(listener.getListenFd());
+
+		eventLoop.run();
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
 
-	eventLoop.monitor();
 
 	return 0;
 }

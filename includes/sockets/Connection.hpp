@@ -13,6 +13,7 @@ private:
 	int			_fd;
 	char		_temp_buffer[READ_BUFFER_SIZE];
 	ssize_t		_read_bytes;
+	ssize_t		_stored_bytes;
 	std::string	_read_buffer;
 
 	IoState		_saveToBuffer() noexcept;
