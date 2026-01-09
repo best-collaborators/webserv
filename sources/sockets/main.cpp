@@ -6,29 +6,17 @@ int	main( void )
 {
 	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
 
-	Listener	listener(PORT);
-
 	try
 	{
-		listener.init();
+		Server	server(PORT);
+
+		server.run();
 	}
-	catch(const std::exception& e)
+	catch( std::exception const & e )
 	{
 		std::cerr << e.what() << '\n';
 		return 1;
 	}
-
-	try
-	{
-		Server	Server(listener.getListenFd());
-
-		Server.run();
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-	}
-
 
 	return 0;
 }

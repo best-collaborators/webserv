@@ -2,14 +2,14 @@
 #include "../includes/sockets/SocketUtils.hpp"
 #include "Poller.hpp"
 
-Server::Server( int listen_fd ) : _listen_fd(listen_fd)
+Server::Server( std::string const & port ) : _listener(port), _poller()
 {
-	if (_poller.add(_listen_fd, EPOLLIN) == false)
+	if (_poller.add(_listener.getFD(), EPOLLIN) == false)
 	{
 		throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
 	}
 
-	std::cout << "[epoll] Added _listen_fd " << _listen_fd << " (EPOLLIN)." << std::endl;
+	std::cout << "[epoll] Added listen_fd " << _listener.getFD() << " (EPOLLIN)." << std::endl;
 }
 
 Server::~Server()
@@ -27,7 +27,7 @@ void	Server::run()
 		{
 			epoll_event const & event = _poller.getEvent(i);
 
-			if (event.data.fd == _listen_fd)
+			if (event.data.fd == _listener.getFD())
 			{
 				int	connection_fd;
 
@@ -49,7 +49,7 @@ bool	Server::acceptNewConnection( int & connection_fd )
 	sockaddr_storage	connection_address {};
 	socklen_t			connection_address_size {};
 
-	connection_fd = accept(_listen_fd, (sockaddr *)&connection_address, &connection_address_size);
+	connection_fd = accept(_listener.getFD(), (sockaddr *)&connection_address, &connection_address_size);
 	std::cout << "[accept] accept() returned." << std::endl;
 
 	if (connection_fd == - 1)

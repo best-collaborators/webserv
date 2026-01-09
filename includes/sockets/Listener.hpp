@@ -22,7 +22,7 @@
 class Listener
 {
 private:
-	static constexpr int MAX_CONNECTIONS = 10;
+	static constexpr int MAX_CONNECTIONS = 1024;
 
 	using	AddrInfoPtr = std::unique_ptr<addrinfo, void(*)(addrinfo *)>;
 
@@ -44,7 +44,6 @@ public:
 	Listener( std::string const & port );
 	~Listener();
 
-	void				init();
-	int					getListenFd() const;
+	int					getFD() const;
 };
 

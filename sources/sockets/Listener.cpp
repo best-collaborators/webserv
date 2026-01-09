@@ -2,14 +2,6 @@
 #include "../includes/sockets/SocketUtils.hpp"
 
 Listener::Listener( std::string const & port ) : _port(port), _listen_fd(-1)
-{}
-
-Listener::~Listener()
-{
-	SocketUtils::safeCloseFD(_listen_fd);
-}
-
-void	Listener::init()
 {
 	addrinfo *	address = nullptr;
 	AddrInfoPtr	addresses_guard = getAddresses();
@@ -40,7 +32,12 @@ void	Listener::init()
 	listenSocket();
 }
 
-int	Listener::getListenFd() const
+Listener::~Listener()
+{
+	SocketUtils::safeCloseFD(_listen_fd);
+}
+
+int	Listener::getFD() const
 {
 	return this->_listen_fd;
 }

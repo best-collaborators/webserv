@@ -19,14 +19,15 @@
 
 #include <map>
 
+#include "Listener.hpp"
 #include "Connection.hpp"
 #include "Poller.hpp"
 
 class Server
 {
 private:
+	Listener					_listener;
 	Poller						_poller;
-	int	const					_listen_fd;
 	std::map<int, Connection>	connections;
 
 	bool					acceptNewConnection( int & connection_fd );
@@ -39,7 +40,7 @@ private:
 	void					closeConnection( int fd ) noexcept;
 
 public:
-	Server( int listen_fd );
+	Server( std::string const & port );
 	~Server();
 
 	void	run();
