@@ -8,6 +8,7 @@ OBJ_DIR = build
 
 SRCS = \
 	$(SRC_DIR)/sockets/main.cpp \
+	$(SRC_DIR)/sockets/Connection.cpp \
 	$(SRC_DIR)/sockets/SocketUtils.cpp \
 	$(SRC_DIR)/sockets/Listener.cpp \
 	$(SRC_DIR)/sockets/EventLoop.cpp
