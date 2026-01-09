@@ -1,6 +1,6 @@
 #include "../includes/sockets/main.hpp"
 #include "../includes/sockets/Listener.hpp"
-#include "../includes/sockets/EventLoop.hpp"
+#include "../includes/sockets/Server.hpp"
 
 int	main( void )
 {
@@ -20,9 +20,9 @@ int	main( void )
 
 	try
 	{
-		EventLoop	eventLoop(listener.getListenFd());
+		Server	Server(listener.getListenFd());
 
-		eventLoop.run();
+		Server.run();
 	}
 	catch(const std::exception& e)
 	{

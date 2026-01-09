@@ -22,7 +22,7 @@
 #include "Connection.hpp"
 #include "Poller.hpp"
 
-class EventLoop
+class Server
 {
 private:
 	Poller						_poller;
@@ -39,8 +39,8 @@ private:
 	void					closeConnection( int fd ) noexcept;
 
 public:
-	EventLoop( int listen_fd );
-	~EventLoop();
+	Server( int listen_fd );
+	~Server();
 
 	void	run();
 };

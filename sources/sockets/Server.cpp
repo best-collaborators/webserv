@@ -1,8 +1,8 @@
-#include "../includes/sockets/EventLoop.hpp"
+#include "../includes/sockets/Server.hpp"
 #include "../includes/sockets/SocketUtils.hpp"
 #include "Poller.hpp"
 
-EventLoop::EventLoop( int listen_fd ) : _listen_fd(listen_fd)
+Server::Server( int listen_fd ) : _listen_fd(listen_fd)
 {
 	if (_poller.add(_listen_fd, EPOLLIN) == false)
 	{
@@ -12,10 +12,10 @@ EventLoop::EventLoop( int listen_fd ) : _listen_fd(listen_fd)
 	std::cout << "[epoll] Added _listen_fd " << _listen_fd << " (EPOLLIN)." << std::endl;
 }
 
-EventLoop::~EventLoop()
+Server::~Server()
 {}
 
-void	EventLoop::run()
+void	Server::run()
 {
 	std::cout << "\n[accept] Waiting for connection..." << std::endl;
 
@@ -44,7 +44,7 @@ void	EventLoop::run()
 	}
 }
 
-bool	EventLoop::acceptNewConnection( int & connection_fd )
+bool	Server::acceptNewConnection( int & connection_fd )
 {
 	sockaddr_storage	connection_address {};
 	socklen_t			connection_address_size {};
@@ -70,7 +70,7 @@ bool	EventLoop::acceptNewConnection( int & connection_fd )
 	return true;
 }
 
-void	EventLoop::registerNewConnection( int & fd ) noexcept
+void	Server::registerNewConnection( int & fd ) noexcept
 {
 	if (!_poller.add(fd, EPOLLIN))
 	{
@@ -85,7 +85,7 @@ void	EventLoop::registerNewConnection( int & fd ) noexcept
 	}
 }
 
-void	EventLoop::handleClientEvent( epoll_event const & event ) noexcept
+void	Server::handleClientEvent( epoll_event const & event ) noexcept
 {
 	int	fd = event.data.fd;
 
@@ -124,7 +124,7 @@ void	EventLoop::handleClientEvent( epoll_event const & event ) noexcept
 	}
 }
 
-void	EventLoop::registerEventToReadWrite( int fd ) noexcept
+void	Server::registerEventToReadWrite( int fd ) noexcept
 {
 	if (_poller.mod(fd, EPOLLIN | EPOLLOUT) == false)
 	{
@@ -136,7 +136,7 @@ void	EventLoop::registerEventToReadWrite( int fd ) noexcept
 	}
 }
 
-void	EventLoop::registerEventToReadOnly( int fd ) noexcept
+void	Server::registerEventToReadOnly( int fd ) noexcept
 {
 	if (_poller.mod(fd, EPOLLIN) == false)
 	{
@@ -148,7 +148,7 @@ void	EventLoop::registerEventToReadOnly( int fd ) noexcept
 	}
 }
 
-void	EventLoop::closeConnection( int fd ) noexcept
+void	Server::closeConnection( int fd ) noexcept
 {
 	if (fd != -1)
 	{

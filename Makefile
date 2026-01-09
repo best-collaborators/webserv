@@ -12,7 +12,7 @@ SRCS = \
 	$(SRC_DIR)/sockets/Connection.cpp \
 	$(SRC_DIR)/sockets/SocketUtils.cpp \
 	$(SRC_DIR)/sockets/Listener.cpp \
-	$(SRC_DIR)/sockets/EventLoop.cpp
+	$(SRC_DIR)/sockets/Server.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
