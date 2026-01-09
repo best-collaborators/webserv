@@ -28,20 +28,18 @@ void	EventLoop::monitor()
 
 		for (int i = 0; i < event_count; ++i)
 		{
-			if (isConnectionEvent(triggered_events[i].data.fd))
+			if (triggered_events[i].data.fd == _listen_fd)
 			{
 				int	connection_fd;
 
 				if (!acceptNewConnection(connection_fd))
 					continue;
 
-				if (!registerNewConnection(connection_fd))
-					continue;
+				registerNewConnection(connection_fd);
 			}
 			else
 			{
-				if (!handleClientEvent(triggered_events[i]))
-					continue;
+				handleClientEvent(triggered_events[i]);
 			}
 		}
 	}
@@ -86,11 +84,6 @@ int		EventLoop::monitorEvents( int & event_count )
 	return true;
 }
 
-bool	EventLoop::isConnectionEvent( int fd ) const
-{
-	return fd == _listen_fd;
-}
-
 bool	EventLoop::acceptNewConnection( int & connection_fd )
 {
 	sockaddr_storage	connection_address {};
@@ -117,147 +110,123 @@ bool	EventLoop::acceptNewConnection( int & connection_fd )
 	return true;
 }
 
-bool	EventLoop::registerNewConnection( int & connection_fd )
+void	EventLoop::registerNewConnection( int & fd ) noexcept
 {
 	epoll_event	client_event {};
+
 	client_event.events = EPOLLIN;
-	client_event.data.fd = connection_fd;
+	client_event.data.fd = fd;
 
-	int epoll_ctl_status = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, connection_fd, &client_event);
+	int status = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, fd, &client_event);
 
-	if (epoll_ctl_status == -1)
+	if (status == -1)
 	{
-		std::cerr << "[epoll] EPOLL_CTL_ADD connection_fd " << connection_fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
-		return false;
+		std::cerr << "[epoll] EPOLL_CTL_ADD fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
+		close(fd);
 	}
+	else
+	{
+		Connection	connection(fd);
 
-	std::cout << "[epoll] Register new connection " << connection_fd << " (EPOLLIN)." << std::endl;
-	return true;
+		connections.insert({ fd, connection });
+		std::cout << "[epoll] Register new connection " << fd << " (EPOLLIN)." << std::endl;
+	}
 }
 
-bool	EventLoop::handleClientEvent( epoll_event & event )
+void	EventLoop::handleClientEvent( epoll_event & event ) noexcept
 {
+	int	fd = event.data.fd;
+
 	if (event.events & EPOLLIN)
 	{
-		std::cout << "\n[io] EPOLLIN triggered for fd " << event.data.fd << std::endl;
-		std::cout << "[io] recv() starting..." << std::endl;
-		char	buffer[READ_BUFFER_SIZE];
-		int		received_bytes = recv(event.data.fd, buffer, sizeof(buffer), 0);
-		std::cout << "[io] recv() completed." << std::endl;
+		IoState state = connections.find(fd).receiveData();
 
-		if (received_bytes == 0)
+		if (state == IoState::Error || state == IoState::Closed)
 		{
-			std::cout << "[io] Peer closed fd " << event.data.fd << "." << std::endl;
-			close(event.data.fd);
-			return false;
+			closeConnection(fd);
+			return;
 		}
-		else if (received_bytes < 0)
+		else if (state == IoState::Ready)
 		{
-			// n < 0: Treat this as a "Spurious Wakeup" or "Wait State" and return to the loop.
-			// Note: Since the socket was marked readable, this shouldn't happen often. Without errno, you have to assume the connection is still alive but temporarily unavailable, or treat it as a fatal error depending on your tolerance.
-			std::cerr << "[io] recv() error." << std::endl;
-			return false;
-		}
-		else if (received_bytes > 0)
-		{
-			if (received_bytes < READ_BUFFER_SIZE)
-			{
-				std::cout << "[io] Request received (complete)." << std::endl;
-			}
-			else if (received_bytes == READ_BUFFER_SIZE)
-			{
-				std::cout << "[io] Request received (partial buffer)." << std::endl;
-			}
-			std::cout << "\n[io] received_bytes: " << received_bytes << "\n[io] buffer_len: " << strlen(buffer) << "\n===============\n";
-			std::string buff = buffer;
-			std::cout << buff.substr(0, received_bytes) << "===============" << std::endl;
-
-			epoll_event	ev {};
-
-			ev.events = EPOLLIN | EPOLLOUT;
-			ev.data.fd = event.data.fd;
-
-			int mod_status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, event.data.fd, &ev);
-			if (mod_status == -1)
-			{
-				int	errsv = errno;
-				std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN|EPOLLOUT for fd " << event.data.fd << " failed (" << errsv << "): " << strerror(errsv) << std::endl;
-				// return 1; //! Clean fds
-				return false;
-			}
-			else
-			{
-				std::cout << "[epoll] Updated fd " << event.data.fd << " to EPOLLIN|EPOLLOUT." << std::endl;
-			}
+			registerEventToReadWrite(fd);
 		}
 	}
 	if (event.events & EPOLLOUT)
 	{
-		std::cout << "\n[io] EPOLLOUT triggered for fd " << event.data.fd << std::endl;
-		std::string body =
-			"<html>\n"
-			"<head><title>200 OK</title></head>\n"
-			"<body>\n"
-			"<center><h1>200 OK</h1></center>\n"
-			"</body>\n"
-			"</html>\n";
+		IoState state = connections.find(fd).sendData();
 
-		std::string headers =
-			"HTTP/1.1 200 OK\r\n"
-			"Content-Type: text/html\r\n"
-			"Content-Length: " + std::to_string(body.size()) + "\r\n"
-			"Connection: keep-alive\r\n"
-			"\r\n";
-
-		std::string msg = headers + body;
-
-		std::cout << "[io] send() starting..." << std::endl;
-		ssize_t sent_bytes = send(event.data.fd, msg.c_str(), msg.length(), 0);
-		std::cout << "[io] send() completed." << std::endl;
-
-		if (sent_bytes == static_cast<ssize_t>(msg.length()))
+		if (state == IoState::Error || state == IoState::Closed)
 		{
-			std::cout << "[io] Response sent (complete)." << std::endl;
+			closeConnection(fd);
+			return;
 		}
-		else if (sent_bytes <= 0)
+		else if (state == IoState::Ready)
 		{
-			std::cout << "[io] Send failed or would block." << std::endl;
-		}
-		else if (sent_bytes < static_cast<ssize_t>(msg.length()))
-		{
-			std::cout << "[io] Response sent partially." << std::endl;
-		}
-
-		if (sent_bytes == static_cast<ssize_t>(msg.length()))
-		{
-			epoll_event	ev {};
-
-			ev.events = EPOLLIN;
-			ev.data.fd = event.data.fd;
-
-			int mod_status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, event.data.fd, &ev);
-			if (mod_status == -1)
-			{
-				int	errsv = errno;
-				std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN for fd " << event.data.fd << " failed (" << errsv << "): " << strerror(errsv) << std::endl;
-				// return 1; //! Clean fds
-				return false;
-			}
-			else
-			{
-				std::cout << "[epoll] Updated fd " << event.data.fd << " to EPOLLIN only." << std::endl;
-			}
+			registerEventToReadOnly(fd);
 		}
 	}
-	if (event.events & EPOLLERR)
+	if (event.events & EPOLLERR || event.events & EPOLLHUP)
 	{
-		std::cout << "[io] EPOLLERR on fd " << event.data.fd << std::endl;
-		close(event.data.fd);
+		std::cout << "[io] EPOLLERR or EPOLLHUP on fd " << event.data.fd << std::endl;
+		closeConnection(event.data.fd);
 	}
-	if (event.events & EPOLLHUP)
+}
+
+void	EventLoop::registerEventToReadWrite( int fd ) noexcept
+{
+	epoll_event	event {};
+
+	event.events = EPOLLIN | EPOLLOUT;
+	event.data.fd = fd;
+
+	int status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
+
+	if (status == -1)
 	{
-		std::cout << "[io] EPOLLHUP on fd " << event.data.fd << std::endl;
-		close(event.data.fd);
+		std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN|EPOLLOUT for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
+		closeConnection(fd);
 	}
-	return true;
+	else
+	{
+		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN|EPOLLOUT." << std::endl;
+	}
+}
+
+void	EventLoop::registerEventToReadOnly( int fd ) noexcept
+{
+	epoll_event	event {};
+
+	event.events = EPOLLIN;
+	event.data.fd = fd;
+
+	int	status = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
+
+	if (status == -1)
+	{
+		std::cerr << "[epoll] EPOLL_CTL_MOD to EPOLLIN for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
+		closeConnection(fd);
+	}
+	else
+	{
+		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN only." << std::endl;
+	}
+}
+
+void	EventLoop::closeConnection( int fd ) noexcept
+{
+	if (fd != -1)
+	{
+		int	status = epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+		
+		if (status == -1)
+		{
+			std::cerr << "[epoll] EPOLL_CTL_DELL for fd " << fd << " failed (" << errno << "): " << strerror(errno) << std::endl;
+		}
+		else
+		{
+			close(fd);
+			connections.erase(fd);
+			std::cout << "[connection] Closed and removed fd " << fd << std::endl;
+		}
+	}
 }

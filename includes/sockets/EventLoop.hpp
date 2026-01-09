@@ -17,27 +17,34 @@
 // fcntl, F_SETFL, O_NONBLOCK
 #include <fcntl.h>
 
+#include <map>
+
+#include "Connection.hpp"
+
 class EventLoop
 {
 private:
-	static constexpr int	MAX_TRIGGERED_EVENTS = 10;
-	static constexpr int	TIMEOUT = -1;
-	static constexpr int	READ_BUFFER_SIZE = 4096;
+	static constexpr int		MAX_TRIGGERED_EVENTS = 10;
+	static constexpr int		TIMEOUT = -1;
 
-	int	const				_listen_fd;
-	int						_epoll_fd;
-	epoll_event				triggered_events[MAX_TRIGGERED_EVENTS];
+	int	const					_listen_fd;
+	int							_epoll_fd;
+	epoll_event					triggered_events[MAX_TRIGGERED_EVENTS];
+	std::map<int, Connection>	connections;
 
 	void					createEpollInstance();
 	void					registerListenSocket();
 
 	int						monitorEvents( int & event_count );
 
-	bool					isConnectionEvent( int fd ) const;
 	bool					acceptNewConnection( int & connection_fd );
-	bool					registerNewConnection( int & connection_fd );
-	bool					handleClientEvent( epoll_event & event );
+	void					registerNewConnection( int & fd ) noexcept;
+	void					handleClientEvent( epoll_event & event ) noexcept;
 
+	void					registerEventToReadWrite( int fd ) noexcept;
+	void					registerEventToReadOnly( int fd ) noexcept;
+
+	void					closeConnection( int fd ) noexcept;
 public:
 	EventLoop( int listen_fd );
 	~EventLoop();
