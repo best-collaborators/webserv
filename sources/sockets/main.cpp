@@ -4,6 +4,8 @@
 
 int	main( void )
 {
+	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
+
 	Listener	listener(PORT);
 
 	try
