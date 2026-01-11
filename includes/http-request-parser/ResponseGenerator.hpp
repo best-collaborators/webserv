@@ -1,3 +1,6 @@
+#ifndef RESPONSE_GENERATOR_HPP
+#define RESPONSE_GENERATOR_HPP
+
 #include <cstring>
 #include <string>
 #include <iostream>
@@ -30,3 +33,5 @@ class ResponseGenerator
 		void form_reponse(bool is_a_file);
 		void form_reponse();
 };
+
+#endif /* RESPONSE_GENERATOR_HPP */

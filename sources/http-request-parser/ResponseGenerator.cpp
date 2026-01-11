@@ -187,7 +187,7 @@ void ResponseGenerator::form_reponse()
 		_length = buffer.size();
 	}
 
-	std::string response_file = "./sources/http-request-parser/test_http_response.txt";
+	std::string response_file = "./tests/test_http_response.txt";
 	std::ofstream ofs(response_file);
 	if (!ofs)
 	{

@@ -25,7 +25,5 @@ int main()
 	ResponseGenerator responseGenerator(status_code, root + http_request_values["request-target"], "application/text", http_request_values["method"], true);
 	responseGenerator.form_reponse();
 
-	RequestParser::MultipartFormData("Fasfas", "fsafsafsa");
-
 	return status_code > 400 ? 1 : 0;
 }
