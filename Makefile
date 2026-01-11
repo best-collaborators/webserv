@@ -10,6 +10,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/main.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
 	$(SRC_DIR)/http-request-parser/ResponseGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
