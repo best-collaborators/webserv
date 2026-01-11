@@ -4,7 +4,10 @@ Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 {
 	int status = epoll_create1(EPOLL_CLOEXEC); //! Check for forks
 
-	SocketUtils::checkStatus(status, "[epoll] epoll_create failed");
+	if (status == -1)
+	{
+		throw std::system_error(errno, std::generic_category(), "[epoll] epoll_create failed");
+	}
 
 	_epoll_fd = status;
 
@@ -13,7 +16,12 @@ Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 
 Poller::~Poller()
 {
-	SocketUtils::safeCloseFD(_epoll_fd);
+	if (_epoll_fd != -1)
+	{
+		while (close(_epoll_fd) == -1 && errno == EINTR) {}
+
+		_epoll_fd = -1;
+	}
 }
 
 int		Poller::wait()

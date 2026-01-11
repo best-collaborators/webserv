@@ -1,5 +1,4 @@
 #include "../includes/sockets/Server.hpp"
-#include "../includes/sockets/SocketUtils.hpp"
 #include "Poller.hpp"
 
 Server::Server( std::string const & port ) : _listener(port), _poller()
@@ -89,6 +88,7 @@ void	Server::handleClientEvent( epoll_event const & event ) noexcept
 {
 	int	fd = event.data.fd;
 
+	//! Return to handling of events (event.events & EPOLLERR || event.events & EPOLLHUP)
 	if (event.events & EPOLLIN)
 	{
 		IoState state = connections.at(fd).receiveData();
@@ -150,13 +150,10 @@ void	Server::registerEventToReadOnly( int fd ) noexcept
 
 void	Server::closeConnection( int fd ) noexcept
 {
-	if (fd != -1)
+	if (_poller.del(fd))
 	{
-		if (_poller.del(fd))
-		{
-			close(fd);
-			connections.erase(fd);
-			std::cout << "[connection] Closed and removed fd " << fd << std::endl;
-		}
+		close(fd);
+		connections.erase(fd);
+		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
 	}
 }

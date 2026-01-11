@@ -11,7 +11,6 @@ SRCS = \
 	$(SRC_DIR)/sockets/Socket.cpp \
 	$(SRC_DIR)/sockets/Poller.cpp \
 	$(SRC_DIR)/sockets/Connection.cpp \
-	$(SRC_DIR)/sockets/SocketUtils.cpp \
 	$(SRC_DIR)/sockets/Listener.cpp \
 	$(SRC_DIR)/sockets/Server.cpp
 
