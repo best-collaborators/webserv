@@ -51,12 +51,16 @@ void	Listener::setupSocket( addrinfo const * address )
 {
 	_socket.create(address);
 
-	_socket.setNonBlocking();
 	_socket.setAddressReuse();
 	if (address->ai_family == AF_INET6)
 		_socket.setDualStack();
 
 	_socket.bind(address);
+}
+
+Socket	Listener::accept()
+{
+	return _socket.accept();
 }
 
 int	Listener::getFD() const

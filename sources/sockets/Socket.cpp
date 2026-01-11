@@ -3,31 +3,43 @@
 Socket::Socket() : _fd(-1)
 {}
 
+Socket::Socket( int fd ) : _fd(fd)
+{
+	_setNonBlocking();
+}
+
+Socket::Socket( Socket && other ) noexcept : _fd(other._fd) 
+{
+	other._fd = -1;
+}
+
+Socket &	Socket::operator=( Socket && other ) noexcept
+{
+	if (this != &other)
+	{
+		_safeClose();
+		_fd = other._fd;
+		other._fd = -1;
+	}
+	return *this;
+}
+
 Socket::~Socket()
 {
-	_safeClose(_fd);
+	_safeClose();
 }
 
 void	Socket::create( addrinfo const * address )
 {
-	_safeClose(_fd);
+	_safeClose();
 
 	_fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 	_checkStatus(_fd, "[socket] socket() failed");
 
+	_setNonBlocking();
+
 	std::cout << "[socket] Socket created." << std::endl;
-}
-
-void	Socket::setNonBlocking()
-{
-	int	flags = fcntl(_fd, F_GETFL, 0);
-
-	_checkStatus(flags, "[socket] fcntl(F_GETFL) failed");
-
-	int	status = fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
-
-	_checkStatus(status, "[socket] fcntl(O_NONBLOCK) failed");
 }
 
 void	Socket::setAddressReuse()
@@ -62,12 +74,21 @@ void	Socket::listen()
 	_checkStatus(status, "[socket] listen() failed");
 }
 
-void	Socket::_checkStatus( int status, std::string const &message )
+Socket	Socket::accept()
 {
-	if (status == -1)
+	sockaddr_storage	connection_address {};
+	socklen_t			connection_address_size {};
+
+	int	fd = ::accept(_fd, reinterpret_cast<sockaddr *>(&connection_address), &connection_address_size);
+	std::cout << "[accept] accept() returned." << std::endl;
+
+	if (fd == - 1)
 	{
-		throw std::system_error(errno, std::generic_category(), message);
+		std::cerr << "[accept] Failed (" << errno << "): " << strerror(errno) << std::endl;
+		return Socket();
 	}
+
+	return Socket(fd);
 }
 
 int	Socket::getFD() const
@@ -75,12 +96,47 @@ int	Socket::getFD() const
 	return _fd;
 }
 
-void	Socket::_safeClose( int & fd ) noexcept
+bool	Socket::isHealthy() const noexcept
 {
-	if (fd != -1)
-	{
-		while (close(fd) == -1 && errno == EINTR) {}
+	int			error = 0;
+	socklen_t	len = sizeof(error);
 
-		fd = -1;
+	if (!getsockopt(_fd, SOL_SOCKET, SO_ERROR, &error, &len))
+	{
+		if (error == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void	Socket::_setNonBlocking()
+{
+	int	flags = fcntl(_fd, F_GETFL, 0);
+
+	_checkStatus(flags, "[socket] fcntl(F_GETFL) failed");
+
+	int	status = fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+
+	_checkStatus(status, "[socket] fcntl(O_NONBLOCK) failed");
+}
+
+void	Socket::_safeClose() noexcept
+{
+	if (_fd != -1)
+	{
+		while (close(_fd) == -1 && errno == EINTR) {}
+
+		_fd = -1;
+	}
+}
+
+void	Socket::_checkStatus( int status, std::string const &message ) const
+{
+	if (status == -1)
+	{
+		throw std::system_error(errno, std::generic_category(), message);
 	}
 }

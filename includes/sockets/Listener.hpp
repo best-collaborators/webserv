@@ -1,6 +1,9 @@
 #pragma once
 
+#include <netdb.h>
+
 #include <memory>
+#include <iostream>
 
 #include "Socket.hpp"
 
@@ -16,9 +19,18 @@ private:
 	void				setupSocket( addrinfo const * address );
 
 public:
+	Listener() = delete;
 	Listener( std::string const & port );
+
+	Listener( Listener const & ) = delete;
+	Listener & operator=( Listener const & ) = delete;
+
+	Listener( Listener && ) noexcept = delete;
+	Listener & operator=( Listener && ) noexcept = delete;
+
 	~Listener() = default;
 
-	int					getFD() const;
+	Socket	accept();
+	int		getFD() const;
 };
 

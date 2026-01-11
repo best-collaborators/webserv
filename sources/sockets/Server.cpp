@@ -11,9 +11,6 @@ Server::Server( std::string const & port ) : _listener(port), _poller()
 	std::cout << "[epoll] Added listen_fd " << _listener.getFD() << " (EPOLLIN)." << std::endl;
 }
 
-Server::~Server()
-{}
-
 void	Server::run()
 {
 	std::cout << "\n[accept] Waiting for connection..." << std::endl;
@@ -24,136 +21,85 @@ void	Server::run()
 
 		for (int i = 0; i < event_count; ++i)
 		{
-			epoll_event const & event = _poller.getEvent(i);
+			epoll_event const &	event = _poller.getEvent(i);
 
 			if (event.data.fd == _listener.getFD())
-			{
-				int	connection_fd;
-
-				if (!acceptNewConnection(connection_fd))
-					continue;
-
-				registerNewConnection(connection_fd);
-			}
+				acceptConnection();
 			else
-			{
-				handleClientEvent(event);
-			}
+				handleEvent(event);
 		}
 	}
 }
 
-bool	Server::acceptNewConnection( int & connection_fd )
+void	Server::acceptConnection()
 {
-	sockaddr_storage	connection_address {};
-	socklen_t			connection_address_size {};
+	Socket	client = _listener.accept();
+	int		client_fd = client.getFD();
 
-	connection_fd = accept(_listener.getFD(), (sockaddr *)&connection_address, &connection_address_size);
-	std::cout << "[accept] accept() returned." << std::endl;
+	if (client_fd == -1)
+		return;
 
-	if (connection_fd == - 1)
-	{
-		std::cerr << "[accept] Failed (" << errno << "): " << strerror(errno) << std::endl;
-		return false;
-	}
+	std::cout << "[accept] New connection fd " << client_fd << std::endl;
 
-	int status = fcntl(connection_fd, F_SETFL, O_NONBLOCK);
+	if (!_poller.add(client_fd, EPOLLIN))
+		return;
 
-	if (status == -1)
-	{
-		std::cerr << "[accept] fcntl(O_NONBLOCK) failed (" << errno << "): " << strerror(errno) << std::endl;
-		return false;
-	}
-
-	std::cout << "[accept] New connection fd " << connection_fd << std::endl;
-	return true;
+	_connections.emplace(client_fd, std::move(client));
+	std::cout << "[epoll] Register new connection " << client_fd << " (EPOLLIN)." << std::endl;
 }
 
-void	Server::registerNewConnection( int & fd ) noexcept
-{
-	if (!_poller.add(fd, EPOLLIN))
-	{
-		close(fd);
-	}
-	else
-	{
-		Connection	connection(fd);
-
-		connections.insert({ fd, connection });
-		std::cout << "[epoll] Register new connection " << fd << " (EPOLLIN)." << std::endl;
-	}
-}
-
-void	Server::handleClientEvent( epoll_event const & event ) noexcept
+void	Server::handleEvent( epoll_event const & event ) noexcept
 {
 	int	fd = event.data.fd;
 
-	//! Return to handling of events (event.events & EPOLLERR || event.events & EPOLLHUP)
-	if (event.events & EPOLLIN)
-	{
-		IoState state = connections.at(fd).receiveData();
+	if (isConnected(fd) == false)
+		return;
 
-		if (state == IoState::Error || state == IoState::Closed)
-		{
-			closeConnection(fd);
-			return;
-		}
-		else if (state == IoState::Ready)
-		{
-			registerEventToReadWrite(fd);
-		}
-	}
-	if (event.events & EPOLLOUT)
-	{
-		IoState state = connections.at(fd).sendData();
+	Connection &	connection = _connections.at(fd);
 
-		if (state == IoState::Error || state == IoState::Closed)
-		{
-			closeConnection(fd);
-			return;
-		}
-		else if (state == IoState::Ready)
-		{
-			registerEventToReadOnly(fd);
-		}
-	}
-	if (event.events & EPOLLERR || event.events & EPOLLHUP)
+	IoState	state = connection.processEvents(event.events);
+
+	switch (state)
 	{
-		std::cout << "[io] EPOLLERR or EPOLLHUP on fd " << event.data.fd << std::endl;
-		closeConnection(event.data.fd);
+	case IoState::Error:
+	case IoState::Closed:
+		std::cout << "[io] EPOLLERR or EPOLLHUP on fd " << fd << std::endl;
+		closeConnection(fd);
+		break;
+	case IoState::Received:
+		modifyEvent(fd, EPOLLIN | EPOLLOUT);
+		break;
+	case IoState::Sent:
+		modifyEvent(fd, EPOLLIN);
+		break;
+	default:
+		break;
 	}
 }
 
-void	Server::registerEventToReadWrite( int fd ) noexcept
+void	Server::modifyEvent( int fd, uint32_t events ) noexcept
 {
-	if (_poller.mod(fd, EPOLLIN | EPOLLOUT) == false)
+	if (_poller.mod(fd, events) == false)
 	{
 		closeConnection(fd);
 	}
 	else
 	{
-		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN | EPOLLOUT." << std::endl;
+		std::cout << "[epoll] Updated fd " << fd << " to " << events << "." << std::endl;
 	}
 }
 
-void	Server::registerEventToReadOnly( int fd ) noexcept
+bool	Server::isConnected( int fd ) const noexcept
 {
-	if (_poller.mod(fd, EPOLLIN) == false)
-	{
-		closeConnection(fd);
-	}
-	else
-	{
-		std::cout << "[epoll] Updated fd " << fd << " to EPOLLIN only." << std::endl;
-	}
+	return _connections.count(fd) > 0;
 }
 
 void	Server::closeConnection( int fd ) noexcept
 {
-	if (_poller.del(fd))
+	if (_poller.del(fd) == true)
 	{
-		close(fd);
-		connections.erase(fd);
+		_connections.erase(fd);
+
 		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
 	}
 }

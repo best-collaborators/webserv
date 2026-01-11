@@ -28,20 +28,25 @@ class Server
 private:
 	Listener					_listener;
 	Poller						_poller;
-	std::map<int, Connection>	connections;
+	std::map<int, Connection>	_connections;
 
-	bool					acceptNewConnection( int & connection_fd );
-	void					registerNewConnection( int & fd ) noexcept;
-	void					handleClientEvent( epoll_event const & event ) noexcept;
-
-	void					registerEventToReadWrite( int fd ) noexcept;
-	void					registerEventToReadOnly( int fd ) noexcept;
-
+	void					acceptConnection();
+	void					handleEvent( epoll_event const & event ) noexcept;
+	void					modifyEvent( int fd, uint32_t events ) noexcept;
+	bool					isConnected( int fd ) const noexcept;
 	void					closeConnection( int fd ) noexcept;
 
 public:
+	Server() = delete;
 	Server( std::string const & port );
-	~Server();
+
+	Server( Server const & ) = delete;
+	Server & operator=( Server const & ) = delete;
+
+	Server( Server && ) noexcept = delete;
+	Server & operator=( Server && ) noexcept = delete;
+
+	~Server() = default;
 
 	void	run();
 };
