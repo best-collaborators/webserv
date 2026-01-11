@@ -19,8 +19,13 @@ private:
 
 public:
 	Poller();
+
 	Poller( Poller const & ) = delete;
 	Poller & operator=( Poller const & ) = delete;
+
+	Poller( Poller && ) noexcept = delete;
+	Poller & operator=( Poller && ) noexcept = delete;
+
 	~Poller();
 
 	int		wait();

@@ -16,7 +16,7 @@ Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 
 Poller::~Poller()
 {
-	if (_epoll_fd != -1)
+	if (_epoll_fd != -1) //! Replace with safe close fd
 	{
 		while (close(_epoll_fd) == -1 && errno == EINTR) {}
 
