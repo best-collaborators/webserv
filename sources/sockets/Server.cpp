@@ -52,7 +52,7 @@ void	Server::handleEvent( epoll_event const & event ) noexcept
 {
 	int	fd = event.data.fd;
 
-	if (isConnected(fd) == false)
+	if (!_connections.count(fd))
 		return;
 
 	Connection &	connection = _connections.at(fd);
@@ -87,11 +87,6 @@ void	Server::modifyEvent( int fd, uint32_t events ) noexcept
 	{
 		std::cout << "[epoll] Updated fd " << fd << " to " << events << "." << std::endl;
 	}
-}
-
-bool	Server::isConnected( int fd ) const noexcept
-{
-	return _connections.count(fd) > 0;
 }
 
 void	Server::closeConnection( int fd ) noexcept

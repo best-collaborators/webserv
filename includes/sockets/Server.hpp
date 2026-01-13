@@ -2,15 +2,6 @@
 
 #include <iostream>
 
-//send, sockaddr_storage, recv, accept, sockaddr
-#include <sys/socket.h>
-
-// strlen, strerror
-#include <cstring>
-
-// close
-#include <unistd.h>
-
 // epoll_create1, epoll_ctl, epoll_wait, epoll_event, EPOLLIN, EPOLL_CTL_ADD
 #include <sys/epoll.h>
 
@@ -33,7 +24,6 @@ private:
 	void					acceptConnection();
 	void					handleEvent( epoll_event const & event ) noexcept;
 	void					modifyEvent( int fd, uint32_t events ) noexcept;
-	bool					isConnected( int fd ) const noexcept;
 	void					closeConnection( int fd ) noexcept;
 
 public:

@@ -18,6 +18,7 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 		if (state != IoState::Pending)
 			return state;
 	}
+
 	if (events & EPOLLOUT)
 	{
 		IoState state = _sendData();
