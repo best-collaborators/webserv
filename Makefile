@@ -13,6 +13,8 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/Trimmer.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartFormData.cpp \
+	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
+	$(SRC_DIR)/http-request-parser/ValidatorHelpers.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

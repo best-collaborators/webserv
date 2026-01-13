@@ -49,6 +49,5 @@ void MultipartFormData::set_content(const std::string &content) {
 }
 
 void MultipartFormData::append_content(const std::string &content, std::streamsize size) {
-	// if (!content.empty())
-		_content.append(content + "\n", _content.size(), size);
+	_content.append(content + "\n", _content.size(), size);
 }

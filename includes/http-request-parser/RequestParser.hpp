@@ -10,7 +10,10 @@
 #include <iostream>
 #include <fstream>
 
+#include <string_view> 
+
 #include "MultipartFormData.hpp"
+#include "MultipartDataValidator.hpp"
 #include "RequestGenerator.hpp"
 #include "Trimmer.hpp"
 
@@ -44,11 +47,11 @@ class RequestParser {
 		bool is_valid_header();
 		int content_length_validation();
 
-		int parse_multipart_form();
-		std::string get_multipart_form_boundary();
+		uint validate_request_headers();
+		uint validate_request_body();
 
-		bool check_multipart_content_type(MultipartFormData &multipart_form_data);
-		bool check_multipart_header(MultipartFormData &multipart_form_data);
+		int parse_multipart_form();
+
 
 		std::string cut_after_new_line(std::string &line);
 };
