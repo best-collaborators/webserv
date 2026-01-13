@@ -23,7 +23,7 @@ class ResponseGenerator
 
 		std::string get_file_last_modified_date(const char *filename);
 		std::_Put_time<char> get_date_GMT();
-		std::string serve_html_error_page(std::string errmsg);
+		std::string serve_html_webserv_page(std::string errmsg);
 		std::string serve_html_success_page(std::string message);
 		std::string create_body();
 

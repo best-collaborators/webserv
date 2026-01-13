@@ -18,120 +18,30 @@ std::_Put_time<char> ResponseGenerator::get_date_GMT()
 	return std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT");
 }
 
-std::string ResponseGenerator::serve_html_error_page(std::string errmsg)
+std::string ResponseGenerator::serve_html_webserv_page(std::string msg)
 {
-	std::string str(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)));
+	std::string status_code_message(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)));
 
 	return "<!DOCTYPE html>\n"
 			"<html lang=\"en\">\n"
 			"<head>\n"
 			"	<meta charset=\"UTF-8\">\n"
-			"	<title>Error</title>\n"
-			"	<style>\n"
-			"		body {\n"
-			"			font-family: Arial, sans-serif;\n"
-			"			background-color: #f8f9fa;\n"
-			"			color: #333;\n"
-			"			text-align: center;\n"
-			"			padding: 50px;\n"
-			"		}\n"
-			"		h1 {\n"
-			"			font-size: 72px;\n"
-			"			margin: 0;\n"
-			"			color: #e74c3c;\n"
-			"		}\n"
-			"		h2 {\n"
-			"			font-size: 24px;\n"
-			"			margin: 10px 0 20px 0;\n"
-			"		}\n"
-			"		p {\n"
-			"			font-size: 16px;\n"
-			"			color: #555;\n"
-			"		}\n"
-			"		a {\n"
-			"			color: #3498db;\n"
-			"			text-decoration: none;\n"
-			"		}\n"
-			"		a:hover {\n"
-			"			text-decoration: underline;\n"
-			"		}\n"
-			"		.container {\n"
-			"			display: inline-block;\n"
-			"			text-align: left;\n"
-			"		}\n"
-			"	</style>\n"
+			"	<title>" + std::to_string(_status_code) + " " + status_code_message + "</title>\n"
 			"</head>\n"
 			"<body>\n"
-			"<div class=\"container\">\n"
-			"	<h1>" + std::to_string(_status_code) + "</h1>\n"
-			"	<h2>" + str + "</h2>\n"
-			"	<p>" + errmsg + "</p>\n"
-			"	<p><a href=\"/\">Return to Home</a></p>\n"
-			"</div>\n"
+			"	<center><h1>" + std::to_string(_status_code) + " " + status_code_message + "</h1></center>\n"
+			"	<hr><center>webserv/42.0.0</center>"
+			"	<p>" + msg + "</p>\n"
 			"</body>\n"
 			"</html>\n";
-}
-
-std::string ResponseGenerator::serve_html_success_page(std::string message)
-{
-	std::string str(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)));
-
-	return "<!DOCTYPE html>\n"
-		"<html lang=\"en\">\n"
-		"<head>\n"
-		"    <meta charset=\"UTF-8\">\n"
-		"    <title>Success</title>\n"
-		"    <style>\n"
-		"        body {\n"
-		"            font-family: Arial, sans-serif;\n"
-		"            background-color: #e9f7ef;\n"
-		"            color: #2c3e50;\n"
-		"            text-align: center;\n"
-		"            padding: 50px;\n"
-		"        }\n"
-		"        h1 {\n"
-		"            font-size: 72px;\n"
-		"            margin: 0;\n"
-		"            color: #27ae60;\n"
-		"        }\n"
-		"        h2 {\n"
-		"            font-size: 24px;\n"
-		"            margin: 10px 0 20px 0;\n"
-		"        }\n"
-		"        p {\n"
-		"            font-size: 16px;\n"
-		"            color: #555;\n"
-		"        }\n"
-		"        a {\n"
-		"            color: #2980b9;\n"
-		"            text-decoration: none;\n"
-		"        }\n"
-		"        a:hover {\n"
-		"            text-decoration: underline;\n"
-		"        }\n"
-		"        .container {\n"
-		"            display: inline-block;\n"
-		"            text-align: left;\n"
-		"        }\n"
-		"    </style>\n"
-		"</head>\n"
-		"<body>\n"
-		"<div class=\"container\">\n"
-		"    <h1>✓</h1>\n"
-		"    <h2>" + str + "</h2>\n"
-		"    <p>" + message + "</p>\n"
-		"    <p><a href=\"/\">Return to Home</a></p>\n"
-		"</div>\n"
-		"</body>\n"
-		"</html>\n";
 }
 
 std::string ResponseGenerator::create_body()
 {
 	if (!_is_a_file) return "";
-	if (_status_code > 300) return serve_html_error_page("Sorry.");
-	if (_method == "POST") return serve_html_success_page("Success.");
-	if (_status_code == 304 || _status_code == 204) return serve_html_success_page("Other message.");
+	if (_status_code > 300) return serve_html_webserv_page("Error happend.");
+	if (_method == "POST") return serve_html_webserv_page("Successfull post.");
+	if (_status_code == 304 || _status_code == 204) return serve_html_webserv_page("Other message.");
 
 	std::ifstream ifs (_content);
 	char *buffer = nullptr;
@@ -153,7 +63,7 @@ std::string ResponseGenerator::create_body()
 				break;
 		}
 		ifs.close();
-		std::string temp = serve_html_error_page("Sorry.");
+		std::string temp = serve_html_webserv_page("Sorry.");
 		_length = temp.size();
 		return temp;
 	}

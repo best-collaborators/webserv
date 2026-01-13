@@ -17,13 +17,14 @@
 class RequestParser {
 
 	public:
-		uint get_status_code(std::string request);
-		RequestParser(std::unordered_map<std::string, std::string> &http_request_values);
+		uint get_status_code();
+		RequestParser(std::unordered_map<std::string, std::string> &http_request_values, std::string request);
 
 	private:
-		std::vector <MultipartFormData> multipartFormDatas;
-		std::string buffer;
+		std::string _buffer;
+		std::vector <MultipartFormData> _multipartFormDatas;
 		std::unordered_map<std::string, std::string> &_http_request_values;
+		std::string _request;
 
 		const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
 		const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
@@ -36,6 +37,8 @@ class RequestParser {
 		std::string get_regex_value(std::string &line, std::regex regex_method);
 
 		bool is_valid_request_line();
+		uint validate_request_line();
+
 		bool add_value_to_map(const char *regex_str, std::string errmsg, std::string key);
 
 		bool is_valid_header();
@@ -46,6 +49,8 @@ class RequestParser {
 
 		bool check_multipart_content_type(MultipartFormData &multipart_form_data);
 		bool check_multipart_header(MultipartFormData &multipart_form_data);
+
+		std::string cut_after_new_line(std::string &line);
 };
 
 #endif /* REQUEST_PARSER_HPP */
