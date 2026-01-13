@@ -1,106 +1,7 @@
 #include "RequestParser.hpp"
 
-RequestParser::MultipartFormData::MultipartFormData(std::string content_type, std::string name, std::string filename)
-: _content_type(content_type), _name(name), _filename(filename) {
-
-	std::cout << _content_type <<" "<<_name << " " << _filename << std::endl;
- }
-
- RequestParser::MultipartFormData::MultipartFormData() {}
-
 RequestParser::RequestParser(std::unordered_map<std::string, std::string> &http_request_values)
 : _http_request_values(http_request_values) { }
-
-inline std::string &RequestParser::ltrim(std::string &s)
-{
-	auto is_space = [](int c) {return std::isspace(c);};
-	auto not_space_iterator = std::find_if_not(s.begin(), s.end(), is_space);
-	s.erase(s.begin(), not_space_iterator);
-	return s;
-}
-
-void RequestParser::MultipartFormData::print_all_data()
-{
-	std::cout << "Content-Type: " << _content_type << std::endl;
-	std::cout << "Name: " << _name << std::endl;
-	std::cout << "Filename: " << _filename << std::endl;
-	std::cout << "Content: " << _content << std::endl;
-}
-
-const std::string &RequestParser::MultipartFormData::get_content_type() const {
-	return _content_type;
-}
-
-void RequestParser::MultipartFormData::set_content_type(const std::string &content_type) {
-	_content_type = content_type;
-}
-
-const std::string &RequestParser::MultipartFormData::get_name() const {
-	return _name;
-}
-
-void RequestParser::MultipartFormData::set_name(const std::string &name) {
-	_name = name;
-}
-
-const std::string &RequestParser::MultipartFormData::get_filename() const {
-	return _filename;
-}
-
-const std::string &RequestParser::MultipartFormData::get_content() const {
-	return _content;
-}
-
-void RequestParser::MultipartFormData::set_filename(const std::string &filename) {
-	_filename = filename;
-}
-
-void RequestParser::MultipartFormData::set_content(const std::string &content) {
-	_content = content;
-}
-
-void RequestParser::MultipartFormData::append_content(const std::string &content) {
-	if (!content.empty())
-		_content += content + "\n";
-}
-
-inline std::string &RequestParser::rtrim(std::string &s)
-{
-	auto is_space = [](int c) {return std::isspace(c);};
-	auto not_space_iterator = std::find_if_not(s.rbegin(), s.rend(), is_space);
-	s.erase(not_space_iterator.base(), s.end());
-	return s;
-}
-
-inline std::string &RequestParser::trim(std::string &s)
-{
-	s = ltrim(s);
-	s = rtrim(s);
-	return s;
-}
-
-inline std::string &RequestParser::ltrim(std::string &s, char delim)
-{
-	auto is_delim = [delim](int c) { return c == delim; };
-	auto not_delim_iterator = std::find_if_not(s.begin(), s.end(), is_delim);
-	s.erase(s.begin(), not_delim_iterator);
-	return s;
-}
-
-inline std::string &RequestParser::rtrim(std::string &s, char delim)
-{
-	auto is_delim = [delim](int c) {return c == delim; };
-	auto not_delim_iterator = std::find_if_not(s.rbegin(), s.rend(), is_delim);
-	s.erase(not_delim_iterator.base(), s.end());
-	return s;
-}
-
-inline std::string &RequestParser::trim(std::string &s, char delim)
-{
-	s = ltrim(s, delim);
-	s = rtrim(s, delim);
-	return s;
-}
 
 std::string RequestParser::get_regex_value(std::string &line, std::regex regex_method)
 {
@@ -132,7 +33,7 @@ bool RequestParser::add_value_to_map(
 		std::cout << errmsg << std::endl;
 		return false;
 	}
-	_http_request_values[key] = trim(method);
+	_http_request_values[key] = Trimmer::trim(method);
 	return true;
 }
 
@@ -142,10 +43,10 @@ bool RequestParser::is_valid_header()
 	std::string name = get_regex_value(buffer, reg_method);
 	if (name == "") return false;
 	
-	trim(buffer);
+	Trimmer::trim(buffer);
 	if (buffer.length() > 8192) return false;
 
-	trim(name);
+	Trimmer::trim(name);
 	name.erase(name.length() - 1);
 	std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return std::tolower(c); });
 
@@ -205,8 +106,8 @@ std::string RequestParser::get_multipart_form_boundary()
 	}
 
 	boundary = match[1];
-	trim(boundary);
-	trim(boundary, '\"');
+	Trimmer::trim(boundary);
+	Trimmer::trim(boundary, '\"');
 	if (boundary.size() > 70) {
 		return "";
 	}
@@ -219,18 +120,18 @@ std::string RequestParser::get_multipart_form_boundary()
 	return boundary;
 }
 
-bool RequestParser::check_multipart_header(RequestParser::MultipartFormData &multipart_form_data)
+bool RequestParser::check_multipart_header(MultipartFormData &multipart_form_data)
 {
 	std::regex reg("^[C,c]ontent-[D,d]isposition: form-data;\\s*name=\"(\\S{1,256})\";?\\s*(filename=\"(\\S{1,256})\")?");
 	std::smatch m;
 	if (!std::regex_search(buffer, m, reg)) { return false; }
 
 	multipart_form_data.set_name(m[1]);
-	multipart_form_data.set_filename(m[2]);
+	multipart_form_data.set_filename(m[3]);
 	return true;
 }
 
-bool RequestParser::check_multipart_content_type(RequestParser::MultipartFormData &multipart_form_data)
+bool RequestParser::check_multipart_content_type(MultipartFormData &multipart_form_data)
 {	
 	if (buffer.empty())
 	{
@@ -246,147 +147,154 @@ bool RequestParser::check_multipart_content_type(RequestParser::MultipartFormDat
 	return true;
 }
 
-uint RequestParser::get_status_code()
+std::string cut_after_new_line(std::string &line)
+{
+	size_t pos = line.find("\r\n");
+	if (pos == std::string::npos) return "";
+
+	std::string temp_buffer = line.substr(0, pos);
+
+	line.erase(0, pos + 2);
+	return temp_buffer;
+}
+
+uint RequestParser::get_status_code(std::string request)
 {
 	buffer = "";
 
-	std::string request_file = "./sources/http-request-parser/test_http_request.txt";
-	std::ifstream ifs(request_file);
-	if (ifs.fail())
-	{
-		std::cout << std::strerror(errno) << " file: " << request_file << std::endl;
-		ifs.close(); return -1;
-	}
+	if (request.empty())
+		RequestGenerator::create_post_request(request);
 
-	getline(ifs, buffer);
+	buffer = cut_after_new_line(request);
+
+	if (buffer == "") return 400;
 	if (is_valid_request_line() == false){
 		std::cerr << "400 Bad Request" << std::endl;
-		ifs.close(); return 400;
+		return 400;
 	}
 
 	if (_http_request_values["version"] != "HTTP/1.1") {
 		std::cerr << "505 HTTP Version Not Supported" << std::endl;
-		ifs.close(); return 505;
+		return 505;
 	}
 
 	if (_http_request_values["request-target"].length() > 4096){
 		std::cerr << "414 URI Too Long" << std::endl;
-		ifs.close(); return 414;
+		return 414;
 	}
 
 	if (_http_request_values["method"] != "GET"
 		&& _http_request_values["method"] != "POST"
 		&& _http_request_values["method"] != "DELETE") {
 		std::cerr << "405 Not Allowed" << std::endl;
-		ifs.close(); return 405;
+		return 405;
 	}
-
-	while (getline(ifs, buffer)) {
-
-		if (buffer == "" && ifs.good()) break;
-
+		
+	buffer = cut_after_new_line(request);
+	while (!buffer.empty()) {
+		
 		if (!is_valid_header()) {
-			std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
+			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
+
 		if (_http_request_values.size() >= 256) {
-			std::cerr << "431 Request Header Fields Too Large" << std::endl; ifs.close(); return 400;
+			std::cerr << "431 Request Header Fields Too Large" << std::endl; return 400;
 		}
+
 		if (_http_request_values.count("content-length")) {
 			if (int status_code = content_length_validation()) {
-				ifs.close(); return status_code;
+				return status_code;
 			}
 		}
+		buffer = cut_after_new_line(request);
 	}
 
 	if (_http_request_values["method"] == "POST" && !_http_request_values.count("content-length")) {
-		std::cerr << "411 Length Required" << std::endl; ifs.close(); return 411;
+		std::cerr << "411 Length Required" << std::endl; return 411;
 	}
 
 	std::string boundary;
 	if (_http_request_values["method"] == "POST" && _http_request_values["content-type"].find("multipart/form-data") != std::string::npos) {
 		boundary = get_multipart_form_boundary();
 		if (boundary.empty()) {
-			std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
+			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
 	}
 
 	//if post and content length is not 0 - error!
-	getline(ifs, buffer);
-	if (buffer == "" && ifs.bad()) {
+	if (request.size() < 3) {
 		if (_http_request_values["method"] == "POST" && _http_request_values.count("content-length")) {
 			std::cerr << "Body required!" << std::endl;
 			return 400;
 		}
-		ifs.close(); return 200;
-	}
-
-	std::vector<MultipartFormData> multipartFormDatas;
-	if (!boundary.empty())
-	{
-		while (ifs.good())
-		{
-			if (buffer == "--" + boundary) {
-
-				MultipartFormData m_data("", "", "");
-
-				getline(ifs, buffer);
-				if (!check_multipart_header(m_data)) {
-					std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
-				}
-				
-				getline(ifs, buffer);
-				if (!check_multipart_content_type(m_data)) {
-					std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
-				}
-				
-				if (!buffer.empty())
-				{
-					getline(ifs, buffer);
-					if (!buffer.empty() || (buffer.empty() && ifs.bad())) {
-						std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
-					}
-				}
-
-				do
-				{
-					if (buffer == "--" + boundary || buffer == "--" + boundary + "--" || ifs.bad()) break;
-					m_data.append_content(buffer);
-				} while (getline(ifs, buffer));
-
-				// m_data.set_content(m_data.get_content().erase(m_data.get_content().end() - 1, m_data.get_content().end()));
-				m_data.print_all_data();
-				multipartFormDatas.push_back(m_data);
-				if (buffer == "--" + boundary + "--") break;
-			}
-			else {
-				std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
-			}
-		}
-
-		getline(ifs, buffer);
-		if (!buffer.empty()) {
-			std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
-		}
-
-		getline(ifs, buffer);
-		if (ifs.eof()) {
-			std::cerr << "201 Created" << std::endl; ifs.close(); return 201;
-		}
-		std::cerr << "400 Bad Request" << std::endl; ifs.close(); return 400;
+		return 200;
 	}
 
 	std::string body;
-	while (getline(ifs, buffer))
+
+	std::string boundary_marker = "--" + boundary + "\r\n";
+	std::string closing_boundary_marker =  "--" + boundary + "--" + "\r\n";
+
+	while (request.size())
 	{
-		body += buffer + "\n";
+		if (std::memcmp(request.data(), boundary_marker.data(), boundary_marker.size()) != 0)
+		{
+			std::cerr << "Wrong header" << std::endl;
+			return 500;
+		}
+
+/* 		std::cout << "buffer |" << buffer << "|"  << "size: " << buffer.size() << std::endl;
+		std::cout << "request |" << request << "|"  << "size: " << request.size() << std::endl; */
+
+		request.erase(0, boundary_marker.size());
+
+		MultipartFormData multipart_form_data;
+
+		buffer = cut_after_new_line(request);
+		if (!check_multipart_header(multipart_form_data)) {
+			std::cerr << "400 Bad Request - bad multipart header" << std::endl; return 400;
+		}
+
+		buffer = cut_after_new_line(request);
+		if (!check_multipart_content_type(multipart_form_data)) {
+			std::cerr << "400 Bad Request - bad multipart content type" << std::endl; return 400;
+		}
+
+		if (!multipart_form_data.get_content_type().empty())
+			buffer = cut_after_new_line(request);
+
+		std::size_t boundary_pos = request.find(boundary_marker);
+		std::size_t boundary_pos_end = boundary_pos;
+
+		if (boundary_pos == std::string::npos) {
+		
+			boundary_pos = request.find(closing_boundary_marker);
+			boundary_pos_end = boundary_pos + closing_boundary_marker.size();
+
+			if (boundary_pos == std::string::npos) {
+				std::cerr << "400 Bad Request - no end boundary" << std::endl; return 400;
+			}
+		}
+
+		buffer = request.substr(0, boundary_pos);
+		multipart_form_data.set_content(buffer);
+
+		request.erase(0, boundary_pos_end);
+		multipartFormDatas.push_back(multipart_form_data);
+
+		multipart_form_data.print_all_data();
 	}
 
+	for (auto data : multipartFormDatas)
+	{
+		// data.print_all_data();
+		if (!data.get_filename().empty())
+		{
+			std::fstream fout(data.get_filename(), std::ios::binary | std::ios::out);
+			fout.write(data.get_content().c_str(), data.get_content().size());
+			fout.close();
+		}
+	}
 
-	std::cout << body;
-	ifs.close();
 	return 200;
 }
-
-// int RequestParser::parse_multipart_form()
-// {
-// }

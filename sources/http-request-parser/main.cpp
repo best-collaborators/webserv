@@ -15,7 +15,7 @@ int main()
 	std::string root = "sources/http-parser";
 
 	RequestParser requestParser(http_request_values);
-	uint status_code = requestParser.get_status_code();
+	uint status_code = requestParser.get_status_code("");
 	if (status_code == UINT8_MAX)
 		return 1;
 
