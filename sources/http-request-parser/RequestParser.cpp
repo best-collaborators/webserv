@@ -1,8 +1,7 @@
 #include "RequestParser.hpp"
 
-RequestParser::RequestParser(std::unordered_map<std::string, std::string> &http_request_values, std::string request)
-: _http_request_values(http_request_values), _request(request) { }
-
+RequestParser::RequestParser(std::string request)
+: _request(request) {}
 
 std::string RequestParser::get_regex_value(std::string &line, std::regex regex_method)
 {
@@ -22,6 +21,7 @@ bool RequestParser::add_value_to_map(
 )
 {
 	std::regex reg_method(regex_str);
+
 	std::string method = get_regex_value(_buffer, reg_method);
 	if (method == "") {
 		std::cout << errmsg << std::endl;
@@ -33,7 +33,7 @@ bool RequestParser::add_value_to_map(
 
 bool RequestParser::is_valid_header()
 {
-	std::regex reg_method("(^\\S{1,256}:[ ]+)");
+	std::regex reg_method(REGEX_HTTP_HEADER);
 	std::string name = get_regex_value(_buffer, reg_method);
 	if (name == "") return false;
 	
@@ -118,6 +118,7 @@ uint RequestParser::validate_request_line()
 
 	if (_http_request_values["method"] != "GET"
 		&& _http_request_values["method"] != "POST"
+		&& _http_request_values["method"] != "OPTIONS"
 		&& _http_request_values["method"] != "DELETE") {
 		std::cerr << "405 Not Allowed" << std::endl;
 		return 405;
@@ -168,24 +169,43 @@ uint RequestParser::validate_request_body()
 	return 0;
 }
 
-uint RequestParser::get_status_code()
+void RequestParser::parse()
 {
 	_buffer = "";
+	_http_request_values.clear();
 
 	if (_request.empty())
 		RequestGenerator::create_post_request(_request);
 
 	uint request_line_validation_status = validate_request_line();
-	if (request_line_validation_status) return request_line_validation_status;
+	if (request_line_validation_status) _status_code = request_line_validation_status;
 
 	uint headers_validation_status = validate_request_headers();
-	if (headers_validation_status) return headers_validation_status;
+	if (headers_validation_status) _status_code = headers_validation_status;
 
 	if (_http_request_values["method"] == "POST" && _http_request_values["content-type"].find("multipart/form-data") != std::string::npos) {
 		MultipartDataValidator validator(_multipartFormDatas, _http_request_values, _buffer, _request);
-		return validator.parse_multipart_data_form();
+		_status_code = validator.parse_multipart_data_form();
 	}
-		
 
-	return 200;
+	_status_code = 200;
 }
+
+void RequestParser::print_http_request_values()
+{
+	for (auto values : _http_request_values) {
+		std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
+	}
+}
+
+//* TODO: add move constructor
+RequestParseResult RequestParser::create_request_parse_result()
+{
+	return {
+		_status_code,
+		std::move(_http_request_values["request-target"]),
+		"",
+		std::move(_http_request_values["method"])
+	};
+}
+

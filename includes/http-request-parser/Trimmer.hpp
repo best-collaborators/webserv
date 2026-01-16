@@ -7,16 +7,16 @@
 
 class Trimmer
 {
-	private:
-		static std::string &ltrim(std::string &s);
-		static std::string &rtrim(std::string &s);
+private:
+	static std::string &ltrim(std::string &s);
+	static std::string &rtrim(std::string &s);
 
-		static std::string &ltrim(std::string &s, char delim);
-		static std::string &rtrim(std::string &s, char delim);
+	static std::string &ltrim(std::string &s, char delim);
+	static std::string &rtrim(std::string &s, char delim);
 
-	public:
-		static std::string &trim(std::string &s);
-		static std::string &trim(std::string &s, char delim);
-	};
+public:
+	static std::string &trim(std::string &s);
+	static std::string &trim(std::string &s, char delim);
+};
 
 #endif

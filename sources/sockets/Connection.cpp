@@ -70,6 +70,14 @@ IoState	Connection::_saveToBuffer() noexcept
 	if (_read_bytes < READ_BUFFER_SIZE)
 	{
 		std::cout << "[io] Request received (complete)." << std::endl;
+
+		RequestParser requestParser(_read_buffer);
+		requestParser.parse();
+
+		_response.set_parse_result(requestParser.create_request_parse_result());
+		std::cout << "[io] Status code of request " << _response.status_code() << std::endl;
+		// requestParser.print_http_request_values();
+
 		return IoState::Received;
 	}
 	else if (_read_bytes == READ_BUFFER_SIZE)
@@ -85,22 +93,9 @@ IoState	Connection::_sendData() noexcept
 	int	fd = _socket.getFD();
 	std::cout << "\n[io] EPOLLOUT triggered for fd " << fd << std::endl;
 
-	std::string body =
-		"<html>\n"
-		"<head><title>200 OK</title></head>\n"
-		"<body>\n"
-		"<center><h1>200 OK</h1></center>\n"
-		"</body>\n"
-		"</html>\n";
-
-	std::string headers =
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html\r\n"
-		"Content-Length: " + std::to_string(body.size()) + "\r\n"
-		"Connection: keep-alive\r\n"
-		"\r\n";
-
-	std::string message = headers + body;
+	std::string message = _response.form_reponse();
+	// std::cout << "==================RESPONSE==================\n" 
+	// << message << "\n" << "============================================";
 
 	ssize_t	message_len = message.length();
 

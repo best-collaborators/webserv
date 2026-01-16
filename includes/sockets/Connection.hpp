@@ -7,10 +7,17 @@
 #include "IoState.hpp"
 #include "Socket.hpp"
 
+#include <unordered_map>
+
+#include "Response.hpp"
+#include "RequestParser.hpp"
+
 class Connection
 {
 private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
+
+	Response _response;
 
 	Socket		_socket;
 

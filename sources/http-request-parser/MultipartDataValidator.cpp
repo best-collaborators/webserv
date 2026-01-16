@@ -14,7 +14,7 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 	std::string boundary;
 	std::smatch match;
 
-	std::regex reg("^multipart/form-data;\\s*boundary=([^;\\s]+$)");
+	std::regex reg(REGEX_BOUNDARY);
 
 	if (!std::regex_search(_http_request_values["content-type"], match, reg)) {
 		return "";
@@ -26,8 +26,9 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 	if (boundary.size() > 70) {
 		return "";
 	}
-	
-	std::regex reg1("\\s");
+
+	//Check with wrong multiformdata request
+	std::regex reg1("$\\s^");
 	std::regex_search(boundary, match, reg1);
 	if (!match.empty()) {
 		return "";
@@ -37,7 +38,7 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 
 bool MultipartDataValidator::check_multipart_header(MultipartFormData &multipart_form_data)
 {
-	std::regex reg("^[C,c]ontent-[D,d]isposition: form-data;\\s*name=\"(\\S{1,256})\";?\\s*(filename=\"(\\S{1,256})\")?");
+	std::regex reg(REGEX_CONTENT_DISPOSITION);
 	std::smatch m;
 	if (!std::regex_search(_buffer, m, reg)) { return false; }
 
@@ -54,21 +55,23 @@ bool MultipartDataValidator::check_multipart_content_type(MultipartFormData &mul
 		return true;
 	}
 
-	std::regex reg("^[C,c]ontent-[T,t]ype:\\s*(\\S{1,256}\\/\\S{1,256})\\s*");
+	std::regex reg(REGEX_CONTENT_TYPE);
 	std::smatch m;
 	if (!std::regex_search(_buffer, m, reg)) { return false; }
 
 	multipart_form_data.set_content_type(m[1]);
 	return true;
 }
+
 uint MultipartDataValidator::create_multipart_data_form_files()
 {
+	std::string upload_dir = "data/";
 	for (auto data : _multipartFormDatas)
 	{
 		// data.print_all_data();
 		if (!data.get_filename().empty())
 		{
-			std::fstream fout(data.get_filename(), std::ios::binary | std::ios::out);
+			std::fstream fout(upload_dir + data.get_filename(), std::ios::binary | std::ios::out);
 			if (!fout)
 				return 500;
 			fout.write(data.get_content().c_str(), data.get_content().size());
@@ -141,19 +144,19 @@ uint MultipartDataValidator::parse_multipart_data_form()
 	while (_request.size() && !is_end)
 	{
 		if (std::memcmp(_request.data(), boundary_marker.data(), boundary_marker.size()) != 0) {
-			std::cerr << "Wrong boundary" << std::endl; return 404;
+			std::cerr << "[HTTP-PARSER/MULTIPART] Wrong boundary." << std::endl; return 404;
 		}
 		_request.erase(0, boundary_marker.size());
 
 		MultipartFormData multipart_form_data;
 		uint parse_multipart_form_data_status = parse_multipart_form_data(multipart_form_data);
 		if (parse_multipart_form_data_status) {
-			std::cerr << "Errr" << std::endl; return parse_multipart_form_data_status;
+			std::cerr << "[HTTP-PARSER/MULTIPART] Multipart format is invalid." << std::endl; return parse_multipart_form_data_status;
 		}
 
 		uint trancate_boundary_status = truncate_boundary(is_end, boundary_marker, closing_boundary_marker, multipart_form_data);
 		if (trancate_boundary_status) {
-			std::cerr << "Errr" << std::endl; return trancate_boundary_status;
+			std::cerr << "[HTTP-PARSER/MULTIPART] Error occured with boundary extraction." << std::endl; return trancate_boundary_status;
 		}
 
 		multipart_form_data.print_all_data();
@@ -161,7 +164,7 @@ uint MultipartDataValidator::parse_multipart_data_form()
 
 	uint multipart_data_file_creation_status = create_multipart_data_form_files();
 	if (multipart_data_file_creation_status) {
-		std::cerr << "Errr" << std::endl; return multipart_data_file_creation_status;
+		std::cerr << "[HTTP-PARSER/MULTIPART] Error occured while creating files." << std::endl; return multipart_data_file_creation_status;
 	}
 
 	return 201;
