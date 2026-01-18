@@ -1,11 +1,13 @@
 #include "RequestParseResult.hpp"
 
-RequestParseResult::RequestParseResult(uint status_code, const std::string& content, std::string_view content_type, std::string_view method) :
+RequestParseResult::RequestParseResult(uint status_code, const std::string& content, std::string_view method) :
 	_status_code(status_code),
-	_content(content),
-	_content_type(content_type),
+	_request_target(content),
 	_method(method)
 {
+	std::string extension = std::string(std::filesystem::path(content).extension());
+	extension = Trimmer::trim(extension, '\"');
+	_content_type = HttpContentType::get_content_type_by_extension(extension);
 }
 
 RequestParseResult::RequestParseResult() {}
@@ -21,10 +23,10 @@ uint RequestParseResult::get_status_code() const
 
 std::string RequestParseResult::get_content() const
 {
-	return _content;
+	return _request_target;
 }
 
-std::string_view RequestParseResult::get_content_type() const
+std::string RequestParseResult::get_content_type() const
 {
 	return _content_type;
 }
@@ -41,10 +43,10 @@ void RequestParseResult::set_status_code(uint status_code)
 
 void RequestParseResult::set_content(const std::string& content)
 {
-	_content = content;
+	_request_target = content;
 }
 
-void RequestParseResult::set_content_type(std::string_view content_type)
+void RequestParseResult::set_content_type(std::string content_type)
 {
 	_content_type = content_type;
 }

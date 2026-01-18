@@ -14,6 +14,7 @@
 #include "Trimmer.hpp"
 #include "RequestParseResult.hpp"
 #include "RequestGenerator.hpp"
+#include "Clock.hpp"
 
 class RequestParser
 {
@@ -23,6 +24,9 @@ private:
 	std::unordered_map<std::string, std::string> _http_request_values;
 	std::string _request;
 	uint _status_code;
+
+	//!Move to a different class
+	uint _uploaded_files_count;
 
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
 	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";

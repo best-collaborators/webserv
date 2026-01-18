@@ -22,6 +22,7 @@ std::string Response::serve_html_webserv_page(std::string msg)
 {
 	std::string status_code_message(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_parse_result.get_status_code())));
 
+	_parse_result.set_content_type("text/html");
 	return "<!DOCTYPE html>\n"
 			"<html lang=\"en\">\n"
 			"<head>\n"
@@ -118,25 +119,26 @@ std::string Response::form_reponse()
 	// }
 
 	std::ostringstream ostringstream;
+	uint status_code =  _parse_result.get_status_code();
 
 	ostringstream << "HTTP/1.1"  << " "
-		<< _parse_result.get_status_code() << " "
-		<< HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_parse_result.get_status_code())) << "\r\n"
+		<< status_code << " "
+		<< HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(status_code)) << "\r\n"
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
 		<< "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
   		<< "Access-Control-Allow-Headers: Content-Type\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	ostringstream  << "Content-Type: "   << _parse_result.get_content_type() << "\r\n" 
+
+	ostringstream  << "Content-Type: " << _parse_result.get_content_type() << "\r\n" 
 		<< "Content-Length: " << _body_content.size() << "\r\n";
 
 	//For cache
-	if (_parse_result.get_status_code() < 300)
+	if (status_code != 201 && status_code < 300)
 		ostringstream << "Last-Modified: " << get_file_last_modified_date(_parse_result.get_content().c_str()) << "\r\n";
 
-	ostringstream << "Connection: close" << "\r\n"
-		<< std::endl << _body_content;
+	ostringstream << "Connection: close" << "\r\n\r\n" << _body_content;
 
 	return ostringstream.str();
 }

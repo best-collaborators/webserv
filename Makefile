@@ -8,14 +8,16 @@ OBJ_DIR = build
 
 SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
-	$(SRC_DIR)/http-request-parser/Response.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/Response.cpp \
 	$(SRC_DIR)/http-request-parser/Trimmer.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartFormData.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
+	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/ValidatorHelpers.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParseResult.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
+	$(SRC_DIR)/http-request-parser/Clock.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \
 	$(SRC_DIR)/sockets/Poller.cpp \
