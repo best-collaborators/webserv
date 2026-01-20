@@ -17,7 +17,12 @@ class Connection
 private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
-	Response _response;
+	Response			_response;
+	RequestParser		requestParser;
+	RequestParseResult _parse_result;
+	bool				is_header_received = false;
+	ssize_t		_content_length;
+	ssize_t		_stored_body_bytes;
 
 	Socket		_socket;
 

@@ -49,12 +49,13 @@ private:
 
 	uint validate_request_headers();
 	uint validate_request_body();
-
-public:
-	RequestParser(std::string request);
 	
-	void parse();
-	void print_http_request_values();
+public:
+	RequestParser();
+	
+	void parse_body(std::string request);
+	void parse_headers(std::string request);
+	void print_http_request_values() const;
 	RequestParseResult create_request_parse_result();
 };
 

@@ -20,7 +20,7 @@ private:
 	RequestParseResult _parse_result;
 	std::streamsize	   _response_length;
 	std::string		   _body_content;
-	bool			   _is_a_file;
+	// bool			   _is_a_file;
 	std::string _root = "data";
 
 	std::string get_file_last_modified_date(const char *filename);
@@ -33,8 +33,8 @@ private:
 public:
 	~Response();
 	Response();
-	std::string form_reponse();
-	void set_parse_result(RequestParseResult parse_result);
+	std::string form_reponse(RequestParseResult parse_result);
+	// void set_parse_result(RequestParseResult &parse_result);
 	uint status_code();
 };
 

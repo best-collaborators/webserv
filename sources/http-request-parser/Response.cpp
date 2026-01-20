@@ -85,6 +85,8 @@ void Response::create_body()
 	if (is_set_default_page()) return;
 
 	//? TEMP FIX FOR ROOT PATH
+	std::cout << "METHOD: " << _parse_result.get_status_code() << std::endl;
+	std::cout << "CONTENT: " << _parse_result.get_content() << std::endl;
 	if (_parse_result.get_content().size() < 2) {
 		_parse_result.set_status_code(503);
 		_body_content = serve_html_webserv_page("Root not configured"); return ;
@@ -107,9 +109,10 @@ void Response::create_body()
 	ifs.close();
 }
 
-std::string Response::form_reponse()
+std::string Response::form_reponse(RequestParseResult parse_result)
 {	
 	_response_length = 0;
+	_parse_result = parse_result;
 	create_body();
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
@@ -143,10 +146,10 @@ std::string Response::form_reponse()
 	return ostringstream.str();
 }
 
-void Response::set_parse_result(RequestParseResult parse_result)
-{
-	_parse_result = parse_result;
-}
+// void Response::set_parse_result(RequestParseResult &parse_result)
+// {
+// 	_parse_result = parse_result;
+// }
 
 uint Response::status_code()
 {

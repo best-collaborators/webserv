@@ -1,8 +1,6 @@
 #include "RequestParser.hpp"
 
-RequestParser::RequestParser(std::string request)
-: _request(request) {
-
+RequestParser::RequestParser() {
 	try 
 	{
 		for (const auto& entry : std::filesystem::directory_iterator("data")) {
@@ -11,9 +9,10 @@ RequestParser::RequestParser(std::string request)
 			}
 		}
 	}
-	catch (std::logic_error &e)
+	catch (std::exception &e)
 	{
-		std::cerr << "[data] Cannot retrieve amount of uploaded files";
+		std::cerr << "[data] Cannot retrieve amount of uploaded files" << std::endl;
+		_status_code = 500;
 	}
 }
 
@@ -45,6 +44,12 @@ bool RequestParser::add_value_to_map(
 	return true;
 }
 
+std::string transform_to_lower(std::string &str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
+	return str;
+}
+
 bool RequestParser::is_valid_header()
 {
 	std::regex reg_method(REGEX_HTTP_HEADER);
@@ -56,12 +61,12 @@ bool RequestParser::is_valid_header()
 
 	Trimmer::trim(name);
 	name.erase(name.length() - 1);
-	std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return std::tolower(c); });
+	transform_to_lower(name);
 
 	if ((name == "host" || name == "content-length") && _buffer.empty())
 		return false;
 	
-	if (!_http_request_values[name].empty()) {
+	if (_http_request_values.count(name)) {
 		if (name == "host" || name == "content-length") {
 			std::cerr << "ERR: HEADER DUPLICATION: " << name << std::endl;
 			return false;
@@ -184,10 +189,10 @@ uint RequestParser::validate_request_body()
 	return 0;
 }
 
-void RequestParser::parse()
+void RequestParser::parse_headers(std::string request)
 {
-	_buffer = "";
 	_http_request_values.clear();
+	_request = request;
 
 	if (_request.empty())
 		RequestGenerator::create_post_request(_request);
@@ -198,6 +203,12 @@ void RequestParser::parse()
 	uint headers_validation_status = validate_request_headers();
 	if (headers_validation_status) _status_code = headers_validation_status;
 
+	_status_code = 200;
+}
+
+void RequestParser::parse_body(std::string request)
+{
+	_request = request;
 	if (_http_request_values["method"] == "POST" && _http_request_values["content-type"].find("multipart/form-data") != std::string::npos) {
 		MultipartDataValidator validator(_multipartFormDatas, _http_request_values, _buffer, _request);
 		_status_code = validator.parse_multipart_data_form();
@@ -217,7 +228,7 @@ void RequestParser::parse()
 				filename = std::to_string(_uploaded_files_count % 3) + "-updoad" + HttpContentType::get_extension_by_content_type(content_type);
 		}
 
-		std::fstream fout(upload_dir + filename , std::ios::binary | std::ios::out);
+		std::fstream fout(upload_dir + filename, std::ios::binary | std::ios::out);
 		if (!fout) {
 			std::cerr << "[http] Error happend while writing into " << filename << std::endl;
 			_status_code = 500;
@@ -235,7 +246,7 @@ void RequestParser::parse()
 	_status_code = 200;
 }
 
-void RequestParser::print_http_request_values()
+void RequestParser::print_http_request_values() const
 {
 	for (auto values : _http_request_values) {
 		std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
@@ -248,7 +259,8 @@ RequestParseResult RequestParser::create_request_parse_result()
 	return {
 		_status_code,
 		std::move(_http_request_values["request-target"]),
-		std::move(_http_request_values["method"])
+		std::move(_http_request_values["method"]),
+		std::move(_http_request_values["content-length"]),
 	};
 }
 
