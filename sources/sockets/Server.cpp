@@ -1,5 +1,6 @@
 #include "../includes/sockets/Server.hpp"
-#include "Poller.hpp"
+
+volatile sig_atomic_t	g_running = true;
 
 Server::Server( std::string const & port ) : _listener(port), _poller()
 {
@@ -15,7 +16,7 @@ void	Server::run()
 {
 	std::cout << "\n[accept] Waiting for connection..." << std::endl;
 
-	while (true)
+	while (g_running)
 	{
 		int event_count = _poller.wait();
 
