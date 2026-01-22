@@ -32,7 +32,8 @@ SRCS = \
 	$(SRC_DIR)/sockets/Poller.cpp \
 	$(SRC_DIR)/sockets/Connection.cpp \
 	$(SRC_DIR)/sockets/Listener.cpp \
-	$(SRC_DIR)/sockets/Server.cpp
+	$(SRC_DIR)/sockets/Server.cpp \
+	$(SRC_DIR)/sockets/CGIExecutor.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
