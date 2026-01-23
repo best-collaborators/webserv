@@ -7,12 +7,15 @@
 
 // fcntl, F_SETFL, O_NONBLOCK
 #include <fcntl.h>
+#include <signal.h>
 
 #include <map>
 
 #include "Listener.hpp"
 #include "Connection.hpp"
 #include "Poller.hpp"
+
+extern volatile sig_atomic_t	g_running;
 
 class Server
 {
