@@ -1,6 +1,6 @@
 #include "HttpStatus.hpp"
 
-std::string_view HttpStatus::get_status_code_name(e_code s)
+std::string HttpStatus::get_status_code_name(e_code s)
 {
 	switch (s)
 	{

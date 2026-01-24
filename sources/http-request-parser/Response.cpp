@@ -1,12 +1,14 @@
 #include "Response.hpp"
 
-Response::Response() { }
+Response::Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values)
+: _reponse(status_code, std::move(http_request_values)) { }
 Response::~Response() { }
 
-std::string Response::get_file_last_modified_date(const char *filename)
+std::string Response::get_file_last_modified_date(const std::string *filename)
 {
+	const char * filename_c = filename->c_str();
 	struct stat filestat;
-	int code = stat(filename, &filestat);
+	int code = stat(filename_c, &filestat);
 	if (code < 0) return "";
 	return ctime(&filestat.st_mtime);
 }
@@ -20,17 +22,17 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(std::string msg)
 {
-	std::string status_code_message(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_parse_result.get_status_code())));
+	std::string status_code_message(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_reponse.get_status_code())));
 
-	_parse_result.set_content_type("text/html");
+	_reponse.set_header_value("content-type", "text/html");
 	return "<!DOCTYPE html>\n"
 			"<html lang=\"en\">\n"
 			"<head>\n"
 			"	<meta charset=\"UTF-8\">\n"
-			"	<title>" + std::to_string(_parse_result.get_status_code()) + " " + status_code_message + "</title>\n"
+			"	<title>" + std::to_string(_reponse.get_status_code()) + " " + status_code_message + "</title>\n"
 			"</head>\n"
 			"<body>\n"
-			"	<center><h1>" + std::to_string(_parse_result.get_status_code()) + " " + status_code_message + "</h1></center>\n"
+			"	<center><h1>" + std::to_string(_reponse.get_status_code()) + " " + status_code_message + "</h1></center>\n"
 			"	<hr><center>webserv/42.0.0</center>"
 			"	<p>" + msg + "</p>\n"
 			"</body>\n"
@@ -39,16 +41,16 @@ std::string Response::serve_html_webserv_page(std::string msg)
 
 bool Response::is_set_default_page()
 {
-	if (_parse_result.get_method() == "OPTIONS") {
+	if (*_reponse.get_header_value("method") == "OPTIONS") {
 		_body_content = serve_html_webserv_page("Method options.");
 	}
-	else if (_parse_result.get_status_code() > 300) {
+	else if (_reponse.get_status_code() > 300) {
 		_body_content = serve_html_webserv_page("Error happend.");
 	}
-	else if (_parse_result.get_method() == "POST") {
+	else if (*_reponse.get_header_value("method") == "POST") {
 		_body_content = serve_html_webserv_page("Successfull post.");
 	}
-	else if (_parse_result.get_status_code() == 304 || _parse_result.get_status_code() == 204) {
+	else if (_reponse.get_status_code() == 304 || _reponse.get_status_code() == 204) {
 		_body_content = serve_html_webserv_page("Other message.");
 	}
 	else
@@ -58,21 +60,21 @@ bool Response::is_set_default_page()
 
 bool Response::is_fstream_successful(std::fstream &ifs)
 {
-	std::cout << _root + _parse_result.get_content() << std::endl;
+	std::cout << _root + *_reponse.get_header_value("request-target") << std::endl;
 	if (ifs.is_open()) return true;
 
 	switch (errno)
 	{
 		case 2:
 			//No such file or directory
-			_parse_result.set_status_code(404);
+			_reponse.set_status_code(404);
 			break;
 		case 13:
 			//Permission denied
-			_parse_result.set_status_code(503);
+			_reponse.set_status_code(503);
 			break;
 		default:
-			_parse_result.set_status_code(503);
+			_reponse.set_status_code(503);
 			break;
 	}
 	ifs.close();
@@ -85,14 +87,15 @@ void Response::create_body()
 	if (is_set_default_page()) return;
 
 	//? TEMP FIX FOR ROOT PATH
-	std::cout << "METHOD: " << _parse_result.get_status_code() << std::endl;
-	std::cout << "CONTENT: " << _parse_result.get_content() << std::endl;
-	if (_parse_result.get_content().size() < 2) {
-		_parse_result.set_status_code(503);
+	std::cout << "METHOD: " << _reponse.get_status_code() << std::endl;
+	std::cout << "CONTENT: " << _reponse.get_header_value("request-target") << std::endl;
+	if ((*_reponse.get_header_value("request-target")).size() < 2) {
+		_reponse.set_status_code(503);
 		_body_content = serve_html_webserv_page("Root not configured"); return ;
 	}
 
-	std::fstream ifs (_root + _parse_result.get_content(), std::ios::binary | std::ios::in);
+	std::string filename = _root + *_reponse.get_header_value("request-target");
+	std::fstream ifs (filename, std::ios::binary | std::ios::in);
 	if (!is_fstream_successful(ifs)) return;
 
 	while (ifs)
@@ -109,10 +112,9 @@ void Response::create_body()
 	ifs.close();
 }
 
-std::string Response::form_reponse(RequestParseResult parse_result)
-{	
+std::string Response::form_reponse()
+{
 	_response_length = 0;
-	_parse_result = parse_result;
 	create_body();
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
@@ -122,7 +124,7 @@ std::string Response::form_reponse(RequestParseResult parse_result)
 	// }
 
 	std::ostringstream ostringstream;
-	uint status_code =  _parse_result.get_status_code();
+	uint status_code =  _reponse.get_status_code();
 
 	ostringstream << "HTTP/1.1"  << " "
 		<< status_code << " "
@@ -133,25 +135,19 @@ std::string Response::form_reponse(RequestParseResult parse_result)
   		<< "Access-Control-Allow-Headers: Content-Type\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-
-	ostringstream  << "Content-Type: " << _parse_result.get_content_type() << "\r\n" 
+	ostringstream  << "Content-Type: " << _reponse.get_header_value("content-type") << "\r\n" 
 		<< "Content-Length: " << _body_content.size() << "\r\n";
 
 	//For cache
-	if (status_code != 201 && status_code < 300)
-		ostringstream << "Last-Modified: " << get_file_last_modified_date(_parse_result.get_content().c_str()) << "\r\n";
+	if (*_reponse.get_header_value("method") != "POST" && status_code != 201 && status_code < 300)
+		ostringstream << "Last-Modified: " << get_file_last_modified_date(_reponse.get_header_value("request-target")) << "\r\n";
 
 	ostringstream << "Connection: close" << "\r\n\r\n" << _body_content;
 
 	return ostringstream.str();
 }
 
-// void Response::set_parse_result(RequestParseResult &parse_result)
-// {
-// 	_parse_result = parse_result;
-// }
-
 uint Response::status_code()
 {
-	return _parse_result.get_status_code();
+	return _reponse.get_status_code();
 }

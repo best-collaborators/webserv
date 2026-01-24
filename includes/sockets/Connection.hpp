@@ -11,18 +11,18 @@
 
 #include "Response.hpp"
 #include "RequestParser.hpp"
+#include "BodyState.hpp"
+#include "HeaderState.hpp"
 
 class Connection
 {
 private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
-	Response			_response;
-	RequestParser		requestParser;
-	RequestParseResult _parse_result;
-	bool				is_header_received = false;
-	ssize_t		_content_length;
-	ssize_t		_stored_body_bytes;
+	bool			is_header_received = false;
+	ssize_t			_stored_body_bytes;
+	HttpResponse	_response;
+	HttpRequest		_request;
 
 	Socket		_socket;
 
@@ -30,6 +30,17 @@ private:
 	ssize_t		_read_bytes;
 	ssize_t		_stored_bytes;
 	std::string	_read_buffer;
+
+	BodyState	_check_body_state() noexcept;
+	void		_handle_complete_body() noexcept;
+	IoState		_process_body() noexcept;
+
+	void		_handle_received_header() noexcept;
+	bool		_headers_complete() const noexcept;
+	void		_parse_headers() noexcept;
+	void		_consume_header() noexcept;
+	HeaderState	_handle_header_method() noexcept;
+	HeaderState	_proceed_header() noexcept;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;

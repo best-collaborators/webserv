@@ -18,7 +18,7 @@ public:
 		HTTP_VERSION_NOT_SUPPORTED = 505
 	} t_code;
 
-	static std::string_view get_status_code_name(e_code s);
+	static std::string get_status_code_name(e_code s);
 };
 
 #endif /* HTTP_STATUS_HPP */

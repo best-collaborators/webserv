@@ -12,7 +12,7 @@
 #include "MultipartFormData.hpp"
 #include "MultipartDataValidator.hpp"
 #include "Trimmer.hpp"
-#include "RequestParseResult.hpp"
+#include "HttpRequest.hpp"
 #include "RequestGenerator.hpp"
 #include "Clock.hpp"
 
@@ -21,7 +21,7 @@ class RequestParser
 private:
 	std::string _buffer;
 	std::vector<MultipartFormData> _multipartFormDatas;
-	std::unordered_map<std::string, std::string> _http_request_values;
+	std::unordered_map<std::string, std::string> _headers;
 	std::string _request;
 	uint _status_code;
 
@@ -56,7 +56,8 @@ public:
 	void parse_body(std::string request);
 	void parse_headers(std::string request);
 	void print_http_request_values() const;
-	RequestParseResult create_request_parse_result();
+	HttpRequest create_request_parse_result();
+	uint get_status_code();
 };
 
 #endif /* REQUEST_PARSER_HPP */

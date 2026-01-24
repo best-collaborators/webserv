@@ -12,18 +12,18 @@
 #include <iomanip>
 #include "HttpStatus.hpp"
 
-#include "RequestParseResult.hpp"
+#include "HttpResponse.hpp"
 
 class Response
 {
 private:
-	RequestParseResult _parse_result;
+	HttpResponse _reponse;
 	std::streamsize	   _response_length;
 	std::string		   _body_content;
 	// bool			   _is_a_file;
 	std::string _root = "data";
 
-	std::string get_file_last_modified_date(const char *filename);
+	std::string get_file_last_modified_date(const std::string *filename);
 	std::_Put_time<char> get_date_GMT();
 	std::string serve_html_webserv_page(std::string errmsg);
 	void create_body();
@@ -32,9 +32,10 @@ private:
 
 public:
 	~Response();
-	Response();
-	std::string form_reponse(RequestParseResult parse_result);
-	// void set_parse_result(RequestParseResult &parse_result);
+	Response() = delete;
+	Response(Response &other) = default;
+	Response(uint _status_code, std::unordered_map<std::string, std::string> _http_request_values);
+	std::string form_reponse();
 	uint status_code();
 };
 

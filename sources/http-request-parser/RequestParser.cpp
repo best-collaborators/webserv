@@ -40,7 +40,7 @@ bool RequestParser::add_value_to_map(
 		std::cout << errmsg << std::endl;
 		return false;
 	}
-	_http_request_values[key] = Trimmer::trim(method);
+	_headers[key] = Trimmer::trim(method);
 	return true;
 }
 
@@ -66,30 +66,30 @@ bool RequestParser::is_valid_header()
 	if ((name == "host" || name == "content-length") && _buffer.empty())
 		return false;
 	
-	if (_http_request_values.count(name)) {
+	if (_headers.count(name)) {
 		if (name == "host" || name == "content-length") {
 			std::cerr << "ERR: HEADER DUPLICATION: " << name << std::endl;
 			return false;
 		}
 		else {
-			if (_http_request_values[name] != _buffer || _http_request_values[name] != _buffer)
-			_http_request_values[name] = _http_request_values[name] + "," + _buffer;
+			if (_headers[name] != _buffer || _headers[name] != _buffer)
+			_headers[name] = _headers[name] + "," + _buffer;
 			return true;
 		}
 	}
-	_http_request_values[name] = _buffer;
+	_headers[name] = _buffer;
 	return true;
 }
 
 int RequestParser::content_length_validation(){
-	if (_http_request_values.count("forward-encoding")) {
+	if (_headers.count("forward-encoding")) {
 		// std::cerr << "ERR: FORWARD-ENCODING + CONTENT LENGTH" << std::endl;
 		std::cerr << "400 Bad Request" << std::endl; return 400;
 	}
 	try {
 		size_t pos;
-		int test_length = std::stoll(_http_request_values["content-length"], &pos, 10);
-		if (_http_request_values["content-length"].length() != pos) {
+		int test_length = std::stoll(_headers["content-length"], &pos, 10);
+		if (_headers["content-length"].length() != pos) {
 			// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
 			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
@@ -126,20 +126,20 @@ uint RequestParser::validate_request_line()
 		return 400;
 	}
 
-	if (_http_request_values["version"] != "HTTP/1.1") {
+	if (_headers["version"] != "HTTP/1.1") {
 		std::cerr << "505 HTTP Version Not Supported" << std::endl;
 		return 505;
 	}
 
-	if (_http_request_values["request-target"].length() > 4096){
+	if (_headers["request-target"].length() > 4096){
 		std::cerr << "414 URI Too Long" << std::endl;
 		return 414;
 	}
 
-	if (_http_request_values["method"] != "GET"
-		&& _http_request_values["method"] != "POST"
-		&& _http_request_values["method"] != "OPTIONS"
-		&& _http_request_values["method"] != "DELETE") {
+	if (_headers["method"] != "GET"
+		&& _headers["method"] != "POST"
+		&& _headers["method"] != "OPTIONS"
+		&& _headers["method"] != "DELETE") {
 		std::cerr << "405 Not Allowed" << std::endl;
 		return 405;
 	}
@@ -156,11 +156,11 @@ uint RequestParser::validate_request_headers()
 			std::cerr << "400 Bad Request" << std::endl; return 400;
 		}
 
-		if (_http_request_values.size() >= 256) {
+		if (_headers.size() >= 256) {
 			std::cerr << "431 Request Header Fields Too Large" << std::endl; return 400;
 		}
 
-		if (_http_request_values.count("content-length")) {
+		if (_headers.count("content-length")) {
 			if (int status_code = content_length_validation()) {
 				return status_code;
 			}
@@ -168,7 +168,7 @@ uint RequestParser::validate_request_headers()
 		_buffer = ValidatorHelpers::cut_after_new_line(_request);
 	}
 
-	if (_http_request_values["method"] == "POST" && !_http_request_values.count("content-length")) {
+	if (_headers["method"] == "POST" && !_headers.count("content-length")) {
 		std::cerr << "411 Length Required" << std::endl; return 411;
 	}
 
@@ -179,7 +179,7 @@ uint RequestParser::validate_request_body()
 {
 	//if post and content length is not 0 - error!
 	if (_request.size() < 3) {
-		if (_http_request_values["method"] == "POST" && _http_request_values.count("content-length")) {
+		if (_headers["method"] == "POST" && _headers.count("content-length")) {
 			std::cerr << "Body required!" << std::endl;
 			return 400;
 		}
@@ -191,7 +191,7 @@ uint RequestParser::validate_request_body()
 
 void RequestParser::parse_headers(std::string request)
 {
-	_http_request_values.clear();
+	_headers.clear();
 	_request = request;
 
 	if (_request.empty())
@@ -209,19 +209,19 @@ void RequestParser::parse_headers(std::string request)
 void RequestParser::parse_body(std::string request)
 {
 	_request = request;
-	if (_http_request_values["method"] == "POST" && _http_request_values["content-type"].find("multipart/form-data") != std::string::npos) {
-		MultipartDataValidator validator(_multipartFormDatas, _http_request_values, _buffer, _request);
+	if (_headers["method"] == "POST" && _headers["content-type"].find("multipart/form-data") != std::string::npos) {
+		MultipartDataValidator validator(_multipartFormDatas, _headers, _buffer, _request);
 		_status_code = validator.parse_multipart_data_form();
 		if (_status_code == 201) _uploaded_files_count++;
 		return ;
 	}
 
-	if (_http_request_values["method"] == "POST") {
+	if (_headers["method"] == "POST") {
 		std::string upload_dir = "data/";
 
-		std::string filename = _http_request_values["x-filename"];
+		std::string filename = _headers["x-filename"];
 		if (filename.empty()) {
-			std::string content_type = _http_request_values["content-type"];
+			std::string content_type = _headers["content-type"];
 			if (content_type.empty())
 				filename = std::to_string(_uploaded_files_count % 3) + "-updoad.bin";
 			else 
@@ -246,21 +246,15 @@ void RequestParser::parse_body(std::string request)
 	_status_code = 200;
 }
 
-void RequestParser::print_http_request_values() const
-{
-	for (auto values : _http_request_values) {
-		std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
-	}
-}
-
-//* TODO: add move constructor
-RequestParseResult RequestParser::create_request_parse_result()
+HttpRequest RequestParser::create_request_parse_result()
 {
 	return {
 		_status_code,
-		std::move(_http_request_values["request-target"]),
-		std::move(_http_request_values["method"]),
-		std::move(_http_request_values["content-length"]),
+		std::move(_headers)
 	};
 }
 
+uint RequestParser::get_status_code()
+{
+	return _status_code;
+}

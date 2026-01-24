@@ -15,9 +15,11 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
 	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/ValidatorHelpers.cpp \
-	$(SRC_DIR)/http-request-parser/RequestParseResult.cpp \
+	$(SRC_DIR)/http-request-parser/HttpMessage.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/Clock.cpp \
+	$(SRC_DIR)/http-request-parser/HttpRequest.cpp \
+	$(SRC_DIR)/http-request-parser/HttpResponse.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \
 	$(SRC_DIR)/sockets/Poller.cpp \
