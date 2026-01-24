@@ -33,8 +33,51 @@ void Server::run()
 	Log::info("Waiting for connection...", "accept");
 
 	while (g_running)
+	
 	{
+		// if (_connections.empty())
+		// {
+		// 	_shutdown_tfd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_CLOEXEC);
+		// 	itimerspec ts {};
+		// 	ts.it_value.tv_sec = 10;
+
+		// 	timerfd_settime(_shutdown_tfd, 0, &ts, nullptr);
+
+		// 	_poller.add(_shutdown_tfd, EPOLLIN);
+		// 	std::cout << "Start shutdown timer" << std::endl;
+		// }
+
+		if (!_connections.empty())
+		{
+			for (auto it = _connections.begin(); it != _connections.end();)
+			{
+				std::cout << "connections size: " << _connections.size() << std::endl;
+				if (it->first >= 0)
+				{
+					std::chrono::seconds	s{5};
+					auto	now = std::chrono::steady_clock::now();
+					auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.getLastActivity());
+		
+					if (duration >= s)
+					{
+						std::cout << "CLOSE! fd: " << it->first << ", duration: " << duration.count() << std::endl;
+						closeConnection(it->first);
+						it = _connections.erase(it);
+						continue;
+					}
+					else
+					{
+						std::cout << "fd: " << it->first << ", duration: " << duration.count() << std::endl;
+					}
+				}
+				std::cout << "end" << std::endl;
+				++it;
+			}
+		}
+		std::cout << "exit loop" << std::endl;
+
 		int event_count = _poller.wait();
+		std::cout << "Wait" << std::endl;
 
 		for (int i = 0; i < event_count; ++i)
 		{

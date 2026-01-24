@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _socket(std::move(socket)), _sent_bytes(0), _read_bytes(0)
+Connection::Connection( Socket && socket ) : _last_activity(std::chrono::steady_clock::now()), _fd(socket.getFD()), _socket(std::move(socket)), _sent_bytes(0), _read_bytes(0)
 {}
 
 int Connection::getFD() const noexcept
@@ -75,6 +75,11 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 	}
 
 	return { IoSource::Connection, IoEvent::Pending };
+}
+
+std::chrono::time_point<std::chrono::steady_clock> Connection::getLastActivity() const noexcept
+{
+	return _last_activity;
 }
 
 IoResult Connection::processCGIEvents( uint32_t const events )

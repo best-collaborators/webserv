@@ -12,7 +12,7 @@ class Poller
 {
 private:
 	static constexpr int		MAX_EVENTS = 1024;
-	static constexpr int		TIMEOUT = -1; //! Handle timeout
+	static constexpr int		TIMEOUT = 1000; //! Handle timeout
 
 	int							_epoll_fd;
 	std::vector<epoll_event>	_events;
