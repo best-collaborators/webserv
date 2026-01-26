@@ -77,6 +77,11 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 	return { IoSource::Connection, IoEvent::Pending };
 }
 
+void Connection::resetLastActivity() noexcept
+{
+	_last_activity = std::chrono::steady_clock::now();
+}
+
 std::chrono::time_point<std::chrono::steady_clock> Connection::getLastActivity() const noexcept
 {
 	return _last_activity;
@@ -171,6 +176,8 @@ IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	_buffer_manager.append(_read_bytes);
 	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
+	resetLastActivity();
+
 	switch (reader_state)
 	{
 	case CGI:
@@ -261,7 +268,10 @@ IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 		Log::error("Send failed", "Connection");
 		return _getSocketState();
 	}
-	else if (sent_bytes == message_length)
+
+	resetLastActivity();
+
+	if (sent_bytes == message_length)
 	{
 		Log::debug("Response sent (complete)", "Connection");
 		_response_formed = false;

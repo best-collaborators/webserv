@@ -27,6 +27,8 @@ private:
 	using fd_to_connection_map = std::unordered_map<int, Connection *>;
 	using pid_to_connection_map = std::unordered_map<pid_t, Connection *>;
 
+	std::chrono::seconds	_connection_timeout;
+
 	Poller					_poller;
 	Listener				_listener;
 	ChildSignalHandler		_childHandler;
@@ -41,6 +43,7 @@ private:
 	void					_handleEvent( epoll_event const & event );
 	void					_modifyEvent( int fd, uint32_t events ) noexcept;
 	void					_closeConnection( int fd ) noexcept;
+	void					_closeIdleConnections() noexcept;
 
 	void					_registerConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
 	void					_unregisterConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;

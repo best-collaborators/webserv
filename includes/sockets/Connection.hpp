@@ -79,6 +79,7 @@ public:
 	int			getCGIPID() const noexcept;
 	int			getCGIPipe( CGIOperation op );
 	void		closeCGIPipe( CGIOperation op );
+	void		resetLastActivity() noexcept;
 
 	EventAction	onCGIOutputReady();
 	EventAction	onChildProcessExited( ChildExitInfo const & info );
