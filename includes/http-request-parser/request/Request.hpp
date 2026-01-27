@@ -6,15 +6,17 @@
 #include <string>
 #include "HttpMessage.hpp"
 
-class HttpRequest : public HttpMessage
+class Request : public HttpMessage
 {
 private:
 	uint _status_code;
 
 public:
-	HttpRequest(uint _status_code, std::unordered_map<std::string, std::string> &&_http_request_values);
-	HttpRequest() = default;
-	~HttpRequest();
+	Request();
+	Request(const Request &other) = default;
+	Request(Request &&other) = default;
+	Request & operator=( Request && ) noexcept = default;
+	~Request();
 
 	uint get_status_code() const;
 	void set_status_code(uint status_code);

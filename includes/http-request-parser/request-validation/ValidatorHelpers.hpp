@@ -9,7 +9,11 @@ class ValidatorHelpers
 {
 public:
 	ValidatorHelpers() = delete;
+	ValidatorHelpers(const ValidatorHelpers &other) = delete;
+	ValidatorHelpers(ValidatorHelpers &&other) = delete;
+	ValidatorHelpers & operator=( ValidatorHelpers && ) noexcept = delete;
 	~ValidatorHelpers() = delete;
+
 	static std::string cut_after_new_line(std::string &line);
 };
 

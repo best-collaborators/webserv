@@ -6,10 +6,6 @@ MultipartFormData::MultipartFormData(std::string content_type, std::string name,
 	std::cout << _content_type <<" "<<_name << " " << _filename << std::endl;
 }
 
-MultipartFormData::MultipartFormData() {}
-
-MultipartFormData::~MultipartFormData() {}
-
 void MultipartFormData::print_all_data()
 {
 	std::cout << "Content-Type: " << _content_type << std::endl;

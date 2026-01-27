@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _stored_body_bytes(0),  _socket(std::move(socket)), _read_bytes(0), _stored_bytes(0)
+Connection::Connection( Socket && socket ) : _stored_body_bytes(0),  _socket(std::move(socket)), _read_bytes(0)
 {}
 
 IoState Connection::processEvents( uint32_t const events ) noexcept
@@ -65,9 +65,8 @@ bool Connection::_headers_complete() const noexcept
 
 void Connection::_parse_headers() noexcept
 {
-	RequestParser request_parser;
-	request_parser.parse_headers(_read_buffer);
-	_request = request_parser.create_request_parse_result();
+	RequestParser request_parser(_request, _read_buffer);
+	request_parser.parse_headers();
 
 	std::cout << "Header received. Status code -> "
 			<< _request.get_status_code() << std::endl;
@@ -81,10 +80,10 @@ void Connection::_consume_header() noexcept
 
 HeaderState Connection::_handle_header_method() noexcept
 {
-	std::string method = *_request.get_header_value("method");
+	std::string method = _request.get_header_value("method");
 	if (method == "GET"	|| method == "OPTIONS" || method == "HEAD") {
 
-		if (_request.get_content_length() != -1) {
+		if (_request.get_content_length() != -1 || _read_buffer.size() > 0) {
 			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)";
 			return HeaderState::Wrong;
 		}
@@ -92,7 +91,7 @@ HeaderState Connection::_handle_header_method() noexcept
 	return HeaderState::Complete;
 }
 
-HeaderState Connection::_proceed_header() noexcept
+HeaderState Connection::_check_header_state() noexcept
 {
 	if (is_header_received) return HeaderState::Complete;
 
@@ -108,17 +107,43 @@ HeaderState Connection::_proceed_header() noexcept
 	return _handle_header_method();
 }
 
+IoState Connection::_process_header() noexcept
+{
+	switch (_check_header_state())
+	{
+		case HeaderState::Incomplete:
+			std::cout << "[io] Request received (partial buffer)." << std::endl;
+			return IoState::Pending;
+
+		case HeaderState::Complete:
+			return IoState::Received;
+
+		//! CHECK RETURN STATUS CLOSE
+		case HeaderState::Wrong:
+			std::cout << "[io] Request received. Request header invalid." << std::endl;
+			_request.set_status_code(404);
+			return IoState::Received;
+
+		default:
+			return IoState::Received;
+	}
+	return IoState::Received;
+}
+
 BodyState Connection::_check_body_state() noexcept
 {
 	if (_read_bytes == 0) {
 		return BodyState::Complete;
 	}
-	if (_read_bytes != 0 && _request.get_content_length()) {
+	if (_read_buffer.size() == 0 && _request.get_header_value("method") != "POST") {
+		return BodyState::Complete;
+	}
+	if (_read_bytes != 0 && _request.get_header_value("method") != "POST") {
 		return BodyState::Invalid;
 	}
 
 	_stored_body_bytes = _read_buffer.size();
-	// std::cout << "\n[io] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
+	std::cout << "\n[io] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
 
 	if (_stored_body_bytes == _request.get_content_length()) {
 		return BodyState::Complete;
@@ -136,8 +161,8 @@ void Connection::_handle_complete_body() noexcept
 {
 	std::cout << "[io] Request received (complete)." << std::endl;
 
-	RequestParser parser;
-	parser.parse_body(_read_buffer);
+	RequestParser parser(_request, _read_buffer);
+	parser.parse_body();
 
 	_request.set_status_code(parser.get_status_code());
 
@@ -157,17 +182,18 @@ IoState Connection::_process_body() noexcept
 			_handle_complete_body();
 			return IoState::Received;
 
+		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
 			std::cout << "[io] Request received. Body too long." << std::endl;
 			_request.set_status_code(404);
-			return IoState::Closed;
+			return IoState::Received;
 
 		case BodyState::Invalid:
 			std::cout << "[io] Request received. Request is not suppose to have body." << std::endl;
 			_request.set_status_code(404);
-			return IoState::Closed;
+			return IoState::Received;
 	}
-	return IoState::Closed;
+	return IoState::Received;
 }
 
 IoState	Connection::_saveToBuffer() noexcept
@@ -175,13 +201,17 @@ IoState	Connection::_saveToBuffer() noexcept
 	_read_buffer.append(_recv_buffer, _read_bytes);
 	_stored_bytes += _read_bytes;
 
-	std::cout << "\n[io] read_bytes: " << _read_bytes << "\n===============\n";
-	std::cout << "connection fd " << _socket.getFD() << "\n=================\n" << _read_buffer.substr(0, _stored_bytes) << "===============" << std::endl;
+	// std::cout << "\n[io] read_bytes: " << _read_bytes
+	// 	<< "\n===============\n";
+	// 	std::cout << "connection fd " << _socket.getFD()
+	// 	<< "\n=================\n"
+	// 	<< _read_buffer.substr(0, _stored_bytes)
+	// 	<< "=================\n";
 
+	_process_header();
 	if (is_header_received) {
 		return _process_body();
 	}
-	_proceed_header();
 	return IoState::Pending;
 }
 
@@ -192,8 +222,13 @@ IoState	Connection::_sendData() noexcept
 
 	std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
 	Response _response(_request.get_status_code(), _request.copy_headers());
-	std::string message = _response.form_reponse();
-	std::cout << "==================RESPONSE==================\n" << message << "\n" << "============================================\n";
+	std::string message = _response.form_response();
+
+	is_header_received = false;
+
+	// std::cout << "==================RESPONSE==================\n"
+	// 	<< message << std::endl
+	// 	<< "============================================\n";
 
 	ssize_t	message_len = message.length();
 

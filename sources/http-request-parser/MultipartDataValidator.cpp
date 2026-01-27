@@ -2,10 +2,10 @@
 
 MultipartDataValidator::MultipartDataValidator(
 			std::vector <MultipartFormData> &multipartFormDatas,
-			std::unordered_map<std::string, std::string> &http_request_values,
+			std::string &content_type,
 			std::string &buffer,
 			std::string &request
-		) : _multipartFormDatas(multipartFormDatas), _http_request_values(http_request_values), _buffer(buffer), _request(request) { }
+		) : _multipartFormDatas(multipartFormDatas), _content_type(content_type), _buffer(buffer), _request(request) { }
 
 MultipartDataValidator::~MultipartDataValidator(){ }
 
@@ -16,7 +16,7 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 
 	std::regex reg(REGEX_BOUNDARY);
 
-	if (!std::regex_search(_http_request_values["content-type"], match, reg)) {
+	if (!std::regex_search(_content_type, match, reg)) {
 		return "";
 	}
 
@@ -148,7 +148,7 @@ uint MultipartDataValidator::parse_multipart_data_form()
 		}
 		_request.erase(0, boundary_marker.size());
 
-		MultipartFormData multipart_form_data;
+		MultipartFormData multipart_form_data("", "", "");
 		uint parse_multipart_form_data_status = parse_multipart_form_data(multipart_form_data);
 		if (parse_multipart_form_data_status) {
 			std::cerr << "[HTTP-PARSER/MULTIPART] Multipart format is invalid." << std::endl; return parse_multipart_form_data_status;
