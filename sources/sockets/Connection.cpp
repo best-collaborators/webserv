@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _stored_body_bytes(0),  _socket(std::move(socket)), _read_bytes(0)
+Connection::Connection( Socket && socket ) : _stored_body_bytes(0),  _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
 {}
 
 IoState Connection::processEvents( uint32_t const events ) noexcept
@@ -180,6 +180,7 @@ IoState Connection::_process_body() noexcept
 
 		case BodyState::Complete:
 			_handle_complete_body();
+			_response.form_response(_request.get_status_code(), _request.copy_headers());
 			return IoState::Received;
 
 		//! CHECK RETURN STATUS CLOSE
@@ -201,12 +202,12 @@ IoState	Connection::_saveToBuffer() noexcept
 	_read_buffer.append(_recv_buffer, _read_bytes);
 	_stored_bytes += _read_bytes;
 
-	// std::cout << "\n[io] read_bytes: " << _read_bytes
-	// 	<< "\n===============\n";
-	// 	std::cout << "connection fd " << _socket.getFD()
-	// 	<< "\n=================\n"
-	// 	<< _read_buffer.substr(0, _stored_bytes)
-	// 	<< "=================\n";
+	std::cout << "\n[io] read_bytes: " << _read_bytes
+		<< "\n===============\n";
+		std::cout << "connection fd " << _socket.getFD()
+		<< "\n=================\n"
+		<< _read_buffer.substr(0, _stored_bytes)
+		<< "=================\n";
 
 	_process_header();
 	if (is_header_received) {
@@ -221,22 +222,26 @@ IoState	Connection::_sendData() noexcept
 	std::cout << "\n[io] EPOLLOUT triggered for fd " << fd << std::endl;
 
 	std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
-	Response _response(_request.get_status_code(), _request.copy_headers());
-	std::string message = _response.form_response();
 
 	is_header_received = false;
 
-	// std::cout << "==================RESPONSE==================\n"
-	// 	<< message << std::endl
-	// 	<< "============================================\n";
-
-	ssize_t	message_len = message.length();
-
 	std::cout << "[io] send() starting..." << std::endl;
 
-	ssize_t sent_bytes = send(fd, message.c_str(), message_len, 0);
+	size_t msg_len = _response.get_current_length();
+	size_t total_msg_len = _response.get_total_response_length();
+	const char *body = _response.get_body().c_str();
 
-	return _handleSendState(sent_bytes, message_len);
+	std::cout << "==================RESPONSE==================\n"
+		<< body << std::endl
+		<< "============================================\n";
+
+	ssize_t curr_sent_bytes = send(fd, body, msg_len, 0);
+
+	_response.consume_body(curr_sent_bytes);
+	_sent_bytes += curr_sent_bytes;
+
+	// _response.set_response_length(msg_len - curr_sent_bytes);
+	return _handleSendState(curr_sent_bytes, total_msg_len);
 }
 
 IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept

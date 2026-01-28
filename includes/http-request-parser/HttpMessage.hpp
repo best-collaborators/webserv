@@ -24,6 +24,7 @@ public:
 
 	std::unordered_map<std::string, std::string> copy_headers();
 	std::string									get_header_value(std::string key) const;
+	void										set_headers(std::unordered_map<std::string, std::string> &&headers);
 	size_t										get_header_count(std::string key) const;
 	size_t										amount_of_headers() const;
 	void										set_header_value(std::string key, std::string new_value);

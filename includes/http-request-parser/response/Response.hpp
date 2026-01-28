@@ -19,9 +19,9 @@ class Response : HttpMessage
 {
 private:
 	uint					_status_code;
-	std::streamsize			_response_length;
+	std::size_t				_response_length;
 	std::string				_root = "data";
-	// bool			   _is_a_file;
+	// bool					_is_a_file;
 
 	std::string				get_file_last_modified_date(const std::string &filename);
 	std::_Put_time<char>	get_date_GMT();
@@ -31,16 +31,21 @@ private:
 	bool					is_fstream_successful(std::fstream &ifs);
 
 public:
-	Response(uint _status_code, std::unordered_map<std::string, std::string> _http_request_values);
-
-	Response() = delete;
+	Response() = default;
 	Response(const Response &other) = default;
 	Response(Response &&other) = default;
 	Response & operator=( Response && ) noexcept = default;
-	~Response();
+	~Response() = default;
 
-	std::string form_response();
+	// Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values);
+
+	std::string form_response(uint _status_code, std::unordered_map<std::string, std::string> &&_http_request_values);
 	uint status_code();
+	size_t get_total_response_length();
+	size_t get_current_length();
+	// void set_response_length(size_t response_length);
+	void consume_body(size_t consume_length);
+	std::string &get_body();
 };
 
 #endif /* RESPONSE_GENERATOR_HPP */

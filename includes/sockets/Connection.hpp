@@ -22,12 +22,14 @@ private:
 	bool		is_header_received = false;
 	ssize_t		_stored_body_bytes;
 	Request		_request;
+	Response	_response;
 
 	Socket		_socket;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
 	ssize_t		_read_bytes;
 	ssize_t		_stored_bytes;
+	ssize_t		_sent_bytes;
 	std::string	_read_buffer;
 
 	BodyState	_check_body_state() noexcept;

@@ -122,10 +122,6 @@ bool RequestParser::is_valid_request_line()
 
 uint RequestParser::validate_request_line()
 {
-	std::string method = _request.get_header_value("method");
-	std::string version = _request.get_header_value("version");
-	std::string request_target = _request.get_header_value("request-target");
-
 	_buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
 
 	if (_buffer == "") return 400;
@@ -134,20 +130,20 @@ uint RequestParser::validate_request_line()
 		return 400;
 	}
 
-	if (version != "HTTP/1.1") {
+	if (_request.get_header_value("version") != "HTTP/1.1") {
 		std::cerr << "505 HTTP Version Not Supported" << std::endl;
 		return 505;
 	}
 
-	if (request_target.length() > 4096){
+	if (_request.get_header_value("request-target").length() > 4096){
 		std::cerr << "414 URI Too Long" << std::endl;
 		return 414;
 	}
 
-	if (method != "GET"
-		&& method != "POST"
-		&& method != "OPTIONS"
-		&& method != "DELETE") {
+	if (_request.get_header_value("method") != "GET"
+		&& _request.get_header_value("method") != "POST"
+		&& _request.get_header_value("method") != "OPTIONS"
+		&& _request.get_header_value("method") != "DELETE") {
 		std::cerr << "405 Not Allowed" << std::endl;
 		return 405;
 	}
@@ -203,10 +199,16 @@ void RequestParser::parse_headers()
 		RequestGenerator::create_post_request(_raw_bits);
 
 	uint request_line_validation_status = validate_request_line();
-	if (request_line_validation_status) _request.set_status_code(request_line_validation_status);
+	if (request_line_validation_status) {
+		_request.set_status_code(request_line_validation_status);
+		return ;
+	}
 
 	uint headers_validation_status = validate_request_headers();
-	if (headers_validation_status) _request.set_status_code(headers_validation_status);
+	if (headers_validation_status) {
+		_request.set_status_code(headers_validation_status);
+		return ;
+	}
 
 	_request.set_status_code(200);
 }

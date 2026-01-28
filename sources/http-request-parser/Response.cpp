@@ -1,8 +1,7 @@
 #include "Response.hpp"
 
-Response::Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values)
-: HttpMessage(std::move(http_request_values)), _status_code(status_code) { }
-Response::~Response() { }
+// Response::Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values)
+// : HttpMessage(std::move(http_request_values)), _status_code(status_code) { }
 
 std::string Response::get_file_last_modified_date(const std::string &filename)
 {
@@ -120,10 +119,13 @@ void Response::create_body()
 	ifs.close();
 }
 
-std::string Response::form_response()
+std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values)
 {
 	_response_length = 0;
 	create_body();
+	_status_code = status_code;
+	set_headers(std::move(http_request_values));
+	
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
 	// {
@@ -151,10 +153,39 @@ std::string Response::form_response()
 
 	ostringstream << "Connection: close" << "\r\n\r\n" << _body;
 
-	return ostringstream.str();
+	_body = ostringstream.str();
+	_response_length = _body.size();
+	return _body;
 }
 
 uint Response::status_code()
 {
 	return _status_code;
+}
+
+size_t Response::get_total_response_length()
+{
+	return _response_length;
+}
+
+size_t Response::get_current_length()
+{
+	return _body.size();
+}
+
+// void Response::set_response_length(size_t response_length)
+// {
+// 	_response_length = response_length;
+// }
+
+void Response::consume_body(size_t consume_length)
+{
+	if (consume_length > _body.size())
+		consume_length = _body.size();
+	_body.erase(consume_length);
+}
+
+std::string &Response::get_body()
+{
+	return _body;
 }

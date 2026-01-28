@@ -55,7 +55,6 @@ public:
 	RequestParser & operator=( RequestParser && ) noexcept = default;
 	~RequestParser() = default;
 
-
 	void			parse_body();
 	void			parse_headers();
 	uint			get_status_code();

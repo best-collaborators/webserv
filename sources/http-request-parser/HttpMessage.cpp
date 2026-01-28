@@ -16,6 +16,11 @@ std::string HttpMessage::get_header_value(std::string key) const
 	return it->second;
 }
 
+void HttpMessage::set_headers(std::unordered_map<std::string, std::string> &&headers)
+{
+	_headers = headers;
+}
+
 size_t	HttpMessage::get_header_count(std::string key) const
 {
 	return _headers.count(key);
