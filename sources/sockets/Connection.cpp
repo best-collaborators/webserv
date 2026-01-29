@@ -240,6 +240,7 @@ IoState	Connection::_sendData() noexcept
 	_response.consume_body(curr_sent_bytes);
 	_sent_bytes += curr_sent_bytes;
 
+	// std::cout << "send bytes " << _sent_bytes << std::endl;
 	// _response.set_response_length(msg_len - curr_sent_bytes);
 	return _handleSendState(curr_sent_bytes, total_msg_len);
 }

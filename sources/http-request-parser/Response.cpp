@@ -122,9 +122,9 @@ void Response::create_body()
 std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values)
 {
 	_response_length = 0;
-	create_body();
 	_status_code = status_code;
 	set_headers(std::move(http_request_values));
+	create_body();
 	
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
@@ -182,7 +182,7 @@ void Response::consume_body(size_t consume_length)
 {
 	if (consume_length > _body.size())
 		consume_length = _body.size();
-	_body.erase(consume_length);
+	_body.erase(0, consume_length);
 }
 
 std::string &Response::get_body()
