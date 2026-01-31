@@ -1,21 +1,32 @@
+INC_DIR = includes
+
+INCL = \
+	-I$(INC_DIR)/http-request-parser \
+	-I$(INC_DIR)/http-request-parser/request \
+	-I$(INC_DIR)/http-request-parser/request-validation \
+	-I$(INC_DIR)/http-request-parser/response \
+	-I$(INC_DIR)/sockets
+
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes -Iincludes/http-request-parser -Iincludes/sockets
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes $(INCL)
 
 SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
-	$(SRC_DIR)/http-request-parser/main.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
-	$(SRC_DIR)/http-request-parser/ResponseGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/Response.cpp \
 	$(SRC_DIR)/http-request-parser/Trimmer.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartFormData.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
+	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/ValidatorHelpers.cpp \
-	$(SRC_DIR)/http-request-parser/RequestParser.cpp
+	$(SRC_DIR)/http-request-parser/HttpMessage.cpp \
+	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
+	$(SRC_DIR)/http-request-parser/Request.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \
 	$(SRC_DIR)/sockets/Poller.cpp \

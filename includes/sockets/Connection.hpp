@@ -7,17 +7,41 @@
 #include "IoState.hpp"
 #include "Socket.hpp"
 
+#include <unordered_map>
+
+#include "Response.hpp"
+#include "RequestParser.hpp"
+#include "BodyState.hpp"
+#include "HeaderState.hpp"
+
 class Connection
 {
 private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
+
+	bool		is_header_received = false;
+	ssize_t		_stored_body_bytes;
+	Request		_request;
+	Response	_response;
 
 	Socket		_socket;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
 	ssize_t		_read_bytes;
 	ssize_t		_stored_bytes;
+	ssize_t		_sent_bytes;
 	std::string	_read_buffer;
+
+	BodyState	_checkBodyState() noexcept;
+	void		_handleCompleteBody() noexcept;
+	IoState		_processBody() noexcept;
+
+	IoState		_processHeader() noexcept;
+	bool		_headersComplete() const noexcept;
+	void		_parseHeaders() noexcept;
+	void		_consumeHeader() noexcept;
+	HeaderState	_handleHeaderMethod() noexcept;
+	HeaderState	_checkHeaderState() noexcept;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;
