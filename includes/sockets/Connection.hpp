@@ -32,16 +32,16 @@ private:
 	ssize_t		_sent_bytes;
 	std::string	_read_buffer;
 
-	BodyState	_check_body_state() noexcept;
-	void		_handle_complete_body() noexcept;
-	IoState		_process_body() noexcept;
+	BodyState	_checkBodyState() noexcept;
+	void		_handleCompleteBody() noexcept;
+	IoState		_processBody() noexcept;
 
-	IoState		_process_header() noexcept;
-	bool		_headers_complete() const noexcept;
-	void		_parse_headers() noexcept;
-	void		_consume_header() noexcept;
-	HeaderState	_handle_header_method() noexcept;
-	HeaderState	_check_header_state() noexcept;
+	IoState		_processHeader() noexcept;
+	bool		_headersComplete() const noexcept;
+	void		_parseHeaders() noexcept;
+	void		_consumeHeader() noexcept;
+	HeaderState	_handleHeaderMethod() noexcept;
+	HeaderState	_checkHeaderState() noexcept;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;

@@ -133,7 +133,7 @@ uint MultipartDataValidator::parse_multipart_data_form()
 {
 	std::string boundary = get_multipart_form_boundary();
 	if (boundary.empty()) {
-		std::cerr << "400 Bad Request" << std::endl; return 400;
+		std::cerr << "400 Bad Request - boundary empty." << std::endl; return 400;
 	}
 
 	std::string body;

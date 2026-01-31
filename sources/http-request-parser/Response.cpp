@@ -151,8 +151,10 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
 		ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value("request-target")) << "\r\n";
 
-	ostringstream << "Connection: close" << "\r\n\r\n" << _body;
+	if (_status_code > 400)
+		ostringstream << "Connection: close" << "\r\n";
 
+	ostringstream << "\r\n" << _body;
 	_body = ostringstream.str();
 	_response_length = _body.size();
 	return _body;
@@ -172,11 +174,6 @@ size_t Response::get_current_length()
 {
 	return _body.size();
 }
-
-// void Response::set_response_length(size_t response_length)
-// {
-// 	_response_length = response_length;
-// }
 
 void Response::consume_body(size_t consume_length)
 {

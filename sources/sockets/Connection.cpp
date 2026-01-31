@@ -58,12 +58,12 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	return _saveToBuffer();
 }
 
-bool Connection::_headers_complete() const noexcept
+bool Connection::_headersComplete() const noexcept
 {
 	return _read_buffer.find("\r\n\r\n") != std::string::npos;
 }
 
-void Connection::_parse_headers() noexcept
+void Connection::_parseHeaders() noexcept
 {
 	RequestParser request_parser(_request, _read_buffer);
 	request_parser.parse_headers();
@@ -72,13 +72,13 @@ void Connection::_parse_headers() noexcept
 			<< _request.get_status_code() << std::endl;
 }
 
-void Connection::_consume_header() noexcept
+void Connection::_consumeHeader() noexcept
 {
 	size_t header_end_position = _read_buffer.find("\r\n\r\n");
 	_read_buffer.erase(0, header_end_position + 4);
 }
 
-HeaderState Connection::_handle_header_method() noexcept
+HeaderState Connection::_handleHeaderMethod() noexcept
 {
 	std::string method = _request.get_header_value("method");
 	if (method == "GET"	|| method == "OPTIONS" || method == "HEAD") {
@@ -91,25 +91,25 @@ HeaderState Connection::_handle_header_method() noexcept
 	return HeaderState::Complete;
 }
 
-HeaderState Connection::_check_header_state() noexcept
+HeaderState Connection::_checkHeaderState() noexcept
 {
 	if (is_header_received) return HeaderState::Complete;
 
-	if (!_headers_complete())
+	if (!_headersComplete())
 		return HeaderState::Incomplete;
 
-	_parse_headers();
-	_consume_header();
+	_parseHeaders();
+	_consumeHeader();
 
 	_request.print_http_request_values();
 
 	is_header_received = true;
-	return _handle_header_method();
+	return _handleHeaderMethod();
 }
 
-IoState Connection::_process_header() noexcept
+IoState Connection::_processHeader() noexcept
 {
-	switch (_check_header_state())
+	switch (_checkHeaderState())
 	{
 		case HeaderState::Incomplete:
 			std::cout << "[io] Request received (partial buffer)." << std::endl;
@@ -130,7 +130,7 @@ IoState Connection::_process_header() noexcept
 	return IoState::Received;
 }
 
-BodyState Connection::_check_body_state() noexcept
+BodyState Connection::_checkBodyState() noexcept
 {
 	if (_read_bytes == 0) {
 		return BodyState::Complete;
@@ -157,7 +157,7 @@ BodyState Connection::_check_body_state() noexcept
 	return BodyState::Incomplete;
 }
 
-void Connection::_handle_complete_body() noexcept
+void Connection::_handleCompleteBody() noexcept
 {
 	std::cout << "[io] Request received (complete)." << std::endl;
 
@@ -165,21 +165,22 @@ void Connection::_handle_complete_body() noexcept
 	parser.parse_body();
 
 	_request.set_status_code(parser.get_status_code());
+	_read_buffer.erase(0, _request.get_content_length());
 
 	std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
 }
 
-IoState Connection::_process_body() noexcept
+IoState Connection::_processBody() noexcept
 {
-	switch (_check_body_state())
+	switch (_checkBodyState())
 	{
 		case BodyState::Incomplete:
 			std::cout << "[io] Request received (partial buffer)." << std::endl;
 			return IoState::Pending;
 
 		case BodyState::Complete:
-			_handle_complete_body();
+			_handleCompleteBody();
 			_response.form_response(_request.get_status_code(), _request.copy_headers());
 			return IoState::Received;
 
@@ -202,16 +203,16 @@ IoState	Connection::_saveToBuffer() noexcept
 	_read_buffer.append(_recv_buffer, _read_bytes);
 	_stored_bytes += _read_bytes;
 
-	std::cout << "\n[io] read_bytes: " << _read_bytes
-		<< "\n===============\n";
-		std::cout << "connection fd " << _socket.getFD()
-		<< "\n=================\n"
-		<< _read_buffer.substr(0, _stored_bytes)
-		<< "=================\n";
+	// std::cout << "\n[io] read_bytes: " << _read_bytes
+	// 	<< "\n===============\n";
+	// 	std::cout << "connection fd " << _socket.getFD()
+	// 	<< "\n=================\n"
+	// 	<< _read_buffer.substr(0, _stored_bytes)
+	// 	<< "=================\n";
 
-	_process_header();
+	_processHeader();
 	if (is_header_received) {
-		return _process_body();
+		return _processBody();
 	}
 	return IoState::Pending;
 }
@@ -233,6 +234,10 @@ IoState	Connection::_sendData() noexcept
 
 	std::cout << "==================RESPONSE==================\n"
 		<< body << std::endl
+		<< "============================================\n";
+
+	std::cout << "==================REQUEST==================\n"
+		<< _read_buffer << std::endl
 		<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(fd, body, msg_len, 0);

@@ -87,7 +87,7 @@ bool RequestParser::is_valid_header()
 int RequestParser::content_length_validation(){
 	if (_request.get_header_count("forward-encoding")) {
 		// std::cerr << "ERR: FORWARD-ENCODING + CONTENT LENGTH" << std::endl;
-		std::cerr << "400 Bad Request" << std::endl; return 400;
+		std::cerr << "400 Bad Request forward-encoding + content-length" << std::endl; return 400;
 	}
 	try {
 		size_t pos;
@@ -95,7 +95,7 @@ int RequestParser::content_length_validation(){
 		int test_length = std::stoll(content_length_str, &pos, 10);
 		if (content_length_str.length() != pos) {
 			// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
-			std::cerr << "400 Bad Request" << std::endl; return 400;
+			std::cerr << "400 Bad Request - content-length is NAN" << std::endl; return 400;
 		}
 
 		// max size is 1mb = 1048576b
@@ -107,7 +107,7 @@ int RequestParser::content_length_validation(){
 	}
 	catch(const std::exception& e) {
 		// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
-		std::cerr << "400 Bad Request" << std::endl; return 400;
+		std::cerr << "400 Bad Request - content-length is NAN" << std::endl; return 400;
 	}
 	return 0;
 }
@@ -126,7 +126,7 @@ uint RequestParser::validate_request_line()
 
 	if (_buffer == "") return 400;
 	if (is_valid_request_line() == false){
-		std::cerr << "400 Bad Request" << std::endl;
+		std::cerr << "400 Bad Request - request line is invalid" << std::endl;
 		return 400;
 	}
 
@@ -157,7 +157,7 @@ uint RequestParser::validate_request_headers()
 	while (!_buffer.empty()) {
 		
 		if (!is_valid_header()) {
-			std::cerr << "400 Bad Request" << std::endl; return 400;
+			std::cerr << "400 Bad Request - header is invalid" << std::endl; return 400;
 		}
 
 		if (_request.amount_of_headers() >= 256) {
@@ -225,7 +225,7 @@ void RequestParser::parse_body()
 		MultipartDataValidator validator(_multipartFormDatas, content_type, _buffer, _raw_bits);
 		_request.set_status_code(validator.parse_multipart_data_form());
 		if (_request.get_status_code() == 201) _uploaded_files_count++;
-		return ;
+			return ;
 	}
 	if (method == "POST") {
 
