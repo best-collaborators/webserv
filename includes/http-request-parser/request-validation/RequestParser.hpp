@@ -52,7 +52,7 @@ public:
 	RequestParser(Request &request, std::string &raw_bits);
 	RequestParser(const RequestParser &other) = default;
 	RequestParser(RequestParser &&other) = default;
-	RequestParser & operator=( RequestParser && ) noexcept = default;
+	RequestParser & operator=( RequestParser && ) noexcept = delete;
 	~RequestParser() = default;
 
 	void			parse_body();
