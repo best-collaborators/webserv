@@ -44,14 +44,14 @@ bool Response::is_set_default_page()
 	if (method == "OPTIONS") {
 		_body = serve_html_webserv_page("Method options.");
 	}
-	else if (method == "POST") {
-		_body = serve_html_webserv_page("Successfull post.");
+	else if (_status_code == 304 || _status_code == 204) {
+		_body = serve_html_webserv_page("Other message.");
 	}
 	else if (_status_code > 300) {
 		_body = serve_html_webserv_page("Error happend.");
 	}
-	else if (_status_code == 304 || _status_code == 204) {
-		_body = serve_html_webserv_page("Other message.");
+	else if (method == "POST") {
+		_body = serve_html_webserv_page("Successfull post.");
 	}
 	else
 		return false;
@@ -82,6 +82,36 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 	return false;
 }
 
+long long getFileSize(const char *filename)
+{
+	std::streampos fsize = 0;
+
+	std::ifstream myfile (filename, std::ios::in);  // File is of type const char*
+	if (!myfile) {
+		
+		std::cerr << "Cannot open file " << filename << std::endl;
+		return 0;
+	}
+
+	fsize = myfile.tellg();		  // The file pointer is currently at the beginning
+	myfile.seekg(0, std::ios::end);	  // Place the file pointer at the end of file
+
+	fsize = myfile.tellg() - fsize;
+	myfile.close();
+
+	try
+	{
+		if (sizeof(fsize) >= sizeof(long long))
+			throw;
+	}
+	catch (std::exception &e)
+	{
+		std::cerr << "file is too big!" << std::endl;
+	}
+	std::cout << "size is: " << fsize << " bytes." << std::endl;
+	return fsize;
+}
+
 void Response::create_body()
 {
 	if (is_set_default_page()) return;
@@ -96,22 +126,20 @@ void Response::create_body()
 	std::fstream ifs (filename, std::ios::binary | std::ios::in);
 	if (!is_fstream_successful(ifs)) return;
 
-	while (ifs)
-	{
-		char buffer[36500];
-		ifs.read(buffer, 36500);
+	char buffer[36500];
+	ifs.read(buffer, 36500);
 
-		std::streamsize gcount = ifs.gcount();
-		_body.append(buffer, gcount);
+	std::streamsize gcount = ifs.gcount();
+	_body.append(buffer, gcount);
 
-		if (ifs.eof()) break;
+	if (ifs.eof()) break;
 
-		if (!ifs) {
-			_status_code = 503;
-			_body = serve_html_webserv_page("Sorry.");
-			return;
-		}
+	if (!ifs) {
+		_status_code = 503;
+		_body = serve_html_webserv_page("Sorry.");
+		return;
 	}
+
 	std::filesystem::path path = filename;
 	auto extension = path.extension();
 	set_header_value("content-type", HttpContentType::get_content_type_by_extension(extension.string()));
