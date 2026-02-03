@@ -42,6 +42,7 @@ private:
 	void		_consumeHeader() noexcept;
 	HeaderState	_handleHeaderMethod() noexcept;
 	HeaderState	_checkHeaderState() noexcept;
+	void		_removeBodyFromBuffer() noexcept;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;

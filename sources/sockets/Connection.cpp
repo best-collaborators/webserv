@@ -55,7 +55,26 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 		return IoState::Closed;
 	}
 
-	return _saveToBuffer();
+	_read_buffer.append(_recv_buffer, _read_bytes);
+	_stored_bytes += _read_bytes;
+
+	// std::cout << "\n[io] read_bytes: " << _read_bytes
+	// 	<< "\n===============\n";
+	// 	std::cout << "connection fd " << _socket.getFD()
+	// 	<< "\n=================\n"
+	// 	<< _read_buffer.substr(0, _stored_bytes)
+	// 	<< "=================\n";
+
+	_processHeader();
+	if (_processBody() == IoState::Pending) {
+		return IoState::Pending;
+	}
+
+	// !CGI
+	
+	_response.form_response(_request.get_status_code(), _request.copy_headers());
+	_removeBodyFromBuffer();
+	return IoState::Received;
 }
 
 bool Connection::_headersComplete() const noexcept
@@ -141,7 +160,6 @@ BodyState Connection::_checkBodyState() noexcept
 	if (_read_bytes != 0 && _request.get_header_value("method") != "POST") {
 		return BodyState::Invalid;
 	}
-
 	_stored_body_bytes = _read_buffer.size();
 	std::cout << "\n[io] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
 
@@ -165,7 +183,6 @@ void Connection::_handleCompleteBody() noexcept
 	parser.parse_body();
 
 	_request.set_status_code(parser.get_status_code());
-	_read_buffer.erase(0, _request.get_content_length());
 
 	std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
@@ -181,7 +198,6 @@ IoState Connection::_processBody() noexcept
 
 		case BodyState::Complete:
 			_handleCompleteBody();
-			_response.form_response(_request.get_status_code(), _request.copy_headers());
 			return IoState::Received;
 
 		//! CHECK RETURN STATUS CLOSE
@@ -198,6 +214,11 @@ IoState Connection::_processBody() noexcept
 	return IoState::Received;
 }
 
+void	Connection::_removeBodyFromBuffer() noexcept
+{
+	_read_buffer.erase(0, _request.get_content_length());
+}
+
 IoState	Connection::_saveToBuffer() noexcept
 {
 	_read_buffer.append(_recv_buffer, _read_bytes);
@@ -211,10 +232,15 @@ IoState	Connection::_saveToBuffer() noexcept
 	// 	<< "=================\n";
 
 	_processHeader();
-	if (is_header_received) {
-		return _processBody();
+	if (_processBody() == IoState::Pending) {
+		return IoState::Pending;
 	}
-	return IoState::Pending;
+
+	// !CGI
+	
+	_response.form_response(_request.get_status_code(), _request.copy_headers());
+	_removeBodyFromBuffer();
+	return IoState::Received;
 }
 
 IoState	Connection::_sendData() noexcept
