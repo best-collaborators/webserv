@@ -1,8 +1,5 @@
 #include "Response.hpp"
 
-// Response::Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values)
-// : HttpMessage(std::move(http_request_values)), _status_code(status_code) { }
-
 std::string Response::get_file_last_modified_date(const std::string &filename)
 {
 	const char * filename_c = filename.c_str();
@@ -38,7 +35,7 @@ std::string Response::serve_html_webserv_page(std::string msg)
 			"</html>\n";
 }
 
-bool Response::is_set_default_page()
+void Response::is_set_default_page()
 {
 	std::string method = get_header_value("method");
 	if (method == "OPTIONS") {
@@ -53,9 +50,12 @@ bool Response::is_set_default_page()
 	else if (_status_code == 304 || _status_code == 204) {
 		_body = serve_html_webserv_page("Other message.");
 	}
-	else
-		return false;
-	return true;
+	else {
+		_is_default_page = false;
+		return ;
+	}
+	_content_length = _body.size();
+	_is_default_page = true;
 }
 
 bool Response::is_fstream_successful(std::fstream &ifs)
@@ -67,65 +67,117 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 	{
 		case 2:
 			//No such file or directory
+			std::cout << "No such file or directory" << std::endl;
 			_status_code = 404;
 			break;
 		case 13:
 			//Permission denied
+			std::cout << "Permission denied" << std::endl;
 			_status_code = 503;
 			break;
 		default:
+			std::cout << "Permission denied" << std::endl;
 			_status_code = 503;
 			break;
 	}
 	ifs.close();
 	_body = serve_html_webserv_page("Sorry.");
+	_content_length = _body.size();
 	return false;
 }
 
-void Response::create_body()
+std::streampos Response::get_file_read_position()
 {
-	if (is_set_default_page()) return;
+	if (_bytes_read > _content_length)
+		return std::streampos(_content_length - (_bytes_read - _content_length));
+	else
+		return std::streampos(_bytes_read);
+}
 
-	//? TEMP FIX FOR ROOT PATH
-	if ((get_header_value("request-target")).size() < 2) {
-		_status_code = 503;
-		_body = serve_html_webserv_page("Root not configured"); return ;
-	}
+void Response::read_body_partially()
+{
+	if (_response_length > 0 && (_body.size() == _response_length || _body.size() >= _buffer || _bytes_sent > _response_length)) return ;
 
 	std::string filename = _root + get_header_value("request-target");
 	std::fstream ifs (filename, std::ios::binary | std::ios::in);
 	if (!is_fstream_successful(ifs)) return;
 
-	while (ifs)
-	{
-		char buffer[36500];
-		ifs.read(buffer, 36500);
+	ssize_t size_to_add = _buffer - _body.size();
+	char buffer[size_to_add];
 
-		std::streamsize gcount = ifs.gcount();
-		_body.append(buffer, gcount);
+	std::streampos file_pos = get_file_read_position();
+	ifs.seekg(file_pos);
+	ifs.read(buffer, size_to_add);
 
-		if (ifs.eof()) break;
+	std::streamsize gcount = ifs.gcount();
+	buffer[gcount] = '\0';
+	_body.append(buffer, gcount);
 
-		if (!ifs) {
-			_status_code = 503;
-			_body = serve_html_webserv_page("Sorry.");
-			return;
-		}
+	_bytes_read += gcount;
+
+	if (!ifs && _bytes_sent < _response_length) {
+		_status_code = 503;
+		return;
 	}
+	ifs.close();
+}
+
+void Response::set_content_type(std::string filename)
+{
 	std::filesystem::path path = filename;
 	auto extension = path.extension();
 	set_header_value("content-type", HttpContentType::get_content_type_by_extension(extension.string()));
+}
 
+void Response::create_body()
+{
+	//? TEMP FIX FOR ROOT PAT
+	read_body_partially();
+}
+
+std::streampos Response::get_file_size()
+{
+	std::string filename = _root + get_header_value("request-target");
+	std::fstream ifs(filename, std::ios::in | std::ios::binary);
+	if (!is_fstream_successful(ifs)) {
+		std::cerr << "Impossible to retrieve request target size of " << filename << std::endl;
+		_status_code = 503;
+		return 0;
+	}
+	std::streampos fbegin = ifs.tellg();
+	ifs.seekg(0, ifs.end);
+	_content_length = ifs.tellg() - fbegin;
 	ifs.close();
+	return _content_length;
 }
 
 std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values)
 {
-	_response_length = 0;
 	_status_code = status_code;
-	set_headers(std::move(http_request_values));
-	create_body();
-	
+	_response_length = 0;
+	_content_length = 0;
+	_bytes_read = 0;
+	_bytes_sent = 0;
+
+	set_header_value("request-target", http_request_values["request-target"]);
+	set_header_value("method", http_request_values["method"]);
+
+	is_set_default_page();
+	if ((get_header_value("request-target")).size() < 2) {
+		_status_code = 503;
+		_body = serve_html_webserv_page("Root not configured");
+		_is_default_page = true;
+		_content_length = _body.size();
+	}
+	std::cout << "IS DEFAULT PAGE: " << std::boolalpha << _is_default_page << std::endl;
+	if (!_is_default_page)
+	{
+		std::cout << "Not a default page" << std::endl;
+		get_file_size();
+		set_content_type(get_header_value("request-target"));
+		create_body();
+	}
+
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
 	// {
@@ -145,18 +197,28 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 		<< "Date: " << get_date_GMT() << "\r\n";
 
 	ostringstream  << "Content-Type: " << get_header_value("content-type") << "\r\n"
-		<< "Content-Length: " << _body.size() << "\r\n";
+		<< "Content-Length: " << _content_length << "\r\n";
 
 	//For cache
-	if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
-		ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value("request-target")) << "\r\n";
+	// if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
+	// 	ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value("request-target")) << "\r\n";
 
 	if (_status_code > 400)
 		ostringstream << "Connection: close" << "\r\n";
 
-	ostringstream << "\r\n" << _body;
+	ostringstream << "\r\n";
+	_header_str = ostringstream.str();
+
+	ostringstream << _body;
+
 	_body = ostringstream.str();
-	_response_length = _body.size();
+
+	_response_length = _header_str.size() + _content_length;
+	// std::cout << "content length" << _content_length << std::endl;
+	// std::cout << "body:                  ==> \n" << _body << std::endl;
+	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
+	// std::cout << "size:                  ==> " << _body.size() << std::endl;
+
 	return _body;
 }
 
@@ -180,6 +242,7 @@ void Response::consume_body(size_t consume_length)
 	if (consume_length > _body.size())
 		consume_length = _body.size();
 	_body.erase(0, consume_length);
+	_bytes_sent += consume_length;
 }
 
 std::string &Response::get_body()
