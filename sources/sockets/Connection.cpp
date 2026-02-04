@@ -385,26 +385,32 @@ IoState	Connection::_sendData() noexcept
 
 	std::cout << "[io] send() starting..." << std::endl;
 
+	_response.read_body_partially();
+
 	size_t msg_len = _response.get_current_length();
 	size_t total_msg_len = _response.get_total_response_length();
 	const char *body = _response.get_body().c_str();
 
-	std::cout << "==================RESPONSE==================\n"
-		<< body << std::endl
-		<< "============================================\n";
+	// std::cout << "msg_len " << msg_len << std::endl;
+	// std::cout << "total_msg_len " << total_msg_len << std::endl;
 
-	std::cout << "==================REQUEST==================\n"
-		<< _read_buffer << std::endl
-		<< "============================================\n";
+	// std::cout << "==================RESPONSE==================\n"
+	// 	<< _response.get_body() << std::endl
+	// 	<< "============================================\n";
+
+	// std::cout << "==================REQUEST==================\n"
+	// 	<< _read_buffer << std::endl
+	// 	<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 
 	_response.consume_body(curr_sent_bytes);
 	_sent_bytes += curr_sent_bytes;
 
+	// std::cout << "curr send bytes " << curr_sent_bytes << std::endl;
 	// std::cout << "send bytes " << _sent_bytes << std::endl;
-	// _response.set_response_length(msg_len - curr_sent_bytes);
-	return _handleSendState(curr_sent_bytes, total_msg_len);
+	// std::cout << "body ==>" << _response.get_body() << std::endl;
+	return _handleSendState(_sent_bytes, total_msg_len);
 }
 
 IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept
@@ -418,6 +424,7 @@ IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 	{
 		std::cout << "[io] Response sent (complete)." << std::endl;
 		_response_formed = false;
+		_sent_bytes = 0;
 		return IoState::Sent;
 	}
 	else if (sent_bytes < message_length) //! Implement partial send
