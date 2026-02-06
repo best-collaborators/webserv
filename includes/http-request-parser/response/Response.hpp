@@ -31,7 +31,6 @@ private:
 	std::string				get_file_last_modified_date(const std::string &filename);
 	std::_Put_time<char>	get_date_GMT();
 	std::string				serve_html_webserv_page(std::string errmsg);
-	void					create_body();
 	void					is_set_default_page();
 	bool					is_fstream_successful(std::fstream &ifs);
 	void					set_content_type(std::string filename);

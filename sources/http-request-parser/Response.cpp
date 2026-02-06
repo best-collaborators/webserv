@@ -39,7 +39,8 @@ void Response::is_set_default_page()
 {
 	std::string method = get_header_value("method");
 	if (method == "OPTIONS") {
-		_body = serve_html_webserv_page("Method options.");
+		_status_code = 204;
+		_body = "";
 	}
 	else if (method == "POST") {
 		_body = serve_html_webserv_page("Successfull post.");
@@ -128,12 +129,6 @@ void Response::set_content_type(std::string filename)
 	set_header_value("content-type", HttpContentType::get_content_type_by_extension(extension.string()));
 }
 
-void Response::create_body()
-{
-	//? TEMP FIX FOR ROOT PAT
-	read_body_partially();
-}
-
 std::streampos Response::get_file_size()
 {
 	std::string filename = _root + get_header_value("request-target");
@@ -162,20 +157,22 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	set_header_value("method", http_request_values["method"]);
 
 	is_set_default_page();
-	if ((get_header_value("request-target")).size() < 2) {
-		_status_code = 503;
+
+	if (!_is_default_page && (get_header_value("request-target")).size() < 2) {
+		_status_code = 200;
 		_body = serve_html_webserv_page("Root not configured");
 		_is_default_page = true;
 		_content_length = _body.size();
-		std::cout << "[response] Not a default page" << std::endl;
 	}
+
 	if (!_is_default_page)
 	{
+		std::cout << "[response] Not a default page" << std::endl;
 		std::cout << "[response] file to send back: " << _root + get_header_value("request-target") << std::endl;
 		get_file_size();
 		if (_status_code < 300) {
 			set_content_type(get_header_value("request-target"));
-			create_body();
+			read_body_partially();
 		}
 	}
 
@@ -194,11 +191,13 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
 		<< "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-  		<< "Access-Control-Allow-Headers: Content-Type\r\n"
+  		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	ostringstream  << "Content-Type: " << get_header_value("content-type") << "\r\n"
-		<< "Content-Length: " << _content_length << "\r\n";
+	if (_content_length > 0) {
+		ostringstream  << "Content-Type: " << get_header_value("content-type") << "\r\n";
+	}
+	ostringstream << "Content-Length: " << _content_length << "\r\n";
 
 	//For cache
 	// if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
@@ -210,7 +209,8 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	ostringstream << "\r\n";
 	_header_str = ostringstream.str();
 
-	ostringstream << _body;
+	if (!_body.empty())
+		ostringstream << _body;
 
 	_body = ostringstream.str();
 

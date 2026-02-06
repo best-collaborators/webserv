@@ -22,6 +22,7 @@ private:
 	std::vector<MultipartFormData>					_multipartFormDatas;
 	Request											&_request;
 	std::string										_raw_bits;
+	std::string										_parsed_body;
 
 	//! Move to a different class
 	uint											_uploaded_files_count;
@@ -49,6 +50,9 @@ private:
 	uint			validate_request_body();
 
 	void			percent_encoding(std::string &buffer);
+	void			parse_chunked_encoding();
+
+	void			write_into_file(std::string upload_dir, std::string filename, std::string _raw_bits, std::string content_type);
 
 public:
 	RequestParser(Request &request, std::string &raw_bits);

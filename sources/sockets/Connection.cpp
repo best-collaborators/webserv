@@ -66,9 +66,16 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	// 	<< "=================\n";
 
 	_processHeader();
-	if (_processBody() == IoState::Pending) {
+
+	std::cout << "\n[io] read_buffer: " << "\n======" << is_header_received << "=========\n"
+		<< _read_buffer
+		<< "\n===============\n";
+
+	if (is_header_received && _processBody() == IoState::Pending) {
 		return IoState::Pending;
 	}
+	else if (!is_header_received)
+		return IoState::Pending;
 
 	// !CGI
 	
@@ -112,6 +119,7 @@ HeaderState Connection::_handleHeaderMethod() noexcept
 
 HeaderState Connection::_checkHeaderState() noexcept
 {
+	std::cout << "headers: " << _read_buffer << std::endl;
 	if (is_header_received) return HeaderState::Complete;
 
 	if (!_headersComplete())
@@ -190,6 +198,8 @@ void Connection::_handleCompleteBody() noexcept
 
 IoState Connection::_processBody() noexcept
 {
+	std::cout << "body: " << _read_buffer << std::endl;
+
 	switch (_checkBodyState())
 	{
 		case BodyState::Incomplete:
@@ -232,7 +242,7 @@ IoState	Connection::_saveToBuffer() noexcept
 	// 	<< "=================\n";
 
 	_processHeader();
-	if (_processBody() == IoState::Pending) {
+	if (is_header_received && _processBody() == IoState::Pending) {
 		return IoState::Pending;
 	}
 
@@ -263,13 +273,13 @@ IoState	Connection::_sendData() noexcept
 	// std::cout << "msg_len " << msg_len << std::endl;
 	// std::cout << "total_msg_len " << total_msg_len << std::endl;
 
-	// std::cout << "==================RESPONSE==================\n"
-	// 	<< _response.get_body() << std::endl
-	// 	<< "============================================\n";
+	std::cout << "==================RESPONSE==================\n"
+		<< std::quoted(_response.get_body()) << std::endl
+		<< "============================================\n";
 
-	// std::cout << "==================REQUEST==================\n"
-	// 	<< _read_buffer << std::endl
-	// 	<< "============================================\n";
+	std::cout << "==================REQUEST==================\n"
+		<< std::quoted(_read_buffer) << std::endl
+		<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(fd, body, msg_len, 0);
 

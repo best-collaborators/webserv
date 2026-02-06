@@ -108,9 +108,9 @@ bool RequestParser::is_valid_header()
 }
 
 int RequestParser::content_length_validation(){
-	if (_request.get_header_count("forward-encoding")) {
-		// std::cerr << "ERR: FORWARD-ENCODING + CONTENT LENGTH" << std::endl;
-		std::cerr << "400 Bad Request forward-encoding + content-length" << std::endl; return 400;
+	if (_request.get_header_count("transfer-encoding")) {
+		// std::cerr << "ERR: TRANSFER-ENCODING + CONTENT LENGTH" << std::endl;
+		std::cerr << "400 Bad Request transfer-encoding + content-length" << std::endl; return 400;
 	}
 	try {
 		size_t pos;
@@ -236,6 +236,83 @@ void RequestParser::parse_headers()
 	_request.set_status_code(200);
 }
 
+// void RequestParser::percent_encoding(std::string &buffer)
+// {
+	
+// 	while (pos != buffer.end() && (pos + 1) != buffer.end() && (pos + 2) != buffer.end())
+// 	{
+// 		size_t index = pos - buffer.begin();
+// 		char hex[3];
+// 		hex[0] = buffer[index + 1];
+// 		hex[1] = buffer[index + 2];
+// 		hex[2] = '\0';
+
+// 		try
+// 		{
+// 			char char_encoded = std::stoi(hex, nullptr, 16);
+// 			buffer.replace(index, 3, 1, char_encoded);
+// 		}
+// 		catch(const std::exception& e) { std::cout << "[http-parser] Not a percent encoding character" << std::endl; }
+// 		pos = std::find(buffer.begin() + index + 1, buffer.end(), '%');
+// 	}
+// }
+
+void RequestParser::parse_chunked_encoding()
+{
+	std::regex reg("^[0-9a-f]+$");
+	std::string buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
+
+	while (!buffer.empty())
+	{
+		std::string hex = get_regex_value(buffer, reg);
+
+		unsigned long long chunk_size = 0;
+		try {
+			chunk_size = std::stoull(hex, nullptr, 16);
+		}
+		catch(const std::exception& e) { 
+			std::cout << "[http-parser] Invalid size in transfer-encoding" << std::endl; 
+			_request.set_status_code(400);
+			return ;
+		}
+
+		buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
+		if ((chunk_size > 0 && buffer.empty()) || (buffer.size() != chunk_size)) {
+			std::cout << "[http-parser] Invalid chunk in transfer-encoding" << std::endl; 
+			_request.set_status_code(400);
+			return ;
+		}
+		_parsed_body += buffer;
+	}
+}
+
+void RequestParser::write_into_file(std::string upload_dir, std::string filename, std::string _raw_bits, std::string content_type)
+{
+	if (_request.get_status_code() > 300)
+		return ;
+
+	if (filename.empty()) {
+		if (content_type.empty())
+			filename = std::to_string(_uploaded_files_count % 3) + "-updoad.bin";
+		else 
+			filename = std::to_string(_uploaded_files_count % 3) + "-updoad" + HttpContentType::get_extension_by_content_type(content_type);
+	}
+
+	std::fstream fout(upload_dir + filename, std::ios::binary | std::ios::out);
+	if (!fout) {
+		std::cerr << "[http] Error happend while writing into " << filename << std::endl;
+		_request.set_status_code(500);
+		return ;
+	}
+
+	fout.write(_raw_bits.c_str(), _raw_bits.size());
+
+	_request.set_status_code(201);
+	_uploaded_files_count++;
+	fout.close();
+	return ;
+}
+
 void RequestParser::parse_body()
 {
 	const std::string method = _request.get_header_value("method");
@@ -250,31 +327,14 @@ void RequestParser::parse_body()
 		if (_request.get_status_code() == 201) _uploaded_files_count++;
 			return ;
 	}
+
+	if (method == "POST" && _request.get_header_count("transfer-encoding") > 0) {
+		parse_chunked_encoding();
+		write_into_file("data/", _request.get_header_value("x-filename"), _parsed_body, content_type);
+	}
+	
 	if (method == "POST") {
-
-		std::string upload_dir = "data/";
-		std::string filename = _request.get_header_value("x-filename");
-
-		if (filename.empty()) {
-			if (content_type.empty())
-				filename = std::to_string(_uploaded_files_count % 3) + "-updoad.bin";
-			else 
-				filename = std::to_string(_uploaded_files_count % 3) + "-updoad" + HttpContentType::get_extension_by_content_type(content_type);
-		}
-
-		std::fstream fout(upload_dir + filename, std::ios::binary | std::ios::out);
-		if (!fout) {
-			std::cerr << "[http] Error happend while writing into " << filename << std::endl;
-			_request.set_status_code(500);
-			return ;
-		}
-
-		fout.write(_raw_bits.c_str(), _raw_bits.size());
-
-		_request.set_status_code(201);
-		_uploaded_files_count++;
-		fout.close();
-		return ;
+		write_into_file("data/", _request.get_header_value("x-filename"), _raw_bits, content_type);
 	}
 
 	_request.set_status_code(200);

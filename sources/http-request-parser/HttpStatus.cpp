@@ -13,6 +13,9 @@ std::string HttpStatus::get_status_code_name(e_code s)
 		case e_code::CREATED:
 			return "Created";
 			break;
+		case e_code::NO_CONTENT:
+			return "No content";
+			break;
 		case e_code::NOT_FOUND:
 			return "Not found";
 			break;
