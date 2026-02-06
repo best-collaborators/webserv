@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Client Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 40px auto;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    #result {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Send Data to Server (GET)</h2>
+
+  <input id="filename" type="text" placeholder="Enter filename" />
+  <textarea id="message" placeholder="Type your message"></textarea>
+  <button onclick="send()">Send</button>
+
+  <div id="result"></div>
+
+<script>
+  function send() {
+    const filename = encodeURIComponent(document.getElementById("filename").value);
+    const url = `http://127.0.0.1:3490/${filename}`;
+
+    fetch(url)
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("result").innerHTML = data;
+      })
+      .catch(err => {
+        document.getElementById("result").textContent = "Error: " + err;
+      });
+  }
+</script>
+
+</body>
+</html>
