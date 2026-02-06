@@ -60,23 +60,22 @@ void Response::is_set_default_page()
 
 bool Response::is_fstream_successful(std::fstream &ifs)
 {
-	std::cout << _root + get_header_value("request-target") << std::endl;
 	if (ifs.is_open()) return true;
 
 	switch (errno)
 	{
 		case 2:
 			//No such file or directory
-			std::cout << "No such file or directory" << std::endl;
+			std::cout << "[response] No such file or directory" << std::endl;
 			_status_code = 404;
 			break;
 		case 13:
 			//Permission denied
-			std::cout << "Permission denied" << std::endl;
+			std::cout << "[response] Permission denied" << std::endl;
 			_status_code = 503;
 			break;
 		default:
-			std::cout << "Permission denied" << std::endl;
+			std::cout << "[response] Permission denied" << std::endl;
 			_status_code = 503;
 			break;
 	}
@@ -140,7 +139,7 @@ std::streampos Response::get_file_size()
 	std::string filename = _root + get_header_value("request-target");
 	std::fstream ifs(filename, std::ios::in | std::ios::binary);
 	if (!is_fstream_successful(ifs)) {
-		std::cerr << "Impossible to retrieve request target size of " << filename << std::endl;
+		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
 		_status_code = 503;
 		return 0;
 	}
@@ -168,17 +167,19 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 		_body = serve_html_webserv_page("Root not configured");
 		_is_default_page = true;
 		_content_length = _body.size();
+		std::cout << "[response] Not a default page" << std::endl;
 	}
-	std::cout << "IS DEFAULT PAGE: " << std::boolalpha << _is_default_page << std::endl;
 	if (!_is_default_page)
 	{
-		std::cout << "Not a default page" << std::endl;
+		std::cout << "[response] file to send back: " << _root + get_header_value("request-target") << std::endl;
 		get_file_size();
-		set_content_type(get_header_value("request-target"));
-		if (body.empty())
-			create_body();
-		else
-			_body = serve_html_webserv_page(body);
+		if (_status_code < 300) {
+			set_content_type(get_header_value("request-target"));
+			if (body.empty())
+				create_body();
+			else
+				_body = serve_html_webserv_page(body);
+		}
 	}
 
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
