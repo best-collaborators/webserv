@@ -17,4 +17,5 @@ void Request::print_http_request_values() const
 	for (auto values : _headers) {
 		std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
 	}
+	std::cout << std::endl;
 }

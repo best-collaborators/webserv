@@ -43,6 +43,7 @@ bool RequestParser::add_value_to_map(
 		return false;
 	}
 	method = Trimmer::trim(method);
+	percent_encoding(method);
 	_request.set_header_value(key, method);
 	return true;
 }
@@ -60,8 +61,6 @@ void RequestParser::percent_encoding(std::string &buffer)
 	{
 		size_t index = pos - buffer.begin();
 		char hex[3];
-		std::cout << _buffer[index] << std::endl;
-		std::cout << index << std::endl;
 		hex[0] = buffer[index + 1];
 		hex[1] = buffer[index + 2];
 		hex[2] = '\0';
@@ -73,7 +72,6 @@ void RequestParser::percent_encoding(std::string &buffer)
 		}
 		catch(const std::exception& e) { std::cout << "[http-parser] Not a percent encoding character" << std::endl; }
 		pos = std::find(buffer.begin() + index + 1, buffer.end(), '%');
-		std::cout << buffer << std::endl;
 	}
 }
 
@@ -89,8 +87,6 @@ bool RequestParser::is_valid_header()
 	Trimmer::trim(name);
 	name.erase(name.length() - 1);
 	transform_to_lower(name);
-
-	percent_encoding(_buffer);
 
 	if ((name == "host" || name == "content-length") && _buffer.empty())
 		return false;
@@ -150,8 +146,6 @@ bool RequestParser::is_valid_request_line()
 uint RequestParser::validate_request_line()
 {
 	_buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
-
-	percent_encoding(_buffer);
 
 	if (_buffer == "") return 400;
 	if (is_valid_request_line() == false){
