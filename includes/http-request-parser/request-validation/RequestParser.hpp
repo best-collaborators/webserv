@@ -31,7 +31,7 @@ private:
 	const char *ERROR_HTTP_VESRION = "LOG: ERROR INVALID REQUEST VERSION";
 
 	const char *REGEX_HTTP_METHOD = "(^[A-Z]{1,32}[ ]+)";
-	const char *REGEX_HTTP_REQUEST_TARGET = "(^/\\S*[\\s]+)";
+	const char *REGEX_HTTP_REQUEST_TARGET = "^(/[\\S]*)";
 	const char *REGEX_HTTP_VESRION = "(HTTP\\/(\\d)+.(\\d)+\\s*$)";
 	const char *REGEX_HTTP_HEADER = "(^\\S{1,256}:[ ]+)";
 
@@ -47,6 +47,8 @@ private:
 
 	uint			validate_request_headers();
 	uint			validate_request_body();
+
+	void			percent_encoding(std::string &buffer);
 
 public:
 	RequestParser(Request &request, std::string &raw_bits);
