@@ -68,7 +68,7 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	_processHeader();
 
 	std::cout << "\n[io] read_buffer: " << "\n======" << is_header_received << "=========\n"
-		<< _read_buffer
+		<< std::quoted(_read_buffer)
 		<< "\n===============\n";
 
 	if (is_header_received && _processBody() == IoState::Pending) {
@@ -119,7 +119,7 @@ HeaderState Connection::_handleHeaderMethod() noexcept
 
 HeaderState Connection::_checkHeaderState() noexcept
 {
-	std::cout << "headers: " << _read_buffer << std::endl;
+	// std::cout << "headers: " << _read_buffer << std::endl;
 	if (is_header_received) return HeaderState::Complete;
 
 	if (!_headersComplete())
@@ -165,16 +165,19 @@ BodyState Connection::_checkBodyState() noexcept
 	if (_read_buffer.size() == 0 && _request.get_header_value("method") != "POST") {
 		return BodyState::Complete;
 	}
-	if (_read_bytes != 0 && _request.get_header_value("method") != "POST") {
+
+	if (_request.get_header_value("method") != "POST" && _read_bytes != 0) {
 		return BodyState::Invalid;
 	}
 	_stored_body_bytes = _read_buffer.size();
 	std::cout << "\n[io] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
-
+	if (_request.get_header_count("transfer-encoding")) {
+		return BodyState::Chunked;
+	}
 	if (_stored_body_bytes == _request.get_content_length()) {
 		return BodyState::Complete;
 	}
-	else if (_stored_body_bytes > _request.get_content_length())
+	else if ( _request.get_header_count("content-length") && _stored_body_bytes > _request.get_content_length())
 	{
 		std::cout << "Read buffer size" << _read_buffer.size() << std::endl;
 		_request.set_status_code(404);
@@ -196,9 +199,35 @@ void Connection::_handleCompleteBody() noexcept
 			  << _request.get_status_code() << std::endl;
 }
 
+BodyState Connection::_handleChunkedBody() noexcept
+{
+	std::cout << "[io] Request received (chunked)." << std::endl;
+
+	RequestParser parser(_request, _read_buffer);
+	parser.parse_body();
+
+	_request.set_status_code(parser.get_status_code());
+
+	std::cout << "Chunk received, chunk size is :"
+			<< _request.get_current_chunk_size() << std::endl;
+
+	std::cout << "Chunk is\n"
+			<< std::quoted(_request.get_current_chunk()) << std::endl;
+
+	if (_request.is_chunk_received()) {
+
+		std::cout << "Body received. Status code -> "
+			  << _request.get_status_code() << std::endl;
+	
+		return BodyState::Complete;
+	}
+
+	return BodyState::Incomplete;
+}
+
 IoState Connection::_processBody() noexcept
 {
-	std::cout << "body: " << _read_buffer << std::endl;
+	// std::cout << "body: " << _read_buffer << std::endl;
 
 	switch (_checkBodyState())
 	{
@@ -209,6 +238,14 @@ IoState Connection::_processBody() noexcept
 		case BodyState::Complete:
 			_handleCompleteBody();
 			return IoState::Received;
+
+		case BodyState::Chunked:
+		{
+			BodyState chunked_body_state = _handleChunkedBody();
+			if (chunked_body_state == BodyState::Complete)
+				return IoState::Received;
+			return IoState::Pending;
+		}
 
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
@@ -247,7 +284,7 @@ IoState	Connection::_saveToBuffer() noexcept
 	}
 
 	// !CGI
-	
+
 	_response.form_response(_request.get_status_code(), _request.copy_headers());
 	_removeBodyFromBuffer();
 	return IoState::Received;
@@ -261,6 +298,7 @@ IoState	Connection::_sendData() noexcept
 	std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
 
 	is_header_received = false;
+	_request.set_is_chunk_received(false);
 
 	std::cout << "[io] send() starting..." << std::endl;
 

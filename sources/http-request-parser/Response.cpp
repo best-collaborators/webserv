@@ -38,7 +38,7 @@ std::string Response::serve_html_webserv_page(std::string msg)
 void Response::is_set_default_page()
 {
 	std::string method = get_header_value("method");
-	if (method == "OPTIONS") {
+	if (method == "OPTIONS" || _status_code == 204) {
 		_status_code = 204;
 		_body = "";
 	}
@@ -48,7 +48,7 @@ void Response::is_set_default_page()
 	else if (_status_code > 300) {
 		_body = serve_html_webserv_page("Error happend.");
 	}
-	else if (_status_code == 304 || _status_code == 204) {
+	else if (_status_code == 304) {
 		_body = serve_html_webserv_page("Other message.");
 	}
 	else {
@@ -194,10 +194,10 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
   		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	if (_content_length > 0) {
+	if (!_body.empty()) {
 		ostringstream  << "Content-Type: " << get_header_value("content-type") << "\r\n";
+		ostringstream << "Content-Length: " << _content_length << "\r\n";
 	}
-	ostringstream << "Content-Length: " << _content_length << "\r\n";
 
 	//For cache
 	// if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)

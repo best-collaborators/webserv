@@ -22,7 +22,6 @@ private:
 	std::vector<MultipartFormData>					_multipartFormDatas;
 	Request											&_request;
 	std::string										_raw_bits;
-	std::string										_parsed_body;
 
 	//! Move to a different class
 	uint											_uploaded_files_count;

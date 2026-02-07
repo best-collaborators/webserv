@@ -195,7 +195,10 @@ uint RequestParser::validate_request_headers()
 		_buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
 	}
 
-	if (_request.get_header_value("method") == "POST" && !_request.get_header_count("content-length")) {
+	if (_request.get_header_value("method") == "POST"
+		&& !_request.get_header_count("content-length")
+		&& !_request.get_header_count("transfer-encoding")) {
+
 		std::cerr << "411 Length Required" << std::endl; return 411;
 	}
 
@@ -236,53 +239,47 @@ void RequestParser::parse_headers()
 	_request.set_status_code(200);
 }
 
-// void RequestParser::percent_encoding(std::string &buffer)
-// {
-	
-// 	while (pos != buffer.end() && (pos + 1) != buffer.end() && (pos + 2) != buffer.end())
-// 	{
-// 		size_t index = pos - buffer.begin();
-// 		char hex[3];
-// 		hex[0] = buffer[index + 1];
-// 		hex[1] = buffer[index + 2];
-// 		hex[2] = '\0';
-
-// 		try
-// 		{
-// 			char char_encoded = std::stoi(hex, nullptr, 16);
-// 			buffer.replace(index, 3, 1, char_encoded);
-// 		}
-// 		catch(const std::exception& e) { std::cout << "[http-parser] Not a percent encoding character" << std::endl; }
-// 		pos = std::find(buffer.begin() + index + 1, buffer.end(), '%');
-// 	}
-// }
-
 void RequestParser::parse_chunked_encoding()
 {
-	std::regex reg("^[0-9a-f]+$");
+	std::regex reg("^([0-9a-f]+)$");
+
 	std::string buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
 
 	while (!buffer.empty())
 	{
 		std::string hex = get_regex_value(buffer, reg);
 
+		std::cout << "[http-parser] Raw bits " << buffer << std::endl; 
+
+		//!add check if there is still bytes to read from last chink
 		unsigned long long chunk_size = 0;
 		try {
 			chunk_size = std::stoull(hex, nullptr, 16);
 		}
 		catch(const std::exception& e) { 
-			std::cout << "[http-parser] Invalid size in transfer-encoding" << std::endl; 
+			std::cout << "[http-parser] Invalid size in transfer-encoding --> " << hex << std::endl; 
 			_request.set_status_code(400);
+			_request.set_is_chunk_received(true);
 			return ;
 		}
 
 		buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
-		if ((chunk_size > 0 && buffer.empty()) || (buffer.size() != chunk_size)) {
+		if (chunk_size == 0 && buffer.empty() && _raw_bits.empty()) {
+			_request.set_status_code(204);
+			_request.set_is_chunk_received(true);
+			return ;
+		}
+
+		if ((chunk_size > 0 && buffer.empty())) {
 			std::cout << "[http-parser] Invalid chunk in transfer-encoding" << std::endl; 
 			_request.set_status_code(400);
 			return ;
 		}
-		_parsed_body += buffer;
+
+		while (buffer.size() != chunk_size && !_raw_bits.empty()) {
+			buffer += ValidatorHelpers::cut_after_new_line(_raw_bits);
+		}
+		_request.append_body_value(buffer);
 	}
 }
 
@@ -307,10 +304,8 @@ void RequestParser::write_into_file(std::string upload_dir, std::string filename
 
 	fout.write(_raw_bits.c_str(), _raw_bits.size());
 
-	_request.set_status_code(201);
 	_uploaded_files_count++;
 	fout.close();
-	return ;
 }
 
 void RequestParser::parse_body()
@@ -329,12 +324,19 @@ void RequestParser::parse_body()
 	}
 
 	if (method == "POST" && _request.get_header_count("transfer-encoding") > 0) {
+
 		parse_chunked_encoding();
-		write_into_file("data/", _request.get_header_value("x-filename"), _parsed_body, content_type);
+
+		if (!_request.is_chunk_received()) return ;
+
+		write_into_file("data/", _request.get_header_value("x-filename"), _request.get_body(), content_type);
+		return ;
 	}
-	
+
 	if (method == "POST") {
 		write_into_file("data/", _request.get_header_value("x-filename"), _raw_bits, content_type);
+		_request.set_status_code(204);
+		return ;
 	}
 
 	_request.set_status_code(200);

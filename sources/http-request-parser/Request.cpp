@@ -19,3 +19,23 @@ void Request::print_http_request_values() const
 	}
 	std::cout << std::endl;
 }
+
+std::string Request::get_current_chunk() const
+{
+	return _current_chunk;
+}
+
+size_t Request::get_current_chunk_size() const
+{
+	return _current_chunk.size();
+}
+
+bool Request::is_chunk_received() const
+{
+	return _chunk_received;
+}
+
+void Request::set_is_chunk_received(bool status)
+{
+	_chunk_received = status;
+}
