@@ -63,6 +63,7 @@ private:
 	HeaderState	_handleHeaderMethod() noexcept;
 	HeaderState	_checkHeaderState() noexcept;
 	void		_removeBodyFromBuffer() noexcept;
+	BodyState	_handleChunkedBody() noexcept;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;

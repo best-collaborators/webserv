@@ -15,7 +15,7 @@ protected:
 	std::string _body;
 public:
 	HttpMessage(std::unordered_map<std::string, std::string> _http_request_values);
-	
+
 	HttpMessage() = default;
 	HttpMessage(const HttpMessage &other) = default;
 	HttpMessage(HttpMessage &&other) = default;
@@ -30,6 +30,9 @@ public:
 	void										set_header_value(std::string key, std::string new_value);
 	void										append_header_value(std::string key, std::string additional_value);
 	ssize_t										get_content_length() const;
+
+	void										append_body_value(std::string addition);
+	std::string									get_body();
 };
 
 #endif /* REQUEST_PARSE_RESULT_HPP */

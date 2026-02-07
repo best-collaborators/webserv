@@ -60,3 +60,13 @@ std::unordered_map<std::string, std::string> HttpMessage::copy_headers()
 {
 	return std::move(_headers);
 }
+
+void HttpMessage::append_body_value(std::string addition)
+{
+	_body += addition;
+}
+
+std::string HttpMessage::get_body()
+{
+	return _body;
+}

@@ -14,10 +14,10 @@ std::string HttpStatus::get_status_code_name(e_code s)
 			return "Created";
 			break;
 		case e_code::NO_CONTENT:
-			return "No content";
+			return "No Content";
 			break;
 		case e_code::NOT_FOUND:
-			return "Not found";
+			return "Not Found";
 			break;
 		case e_code::METHOD_NOT_ALLOWED:
 			return "Method Not Allowed";
