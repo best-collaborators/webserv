@@ -119,9 +119,9 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 
 	_processHeader();
 
-	std::cout << "\n[io] read_buffer: " << "\n======" << is_header_received << "=========\n"
-		<< std::quoted(_read_buffer)
-		<< "\n===============\n";
+	// std::cout << "\n[io] read_buffer: " << "\n======" << is_header_received << "=========\n"
+	// 	<< std::quoted(_read_buffer)
+	// 	<< "\n===============\n";
 
 	if (is_header_received && _processBody() == IoState::Pending)
 		return IoState::Pending;
@@ -238,8 +238,8 @@ void Connection::_parseHeaders() noexcept
 
 void Connection::_consumeHeader() noexcept
 {
-	size_t header_end_position = _read_buffer.find("\r\n\r\n");
-	_read_buffer.erase(0, header_end_position + 4);
+	// size_t header_end_position = _read_buffer.find("\r\n\r\n");
+	// _read_buffer.erase(0, header_end_position + 4);
 }
 
 HeaderState Connection::_handleHeaderMethod() noexcept
@@ -257,7 +257,6 @@ HeaderState Connection::_handleHeaderMethod() noexcept
 
 HeaderState Connection::_checkHeaderState() noexcept
 {
-	// std::cout << "headers: " << _read_buffer << std::endl;
 	if (is_header_received) return HeaderState::Complete;
 
 	if (!_headersComplete())
@@ -341,6 +340,9 @@ BodyState Connection::_handleChunkedBody() noexcept
 {
 	std::cout << "[io] Request received (chunked)." << std::endl;
 
+	std::cout << "_read_buffer is\n"
+			<< _read_buffer << std::endl;
+
 	RequestParser parser(_request, _read_buffer);
 	parser.parse_body();
 
@@ -349,14 +351,16 @@ BodyState Connection::_handleChunkedBody() noexcept
 	std::cout << "Chunk received, chunk size is :"
 			<< _request.get_current_chunk_size() << std::endl;
 
-	std::cout << "Chunk is\n"
-			<< std::quoted(_request.get_current_chunk()) << std::endl;
+	std::cout << "Body is\n"
+			<< _request.get_body() << std::endl;
+
+	std::cout << "_read_buffer is\n"
+			<< _read_buffer << std::endl;
 
 	if (_request.is_chunk_received()) {
 
 		std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
-	
 		return BodyState::Complete;
 	}
 
