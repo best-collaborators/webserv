@@ -26,9 +26,15 @@ public:
 	void print_http_request_values() const;
 
 	std::string get_current_chunk() const;
+	size_t get_current_chunk_size_actual() const;
 	size_t get_current_chunk_size() const;
 	bool	is_chunk_received() const;
+	
+	
+	void	set_chunk_size(size_t amount);
+	void	set_current_chunk(std::string &&chunk);
 	void	set_is_chunk_received(bool status);
+	void	increase_chunk_size(size_t amount);
 };
 
 #endif /* HTTP_REQUEST */
