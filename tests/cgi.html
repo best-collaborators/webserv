@@ -64,7 +64,7 @@
     })
     .then(response => response.text()) 
     .then(data => {
-      resultDiv.textContent = "Server Response:\n" + data;
+      resultDiv.innerHTML = data;
     })
     .catch(err => {
       resultDiv.textContent = "Error: " + err;
