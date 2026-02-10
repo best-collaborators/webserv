@@ -26,15 +26,6 @@ private:
 	//! Move to a different class
 	uint											_uploaded_files_count;
 
-	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
-	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
-	const char *ERROR_HTTP_VESRION = "LOG: ERROR INVALID REQUEST VERSION";
-
-	const char *REGEX_HTTP_METHOD = "(^[A-Z]{1,32}[ ]+)";
-	const char *REGEX_HTTP_REQUEST_TARGET = "^(/[\\S]*)";
-	const char *REGEX_HTTP_VESRION = "(HTTP\\/(\\d)+.(\\d)+\\s*$)";
-	const char *REGEX_HTTP_HEADER = "(^\\S{1,256}:[ ]+)";
-
 	std::string		get_regex_value(std::string &line, std::regex regex_method);
 
 	bool			is_valid_request_line();
