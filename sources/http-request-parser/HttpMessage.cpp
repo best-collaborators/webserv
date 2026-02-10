@@ -66,7 +66,7 @@ void HttpMessage::append_body_value(std::string addition)
 	_body += addition;
 }
 
-std::string HttpMessage::get_body()
+std::string &HttpMessage::get_body()
 {
 	return _body;
 }

@@ -10,3 +10,9 @@ std::string ValidatorHelpers::cut_after_new_line(std::string &line)
 	line.erase(0, pos + 2);
 	return temp_buffer;
 }
+
+std::string ValidatorHelpers::transform_to_lower(std::string &str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
+	return str;
+}

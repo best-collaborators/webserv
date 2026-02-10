@@ -1,23 +1,20 @@
 #ifndef MULTIPART_DATA_VALIDATOR
 #define MULTIPART_DATA_VALIDATOR
 
-#include <iostream>
-#include <regex>
-#include "MultipartFormData.hpp"
-#include "Trimmer.hpp"
 #include <fstream>
 #include <vector>
+#include <cstring>
+#include <iostream>
+#include <regex>
 
-#include "RequestParser.hpp"
 #include "ValidatorHelpers.hpp"
+#include "MultipartFormData.hpp"
+#include "HttpRegexPatterns.hpp"
+#include "Trimmer.hpp"
 
 class MultipartDataValidator
 {
 private:
-	const char *REGEX_BOUNDARY = "^multipart/form-data;\\s*boundary=([^;\\s]+$)";
-	const char *REGEX_CONTENT_TYPE = "^[C,c]ontent-[T,t]ype:\\s*(\\S{1,256}\\/\\S{1,256})\\s*";
-	const char *REGEX_CONTENT_DISPOSITION = "^[C,c]ontent-[D,d]isposition: form-data;\\s*name=\"(\\S{1,256})\";?\\s*(filename=\"(\\S{1,256})\")?";
-
 	std::vector <MultipartFormData>		_multipartFormDatas;
 	std::string							_content_type;
 	std::string							_buffer;
@@ -29,12 +26,12 @@ public:
 		std::string &_buffer,
 		std::string &_request
 	);
+	~MultipartDataValidator();
 
 	MultipartDataValidator() = delete;
 	MultipartDataValidator(const MultipartDataValidator &other) = delete;
 	MultipartDataValidator(MultipartDataValidator &&other) = delete;
 	MultipartDataValidator & operator=( MultipartDataValidator && ) noexcept = delete;
-	~MultipartDataValidator();
 
 	std::string			get_multipart_form_boundary();
 

@@ -23,6 +23,16 @@ public:
 private:
 	HttpRegexPatterns() = delete;
 
+	// Private regex pattern attributes
+	static const std::regex METHOD_PATTERN;
+	static const std::regex REQUEST_TARGET_PATTERN;
+	static const std::regex VERSION_PATTERN;
+	static const std::regex HEADER_PATTERN;
+	static const std::regex CONTENT_DISPOSITION_PATTERN;
+	static const std::regex CONTENT_TYPE_PATTERN;
+	static const std::regex BOUNDARY_PATTERN;
+	static const std::regex PERCENT_ENCODING_PATTERN;
+	static const std::regex HEX_VALUE_PATTERN;
 };
 
 #endif /* HTTP_REGEX_PATTERNS_HPP */

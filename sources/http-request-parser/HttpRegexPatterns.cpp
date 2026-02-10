@@ -1,61 +1,60 @@
 #include "HttpRegexPatterns.hpp"
 
-	// const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
-	// const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
-	// const char *ERROR_HTTP_VESRION = "LOG: ERROR INVALID REQUEST VERSION";
-
-	// const char *REGEX_HTTP_METHOD =
-	// const char *REGEX_HTTP_REQUEST_TARGET = "";
-	// const char *REGEX_HTTP_VESRION = "";
-	// const char *REGEX_HTTP_HEADER = "";
+const std::regex HttpRegexPatterns::METHOD_PATTERN("(^[A-Z]{1,32}[ ]+)");
+const std::regex HttpRegexPatterns::REQUEST_TARGET_PATTERN("^(/[\\S]*)");
+const std::regex HttpRegexPatterns::VERSION_PATTERN("(HTTP\\/(\\d)+.(\\d)+\\s*$)");
+const std::regex HttpRegexPatterns::HEADER_PATTERN("(^\\S{1,256}:[ ]+)");
+const std::regex HttpRegexPatterns::CONTENT_DISPOSITION_PATTERN("^[C,c]ontent-[D,d]isposition: form-data;\\s*name=\"(\\S{1,256})\";?\\s*(filename=\"(\\S{1,256})\")?");
+const std::regex HttpRegexPatterns::CONTENT_TYPE_PATTERN("^[C,c]ontent-[T,t]ype:\\s*(\\S{1,256}\\/\\S{1,256})\\s*");
+const std::regex HttpRegexPatterns::BOUNDARY_PATTERN("^multipart/form-data;\\s*boundary=([^;\\s]+$)");
+const std::regex HttpRegexPatterns::PERCENT_ENCODING_PATTERN("");
+const std::regex HttpRegexPatterns::HEX_VALUE_PATTERN("^([0-9a-f]+)$");
 
 // Request line patterns
-static const std::regex& METHOD()
+const std::regex& HttpRegexPatterns::METHOD()
 {
-	return std::regex("(^[A-Z]{1,32}[ ]+)");
+	return HttpRegexPatterns::METHOD_PATTERN;
 }
 
-static const std::regex& REQUEST_TARGET()
+const std::regex& HttpRegexPatterns::REQUEST_TARGET()
 {
-	return std::regex("^(/[\\S]*)");
+	return HttpRegexPatterns::REQUEST_TARGET_PATTERN;
 }
 
-static const std::regex& VERSION()
+const std::regex& HttpRegexPatterns::VERSION()
 {
-	return std::regex("(HTTP\\/(\\d)+.(\\d)+\\s*$)");
+	return HttpRegexPatterns::VERSION_PATTERN;
 }
-
 
 // Header patterns
-static const std::regex& HEADER()
+const std::regex& HttpRegexPatterns::HEADER()
 {
-	return std::regex("(^\\S{1,256}:[ ]+)");
+	return HttpRegexPatterns::HEADER_PATTERN;
 }
 
-static const std::regex& CONTENT_DISPOSITION()
+const std::regex& HttpRegexPatterns::CONTENT_DISPOSITION()
 {
-	
+	return HttpRegexPatterns::CONTENT_DISPOSITION_PATTERN;
 }
 
-static const std::regex& CONTENT_TYPE()
+const std::regex& HttpRegexPatterns::CONTENT_TYPE()
 {
-	
+	return HttpRegexPatterns::CONTENT_TYPE_PATTERN;
 }
 
-static const std::regex& BOUNDARY()
+const std::regex& HttpRegexPatterns::BOUNDARY()
 {
-	
+	return HttpRegexPatterns::BOUNDARY_PATTERN;
 }
-
 
 // Encoding patterns
-static const std::regex& PERCENT_ENCODING()
+const std::regex& HttpRegexPatterns::PERCENT_ENCODING()
 {
-
+	return HttpRegexPatterns::PERCENT_ENCODING_PATTERN;
 }
 
-static const std::regex& HEX_VALUE()
+const std::regex& HttpRegexPatterns::HEX_VALUE()
 {
-
+	return HttpRegexPatterns::HEX_VALUE_PATTERN;
 }
 

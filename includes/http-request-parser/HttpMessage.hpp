@@ -32,7 +32,7 @@ public:
 	ssize_t										get_content_length() const;
 
 	void										append_body_value(std::string addition);
-	std::string									get_body();
+	std::string									&get_body();
 };
 
 #endif /* REQUEST_PARSE_RESULT_HPP */

@@ -15,6 +15,7 @@ public:
 	~ValidatorHelpers() = delete;
 
 	static std::string cut_after_new_line(std::string &line);
+	static std::string transform_to_lower(std::string &str);
 };
 
 #endif

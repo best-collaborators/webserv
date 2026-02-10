@@ -1,19 +1,31 @@
 #include "RequestLineValidator.hpp"
 
-RequestLineValidator::RequestLineValidator(/* args */)
-{
-}
+RequestLineValidator::	RequestLineValidator( std::string &raw_bits, Request &request ) :
+	_raw_bits(raw_bits), _request(request) { }
 
-RequestLineValidator::~RequestLineValidator()
+bool RequestLineValidator::add_value_to_map(
+	std::regex reg_method,
+	std::string errmsg,
+	std::string key
+)
 {
+	std::string method = RegexMatcher::get_regex_value(_buffer, reg_method);
+	if (method == "") {
+		std::cout << errmsg << std::endl;
+		return false;
+	}
+	method = Trimmer::trim(method);
+	PercentEncoder::percent_encoding(method);
+	_request.set_header_value(key, method);
+	return true;
 }
 
 bool RequestLineValidator::is_valid_request_line()
 {
-	if (_buffer.length() > 8192) return false;
-	return (add_value_to_map(REGEX_HTTP_METHOD, ERROR_HTTP_METHOD, "method")
-	&& add_value_to_map(REGEX_HTTP_REQUEST_TARGET, ERROR_HTTP_REQUEST_TARGET, "request-target")
-	&& add_value_to_map(REGEX_HTTP_VESRION, ERROR_HTTP_VESRION, "version"));
+	if (_buffer.length() > http::limits::max_header_value_length) return false;
+	return (add_value_to_map(HttpRegexPatterns::METHOD(), ERROR_HTTP_METHOD, "method")
+	&& add_value_to_map(HttpRegexPatterns::REQUEST_TARGET(), ERROR_HTTP_REQUEST_TARGET, "request-target")
+	&& add_value_to_map(HttpRegexPatterns::VERSION(), ERROR_HTTP_VESRION, "version"));
 }
 
 uint RequestLineValidator::validate_request_line()
@@ -31,7 +43,7 @@ uint RequestLineValidator::validate_request_line()
 		return 505;
 	}
 
-	if (_request.get_header_value("request-target").length() > 4096){
+	if (_request.get_header_value("request-target").length() > http::limits::max_uri_length){
 		std::cerr << "414 URI Too Long" << std::endl;
 		return 414;
 	}

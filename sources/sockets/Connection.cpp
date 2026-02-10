@@ -229,8 +229,8 @@ bool Connection::_headersComplete() const noexcept
 
 void Connection::_parseHeaders() noexcept
 {
-	RequestParser request_parser(_request, _read_buffer);
-	request_parser.parse_headers();
+	RequestParser header_parser(_request, _read_buffer);
+	header_parser.parse_headers();
 
 	std::cout << "Header received. Status code -> "
 			<< _request.get_status_code() << std::endl;
@@ -327,10 +327,8 @@ void Connection::_handleCompleteBody() noexcept
 {
 	std::cout << "[io] Request received (complete)." << std::endl;
 
-	RequestParser parser(_request, _read_buffer);
-	parser.parse_body();
-
-	_request.set_status_code(parser.get_status_code());
+	RequestParser body_parser(_request, _read_buffer);
+	body_parser.parse_body();
 
 	std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
@@ -345,8 +343,6 @@ BodyState Connection::_handleChunkedBody() noexcept
 
 	RequestParser parser(_request, _read_buffer);
 	parser.parse_body();
-
-	_request.set_status_code(parser.get_status_code());
 
 	std::cout << "Chunk received, chunk size is :"
 			<< _request.get_current_chunk_size() << std::endl;
@@ -445,13 +441,13 @@ IoState	Connection::_sendData() noexcept
 	// std::cout << "msg_len " << msg_len << std::endl;
 	// std::cout << "total_msg_len " << total_msg_len << std::endl;
 
-	std::cout << "==================RESPONSE==================\n"
-		<< std::quoted(_response.get_body()) << std::endl
-		<< "============================================\n";
+	// std::cout << "==================RESPONSE==================\n"
+	// 	<< std::quoted(_response.get_body()) << std::endl
+	// 	<< "============================================\n";
 
-	std::cout << "==================REQUEST==================\n"
-		<< std::quoted(_read_buffer) << std::endl
-		<< "============================================\n";
+	// std::cout << "==================REQUEST==================\n"
+	// 	<< std::quoted(_read_buffer) << std::endl
+	// 	<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 

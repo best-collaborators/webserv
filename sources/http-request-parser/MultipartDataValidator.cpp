@@ -14,9 +14,7 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 	std::string boundary;
 	std::smatch match;
 
-	std::regex reg(REGEX_BOUNDARY);
-
-	if (!std::regex_search(_content_type, match, reg)) {
+	if (!std::regex_search(_content_type, match, HttpRegexPatterns::BOUNDARY())) {
 		return "";
 	}
 
@@ -38,9 +36,8 @@ std::string MultipartDataValidator::get_multipart_form_boundary()
 
 bool MultipartDataValidator::check_multipart_header(MultipartFormData &multipart_form_data)
 {
-	std::regex reg(REGEX_CONTENT_DISPOSITION);
 	std::smatch m;
-	if (!std::regex_search(_buffer, m, reg)) { return false; }
+	if (!std::regex_search(_buffer, m, HttpRegexPatterns::CONTENT_DISPOSITION())) { return false; }
 
 	multipart_form_data.set_name(m[1]);
 	multipart_form_data.set_filename(m[3]);
@@ -55,7 +52,7 @@ bool MultipartDataValidator::check_multipart_content_type(MultipartFormData &mul
 		return true;
 	}
 
-	std::regex reg(REGEX_CONTENT_TYPE);
+	std::regex reg(HttpRegexPatterns::CONTENT_TYPE());
 	std::smatch m;
 	if (!std::regex_search(_buffer, m, reg)) { return false; }
 
@@ -63,6 +60,7 @@ bool MultipartDataValidator::check_multipart_content_type(MultipartFormData &mul
 	return true;
 }
 
+//TODO: CHANGE IT TO FILEUPLOAD CLASS
 uint MultipartDataValidator::create_multipart_data_form_files()
 {
 	std::string upload_dir = "data/";

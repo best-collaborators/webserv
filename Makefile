@@ -16,6 +16,14 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
+	$(SRC_DIR)/http-request-parser/FileUploadHandler.cpp \
+	$(SRC_DIR)/http-request-parser/PercentEncoder.cpp \
+	$(SRC_DIR)/http-request-parser/HttpBodyParser.cpp \
+	$(SRC_DIR)/http-request-parser/TransferEncodingChunked.cpp \
+	$(SRC_DIR)/http-request-parser/HttpHeaderParser.cpp \
+	$(SRC_DIR)/http-request-parser/RegexMatcher.cpp \
+	$(SRC_DIR)/http-request-parser/HttpRegexPatterns.cpp \
+	$(SRC_DIR)/http-request-parser/RequestLineValidator.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/Response.cpp \

@@ -1,59 +1,26 @@
 #ifndef REQUEST_PARSER_HPP
 #define REQUEST_PARSER_HPP
 
-#include <unordered_map>
-#include <regex>
-#include <string>
-#include <string_view>
-#include <cstring>
-#include <iostream>
-#include <vector>
-
-#include "MultipartFormData.hpp"
-#include "MultipartDataValidator.hpp"
-#include "Trimmer.hpp"
-#include "Request.hpp"
-#include "RequestGenerator.hpp"
+#include "HttpBodyParser.hpp"
+#include "HttpHeaderParser.hpp"
 
 class RequestParser
 {
 private:
 	std::string										_buffer;
-	std::vector<MultipartFormData>					_multipartFormDatas;
 	Request											&_request;
 	std::string										&_raw_bits;
 
-	//! Move to a different class
-	uint											_uploaded_files_count;
-
-	std::string		get_regex_value(std::string &line, std::regex regex_method);
-
-	bool			is_valid_request_line();
-	uint			validate_request_line();
-
-	bool			add_value_to_map(const char *regex_str, std::string errmsg, std::string key);
-
-	bool			is_valid_header();
-	int				content_length_validation();
-
-	uint			validate_request_headers();
-	uint			validate_request_body();
-
-	void			percent_encoding(std::string &buffer);
-	void			parse_chunked_encoding();
-
-	void			write_into_file(std::string upload_dir, std::string filename, std::string _raw_bits, std::string content_type);
+	RequestParser(const RequestParser &other) = delete;
+	RequestParser(RequestParser &&other) = delete;
+	RequestParser & operator=( RequestParser && ) noexcept = delete;
 
 public:
 	RequestParser(Request &request, std::string &raw_bits);
-	RequestParser(const RequestParser &other) = default;
-	RequestParser(RequestParser &&other) = default;
-	RequestParser & operator=( RequestParser && ) noexcept = delete;
 	~RequestParser() = default;
 
 	void			parse_body();
 	void			parse_headers();
-	uint			get_status_code();
 };
 
 #endif /* REQUEST_PARSER_HPP */
