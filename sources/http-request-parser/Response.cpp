@@ -18,37 +18,44 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(std::string msg)
 {
-	std::string status_code_message(HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)));
+    set_header_value("content-type", "text/html");
 
-	set_header_value("content-type", "text/html");
-	return "<!DOCTYPE html>\n"
-			"<html lang=\"en\">\n"
-			"<head>\n"
-			"	<meta charset=\"UTF-8\">\n"
-			"	<title>" + std::to_string(_status_code) + " " + status_code_message + "</title>\n"
-			"</head>\n"
-			"<body>\n"
-			"	<center><h1>" + std::to_string(_status_code) + " " + status_code_message + "</h1></center>\n"
-			"	<hr><center>webserv/42.0.0</center>"
-			"	<p>" + msg + "</p>\n"
-			"</body>\n"
-			"</html>\n";
+    return "<!DOCTYPE html>\n"
+           "<html lang=\"en\">\n"
+           "<head>\n"
+           "    <meta charset=\"UTF-8\">\n"
+           "    <title>" +
+           std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
+           HttpStatus::get_status_code_name(_status_code) +
+           "</title>\n"
+           "</head>\n"
+           "<body>\n"
+           "    <center>\n"
+           "        <h1>" +
+           std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
+           HttpStatus::get_status_code_name(_status_code) +
+           "</h1>\n"
+           "    </center>\n"
+           "    <hr><center>webserv/42.0.0</center>\n"
+           "    <p>" + msg + "</p>\n"
+           "</body>\n"
+           "</html>\n";
 }
 
 void Response::is_set_default_page()
 {
 	std::string method = get_header_value("method");
-	if (method == "OPTIONS" || _status_code == 204) {
-		_status_code = 204;
+	if (method == "OPTIONS" || _status_code == static_cast<HttpStatus::e_code>(204)) {
+		_status_code = HttpStatus::e_code(204);
 		_body = "";
 	}
 	else if (method == "POST") {
 		_body = serve_html_webserv_page("Successfull post.");
 	}
-	else if (_status_code > 300) {
+	else if (HttpStatus::is_bad(_status_code)) {
 		_body = serve_html_webserv_page("Error happend.");
 	}
-	else if (_status_code == 304) {
+	else if (_status_code == static_cast<HttpStatus::e_code>(304)) {
 		_body = serve_html_webserv_page("Other message.");
 	}
 	else {
@@ -68,16 +75,16 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 		case 2:
 			//No such file or directory
 			std::cout << "[response] No such file or directory" << std::endl;
-			_status_code = 404;
+			_status_code = HttpStatus::e_code(404);
 			break;
 		case 13:
 			//Permission denied
 			std::cout << "[response] Permission denied" << std::endl;
-			_status_code = 503;
+			_status_code = HttpStatus::e_code(503);
 			break;
 		default:
 			std::cout << "[response] Permission denied" << std::endl;
-			_status_code = 503;
+			_status_code = HttpStatus::e_code(503);
 			break;
 	}
 	ifs.close();
@@ -116,7 +123,7 @@ void Response::read_body_partially()
 	_bytes_read += gcount;
 
 	if (!ifs && _bytes_sent < _response_length) {
-		_status_code = 503;
+		_status_code = HttpStatus::e_code(503);
 		return;
 	}
 	ifs.close();
@@ -135,7 +142,7 @@ std::streampos Response::get_file_size()
 	std::fstream ifs(filename, std::ios::in | std::ios::binary);
 	if (!is_fstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
-		_status_code = 503;
+		_status_code = HttpStatus::e_code(503);
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -145,7 +152,7 @@ std::streampos Response::get_file_size()
 	return _content_length;
 }
 
-std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body)
+std::string Response::form_response(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body)
 {
 	_status_code = status_code;
 	_response_length = 0;
@@ -159,7 +166,7 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	is_set_default_page();
 
 	if (!_is_default_page && (get_header_value("request-target")).size() < 2) {
-		_status_code = 200;
+		_status_code = HttpStatus::e_code(200);
 		_body = serve_html_webserv_page("Root not configured");
 		_is_default_page = true;
 		_content_length = _body.size();
@@ -170,7 +177,7 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 		std::cout << "[response] Not a default page" << std::endl;
 		std::cout << "[response] file to send back: " << _root + get_header_value("request-target") << std::endl;
 		get_file_size();
-		if (_status_code < 300) {
+		if (HttpStatus::is_good(_status_code)) {
 			set_content_type(get_header_value("request-target"));
 			if (body.empty())
 				read_body_partially();
@@ -189,8 +196,7 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	std::ostringstream ostringstream;
 
 	ostringstream << "HTTP/1.1"  << " "
-		<< _status_code << " "
-		<< HttpStatus::get_status_code_name(static_cast<HttpStatus::e_code>(_status_code)) << "\r\n"
+		<< _status_code << "\r\n"
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
 		<< "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
@@ -206,7 +212,7 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	// if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
 	// 	ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value("request-target")) << "\r\n";
 
-	if (_status_code > 400)
+	if (HttpStatus::is_bad(_status_code))
 		ostringstream << "Connection: close" << "\r\n";
 
 	ostringstream << "\r\n";
@@ -226,7 +232,7 @@ std::string Response::form_response(uint status_code, std::unordered_map<std::st
 	return _body;
 }
 
-uint Response::status_code()
+HttpStatus::e_code Response::status_code()
 {
 	return _status_code;
 }

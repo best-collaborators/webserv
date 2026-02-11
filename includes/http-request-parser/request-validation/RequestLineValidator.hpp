@@ -7,9 +7,11 @@
 #include "HttpRegexPatterns.hpp"
 #include "Trimmer.hpp"
 #include "Request.hpp"
-#include "ValidatorHelpers.hpp"
+#include "RequestStringUtils.hpp"
 #include "PercentEncoder.hpp"
 #include "HttpLimits.hpp"
+
+#include "HttpStatus.hpp"
 
 class RequestLineValidator
 {
@@ -33,8 +35,8 @@ public:
 	RequestLineValidator( std::string &raw_bits, Request &request );
 	~RequestLineValidator() = default;
 
-	bool	is_valid_request_line();
-	uint	validate_request_line();
+	bool				is_valid_request_line();
+	HttpStatus::e_code	validate();
 };
 
 #endif /* REQUEST_LINE_VALIDATOR */

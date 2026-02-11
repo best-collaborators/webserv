@@ -28,24 +28,24 @@ bool RequestLineValidator::is_valid_request_line()
 	&& add_value_to_map(HttpRegexPatterns::VERSION(), ERROR_HTTP_VESRION, "version"));
 }
 
-uint RequestLineValidator::validate_request_line()
+HttpStatus::e_code RequestLineValidator::validate()
 {
-	_buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
+	_buffer = RequestStringUtils::cut_after_new_line(_raw_bits);
 
-	if (_buffer == "") return 400;
+	if (_buffer == "") return HttpStatus::code_from_number(400);
 	if (is_valid_request_line() == false){
 		std::cerr << "400 Bad Request - request line is invalid" << std::endl;
-		return 400;
+		return HttpStatus::code_from_number(400);
 	}
 
 	if (_request.get_header_value("version") != "HTTP/1.1") {
 		std::cerr << "505 HTTP Version Not Supported" << std::endl;
-		return 505;
+		return HttpStatus::code_from_number(505);
 	}
 
 	if (_request.get_header_value("request-target").length() > http::limits::max_uri_length){
 		std::cerr << "414 URI Too Long" << std::endl;
-		return 414;
+		return HttpStatus::code_from_number(414);
 	}
 
 	if (_request.get_header_value("method") != "GET"
@@ -53,8 +53,8 @@ uint RequestLineValidator::validate_request_line()
 		&& _request.get_header_value("method") != "OPTIONS"
 		&& _request.get_header_value("method") != "DELETE") {
 		std::cerr << "405 Not Allowed" << std::endl;
-		return 405;
+		return HttpStatus::code_from_number(405);
 	}
 
-	return 0;
+	return HttpStatus::code_from_number(0);
 }

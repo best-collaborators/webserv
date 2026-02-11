@@ -81,18 +81,18 @@ uint MultipartDataValidator::create_multipart_data_form_files()
 
 uint MultipartDataValidator::parse_multipart_form_data(MultipartFormData &multipart_form_data)
 {
-	_buffer = ValidatorHelpers::cut_after_new_line(_request);
+	_buffer = RequestStringUtils::cut_after_new_line(_request);
 	if (!check_multipart_header(multipart_form_data)) {
 		std::cerr << "400 Bad Request - bad multipart header" << std::endl; return 400;
 	}
 
-	_buffer = ValidatorHelpers::cut_after_new_line(_request);
+	_buffer = RequestStringUtils::cut_after_new_line(_request);
 	if (!check_multipart_content_type(multipart_form_data)) {
 		std::cerr << "400 Bad Request - bad multipart content type" << std::endl; return 400;
 	}
 
 	if (!multipart_form_data.get_content_type().empty())
-		_buffer = ValidatorHelpers::cut_after_new_line(_request);
+		_buffer = RequestStringUtils::cut_after_new_line(_request);
 
 	return 0;
 }

@@ -18,7 +18,7 @@
 class Response : HttpMessage
 {
 private:
-	uint					_status_code;
+	HttpStatus::e_code		_status_code;
 	std::size_t				_response_length;
 	std::streampos			_content_length;
 	std::string				_root = "data";
@@ -46,8 +46,8 @@ public:
 
 	// Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values);
 
-	std::string form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body = "");
-	uint status_code();
+	std::string form_response(HttpStatus::e_code _status_code, std::unordered_map<std::string, std::string> &&_http_request_values, std::string body = "");
+	HttpStatus::e_code status_code();
 	size_t get_total_response_length();
 	size_t get_current_length();
 	// void set_response_length(size_t response_length);

@@ -3,13 +3,16 @@
 TransferEncodingChunkedParser::TransferEncodingChunkedParser( std::string &raw_bits, Request &request ) :
 _request(request), _raw_bits(raw_bits) { }
 
+
+
 void TransferEncodingChunkedParser::parse()
 {
 	std::string buffer = _request.get_current_chunk();
 
-	std::string temp = ValidatorHelpers::cut_after_new_line(_raw_bits);
+	//TODO: Replace to RequestStringUtils::consume_next_line(_raw_bits);
+	std::string temp = RequestStringUtils::cut_after_new_line(_raw_bits);
 	if (temp.empty() && !_raw_bits.empty()) {
-		temp += std::move(_raw_bits);
+		temp = std::move(_raw_bits);
 		_raw_bits = "";
 	}
 	buffer += temp;
@@ -38,7 +41,7 @@ void TransferEncodingChunkedParser::parse()
 			}
 			_request.set_chunk_size(chunk_size);
 
-			buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
+			buffer = RequestStringUtils::cut_after_new_line(_raw_bits);
 			if (buffer.empty() && !_raw_bits.empty()) {
 				buffer = std::move(_raw_bits);
 				_raw_bits = "";
@@ -64,13 +67,13 @@ void TransferEncodingChunkedParser::parse()
 			_request.append_body_value(buffer);
 			_request.set_current_chunk("");
 			_request.set_chunk_size(0);
-			buffer = ValidatorHelpers::cut_after_new_line(_raw_bits);
+			buffer = RequestStringUtils::cut_after_new_line(_raw_bits);
 			continue ;
 		}
 
 		while (buffer.size() >= chunk_size && !_raw_bits.empty()) {
 			std::cout << "buffer size: " << buffer.size() << std::endl;
-			std::string temp = ValidatorHelpers::cut_after_new_line(_raw_bits);
+			std::string temp = RequestStringUtils::cut_after_new_line(_raw_bits);
 			if (temp.empty() && !_raw_bits.empty()) {
 				temp += std::move(_raw_bits);
 				_raw_bits = "";

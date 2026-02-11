@@ -16,10 +16,17 @@ public:
 		CONTENT_TOO_LARGE = 413,
 		URI_TOO_LONG = 414,
 		SERVICE_UNAVAILABLE = 503,
-		HTTP_VERSION_NOT_SUPPORTED = 505
+		HTTP_VERSION_NOT_SUPPORTED = 505,
+		UNKNOWN = 0
 	} t_code;
 
-	static std::string get_status_code_name(e_code s);
+	static std::string	get_status_code_name(e_code s);
+	static e_code		code_from_number(uint code);
+	static uint			number_from_code(e_code code);
+	static bool			is_bad(e_code code);
+	static bool			is_good(e_code code);
 };
+
+std::ostream& operator<<(std::ostream& os, HttpStatus::e_code code);
 
 #endif /* HTTP_STATUS_HPP */

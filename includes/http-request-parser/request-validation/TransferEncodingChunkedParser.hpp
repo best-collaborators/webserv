@@ -2,7 +2,7 @@
 #define TRANSFER_ENCODING_CHUNKED_PARSER
 
 #include "Request.hpp"
-#include "ValidatorHelpers.hpp"
+#include "RequestStringUtils.hpp"
 #include "RegexMatcher.hpp"
 #include "HttpRegexPatterns.hpp"
 

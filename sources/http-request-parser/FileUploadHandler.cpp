@@ -22,7 +22,7 @@ _upload_dir(upload_dir), _filename(""), _request(request) {
 
 void FileUploadHandler::write_into_file( std::string &_body )
 {
-	if (_request.get_status_code() > 300)
+	if (HttpStatus::is_bad(_request.get_status_code()))
 		return ;
 
 	if (_request.get_header_count("x-filename")) {

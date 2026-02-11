@@ -441,13 +441,13 @@ IoState	Connection::_sendData() noexcept
 	// std::cout << "msg_len " << msg_len << std::endl;
 	// std::cout << "total_msg_len " << total_msg_len << std::endl;
 
-	// std::cout << "==================RESPONSE==================\n"
-	// 	<< std::quoted(_response.get_body()) << std::endl
-	// 	<< "============================================\n";
+	std::cout << "==================RESPONSE==================\n"
+		<< std::quoted(_response.get_body()) << std::endl
+		<< "============================================\n";
 
-	// std::cout << "==================REQUEST==================\n"
-	// 	<< std::quoted(_read_buffer) << std::endl
-	// 	<< "============================================\n";
+	std::cout << "==================REQUEST==================\n"
+		<< std::quoted(_read_buffer) << std::endl
+		<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 

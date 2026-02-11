@@ -31,7 +31,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/MultipartFormData.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
 	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
-	$(SRC_DIR)/http-request-parser/ValidatorHelpers.cpp \
+	$(SRC_DIR)/http-request-parser/RequestStringUtils.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMessage.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/Request.cpp \

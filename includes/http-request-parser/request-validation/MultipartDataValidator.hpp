@@ -7,7 +7,7 @@
 #include <iostream>
 #include <regex>
 
-#include "ValidatorHelpers.hpp"
+#include "RequestStringUtils.hpp"
 #include "MultipartFormData.hpp"
 #include "HttpRegexPatterns.hpp"
 #include "Trimmer.hpp"
