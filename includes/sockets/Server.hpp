@@ -14,6 +14,8 @@
 #include "Listener.hpp"
 #include "Connection.hpp"
 #include "Poller.hpp"
+#include "CGIOperation.hpp"
+#include "ChildSignalHandler.hpp"
 
 extern volatile sig_atomic_t	g_running;
 
@@ -23,12 +25,22 @@ private:
 	Listener					_listener;
 	Poller						_poller;
 	std::map<int, Connection>	_connections;
+	std::unordered_map<int, Connection *>	_fd_to_connection;
+	ChildSignalHandler						_childHandler;
 
 	void					acceptConnection();
 	void					handleEvent( epoll_event const & event ) noexcept;
 	void					modifyEvent( int fd, uint32_t events ) noexcept;
 	void					closeConnection( int fd ) noexcept;
 
+	void					_registerConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
+	void					_unregisterConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
+
+	void					_handleError( Connection & connection, int fd, bool isActiveCGI );
+	void					_handleClose( int fd, bool isActiveCGI );
+	void					_handleReceived( Connection & connection, int fd, bool isActiveCGI );
+	void					_handleSent( Connection & connection, int fd, bool isActiveCGI );
+	void					_handleInitCGI( Connection & connection );
 public:
 	Server() = delete;
 	Server( std::string const & port );

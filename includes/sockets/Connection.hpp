@@ -1,8 +1,10 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/wait.h>
 
 #include "IoState.hpp"
 #include "Socket.hpp"
@@ -13,18 +15,23 @@
 #include "RequestParser.hpp"
 #include "BodyState.hpp"
 #include "HeaderState.hpp"
+#include "CGIOperation.hpp"
+#include "CGIConfig.hpp"
+#include "CGIHandler.hpp"
 
 class Connection
 {
 private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
+	int			_fd;
 	bool		is_header_received = false;
 	ssize_t		_stored_body_bytes;
 	Request		_request;
 	Response	_response;
 
 	Socket		_socket;
+	std::unique_ptr<CGIHandler> _cgi_handler;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
 	ssize_t		_read_bytes;
@@ -66,5 +73,11 @@ public:
 
 	~Connection() = default;
 
+	int		getFD() const noexcept;
+
 	IoState	processEvents( uint32_t const events ) noexcept;
+
+	int		getCGIPipe( CGIOperation op );
+	void	closeCGIPipe( CGIOperation op );
+	bool	hasActiveCGI() const noexcept;
 };

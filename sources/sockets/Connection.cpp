@@ -1,7 +1,12 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _stored_body_bytes(0),  _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
+Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _stored_body_bytes(0), _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
 {}
+
+int Connection::getFD() const noexcept
+{
+	return _fd;
+}
 
 IoState Connection::processEvents( uint32_t const events ) noexcept
 {
@@ -9,11 +14,26 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 		return IoState::Error;
 
 	if (events & EPOLLHUP)
+	{
+		if (_cgi_handler)
+		{
+			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
+			_removeBodyFromBuffer();
+			return IoState::Received;
+		}
 		return IoState::Closed;
+	}
 
 	if (events & EPOLLIN)
 	{
-		IoState state = _receiveData();
+		IoState state = _cgi_handler ? _cgi_handler->readFromCGI() : _receiveData();
+
+		if (state == IoState::Received)
+		{
+			_response.form_response(_request.get_status_code(), _request.copy_headers());
+			_removeBodyFromBuffer();
+			return state;
+		}
 
 		if (state != IoState::Pending)
 			return state;
@@ -21,7 +41,7 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 
 	if (events & EPOLLOUT)
 	{
-		IoState state = _sendData();
+		IoState state = _cgi_handler ? _cgi_handler->writeToCGI(_read_buffer) : _sendData();
 
 		if (state != IoState::Pending)
 			return state;
@@ -58,23 +78,75 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	_read_buffer.append(_recv_buffer, _read_bytes);
 	_stored_bytes += _read_bytes;
 
-	// std::cout << "\n[io] read_bytes: " << _read_bytes
-	// 	<< "\n===============\n";
-	// 	std::cout << "connection fd " << _socket.getFD()
-	// 	<< "\n=================\n"
-	// 	<< _read_buffer.substr(0, _stored_bytes)
-	// 	<< "=================\n";
-
 	_processHeader();
-	if (_processBody() == IoState::Pending) {
+
+	if (is_header_received == false)
 		return IoState::Pending;
+
+	if (_processBody() != IoState::Received)
+		return IoState::Pending;
+
+	if (_request.get_header_value("request-target") == "/cgi/test.js")
+	{
+		std::string const	contentLength = _request.get_header_value("content-length");
+		
+		if (!contentLength.empty())
+		{
+			std::size_t	pos {};
+			const int i = std::stoi(contentLength, &pos);
+
+			if (static_cast<ssize_t>(i) == _stored_body_bytes)
+			{
+				try
+				{
+					std::string	executable = "/usr/local/bin/node";
+					std::string	scriptPath = "tests/test.js";
+					std::vector<std::string> envVariables = { "TEST=Test!" };
+
+					CGIConfig	config = {
+						executable,
+						scriptPath,
+						envVariables
+					};
+
+					_cgi_handler = std::make_unique<CGIHandler>(config);
+				}
+				catch(const std::exception& e)
+				{
+					std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
+					return IoState::Received; //! Return 500 error code and send response back
+				}
+				return IoState::CGI;
+			}
+		}
 	}
 
-	// !CGI
-	
-	_response.form_response(_request.get_status_code(), _request.copy_headers());
-	_removeBodyFromBuffer();
 	return IoState::Received;
+}
+
+bool Connection::hasActiveCGI() const noexcept
+{
+	return _cgi_handler != nullptr;
+}
+
+int Connection::getCGIPipe( CGIOperation op )
+{
+	if (!_cgi_handler)
+		return -1;	
+	return op == CGIOperation::READ ? _cgi_handler->getReadFD() : _cgi_handler->getWriteFD();
+}
+
+void Connection::closeCGIPipe( CGIOperation op )
+{
+	if (!_cgi_handler)
+		return;
+	if (op == CGIOperation::READ)
+	{
+		_cgi_handler->closeReadPipe();
+		_cgi_handler.reset();
+	}
+	else
+		_cgi_handler->closeWritePipe();
 }
 
 bool Connection::_headersComplete() const noexcept

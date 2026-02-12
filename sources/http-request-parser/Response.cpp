@@ -119,13 +119,16 @@ void Response::create_body()
 	ifs.close();
 }
 
-std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values)
+std::string Response::form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body)
 {
 	_response_length = 0;
 	_status_code = status_code;
 	set_headers(std::move(http_request_values));
-	create_body();
-	
+	if (body.empty())
+		create_body();
+	else
+		_body = serve_html_webserv_page(body);
+
 	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
 	// if (!_is_a_file)
 	// {
