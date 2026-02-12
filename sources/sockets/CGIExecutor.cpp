@@ -1,77 +1,127 @@
 #include "CGIExecutor.hpp"
 
-CGIExecutor::CGIExecutor()
+CGIExecutor::CGIExecutor( CGIConfig & config ): _pid(-1)
 {
-	pid_t	fork_pid;
-	int	send_fds[2];
-	int recv_fds[2];
+	_initPipes();
+	_initFork();
+	_initChild(config);
 
-	if (pipe(send_fds) == -1)
+	_write_pipe[STDIN_FILENO].reset();
+	_read_pipe[STDOUT_FILENO].reset();
+}
+
+int CGIExecutor::releaseWriteFD() noexcept
+{
+	return _write_pipe[STDOUT_FILENO].release();
+}
+
+int CGIExecutor::releaseReadFD() noexcept
+{
+	return _read_pipe[STDIN_FILENO].release();
+}
+
+void CGIExecutor::_initPipes()
+{
+	int	wp[2];
+
+	if (pipe(wp) == -1)
+		throw std::system_error(errno, std::generic_category(), "[CGI] write pipe creation failed");
+
+	_write_pipe[0] = PipeFD(wp[0]);
+	_write_pipe[1] = PipeFD(wp[1]);
+
+	int	rp[2];
+
+	if (pipe(rp) == -1)
 	{
-		std::cerr << "send pipes creation failed" << std::endl;
+		throw std::system_error(errno, std::generic_category(), "[CGI] read pipe creation failed");
 	}
-	if (pipe(recv_fds) == -1)
+
+	_read_pipe[0] = PipeFD(rp[0]);
+	_read_pipe[1] = PipeFD(rp[1]);
+}
+
+void CGIExecutor::_initFork()
+{
+	_pid = fork();
+
+	if (_pid == -1)
+		throw std::system_error(errno, std::generic_category(), "[CGI] fork creation failed");
+}
+
+void CGIExecutor::_initChild( CGIConfig & config )
+{
+	if (_pid == 0)
 	{
-		std::cerr << "recv pipes creation failed" << std::endl;
-	}
-
-	fork_pid = fork();
-	if (fork_pid == -1)
-	{
-		std::cerr << "fork failed" << std::endl;
-	}
-	else if (fork_pid == 0)
-	{
-		std::cout << "child" << std::endl;
-		close(send_fds[STDOUT_FILENO]);
-		close(recv_fds[STDIN_FILENO]);
-
-		dup2(send_fds[STDIN_FILENO], STDIN_FILENO);
-		close(send_fds[STDIN_FILENO]);
-
-		dup2(recv_fds[STDOUT_FILENO], STDOUT_FILENO);
-		dup2(recv_fds[STDOUT_FILENO], STDERR_FILENO);
-		close(recv_fds[STDOUT_FILENO]);
-
-		char file[] = "tests/test.js";
-		char env[] = "TEST=Test!";
-		char path[] = "/home/rmzvr/.nvm/versions/node/v24.11.1/bin/node";
-		char *envp[] = { env, nullptr };
-		char *argv[] = { path, file, nullptr };
-
-		if (execve(argv[0], argv, envp) == -1)
+		try
 		{
-			std::cerr << "execve failed" << std::endl;
-		}
-	}
-	else
-	{
-		std::cout << "parent" << std::endl;
-
-		char	buffer_read[1001];
-		char	buffer_write[] = "hi";
-
-		close(send_fds[STDIN_FILENO]);
-		close(recv_fds[STDOUT_FILENO]);
-
-		write(send_fds[STDOUT_FILENO], buffer_write, sizeof(buffer_write) - 1);
-		close(send_fds[STDOUT_FILENO]);
-
-		ssize_t i = 1;
-		while (i > 0)
-		{
-			i = read(recv_fds[STDIN_FILENO], buffer_read, sizeof(buffer_read));
-			if (i > 0)
+			
+			_restoreDefaultSignalMask();
+	
+			_initChildPipes();
+	
+			std::vector<char *>	envp = _generateEnvp(config);
+			std::vector<char *>	argv = _generateArgv(config);
+	
+			if (execve(config.executable.data(), argv.data(), envp.data()) == -1)
 			{
-				buffer_read[i] = '\0';
-				std::cout << "buffer_read: " << buffer_read << std::endl;
+				std::cerr << "[child-CGI] execve failed" << std::endl;
+				_exit(1);
 			}
 		}
-		close(recv_fds[STDIN_FILENO]);
-
-		wait(NULL);
+		catch(const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+			_exit(1);
+		}
 	}
 }
 
-CGIExecutor::~CGIExecutor()
-{}
+void CGIExecutor::_restoreDefaultSignalMask()
+{
+	sigset_t	empty_mask;
+	sigemptyset(&empty_mask);
+	sigprocmask(SIG_SETMASK, &empty_mask, NULL);
+}
+
+void CGIExecutor::_initChildPipes()
+{
+	// Write pipe
+	_write_pipe[STDOUT_FILENO].reset();
+	_dup2FD(_write_pipe[STDIN_FILENO].get(), STDIN_FILENO);
+	_write_pipe[STDIN_FILENO].reset();
+
+	// Read pipe
+	_read_pipe[STDIN_FILENO].reset();
+	_dup2FD(_read_pipe[STDOUT_FILENO].get(), STDOUT_FILENO);
+	_dup2FD(_read_pipe[STDOUT_FILENO].get(), STDERR_FILENO);
+	_read_pipe[STDOUT_FILENO].reset();
+}
+
+void CGIExecutor::_dup2FD( int fd1, int fd2 )
+{
+	if (dup2(fd1, fd2) == -1)
+		throw std::system_error(errno, std::generic_category(), "[CGI] dup2 failed");
+}
+
+std::vector<char *>	CGIExecutor::_generateEnvp( CGIConfig & config )
+{
+	std::vector<char *>	envp;
+
+	for (size_t i = 0; i < config.envVariables.size(); i++)
+		envp.push_back(config.envVariables[i].data());
+	envp.push_back(nullptr);
+
+	return envp;
+}
+
+std::vector<char *> CGIExecutor::_generateArgv( CGIConfig & config )
+{
+	std::vector<char *>	argv = {
+		config.executable.data(),
+		config.scriptPath.data(),
+		nullptr
+	};
+
+	return argv;
+}
