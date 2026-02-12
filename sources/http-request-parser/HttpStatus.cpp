@@ -37,38 +37,10 @@ HttpStatus::e_code HttpStatus::code_from_number(uint code)
 
 bool HttpStatus::is_bad(e_code code)
 {
-	switch (code)
-	{
-		case e_code::BAD_REQUEST:
-		case e_code::NOT_FOUND:
-		case e_code::METHOD_NOT_ALLOWED:
-		case e_code::LENGTH_REQUIRED:
-		case e_code::CONTENT_TOO_LARGE:
-		case e_code::URI_TOO_LONG:
-		case e_code::HTTP_VERSION_NOT_SUPPORTED:
-		case e_code::SERVICE_UNAVAILABLE:
-		  return true;
-		default:
-			return true;
-	}
-	return false;
+	return static_cast<int>(code) >= 400;
 }
 
 bool HttpStatus::is_good(e_code code)
 {
-	switch (code)
-	{
-		case e_code::BAD_REQUEST:
-		case e_code::NOT_FOUND:
-		case e_code::METHOD_NOT_ALLOWED:
-		case e_code::LENGTH_REQUIRED:
-		case e_code::CONTENT_TOO_LARGE:
-		case e_code::URI_TOO_LONG:
-		case e_code::HTTP_VERSION_NOT_SUPPORTED:
-		case e_code::SERVICE_UNAVAILABLE:
-		  return false;
-		default:
-			return false;
-	}
-	return true;
+	return static_cast<int>(code) < 400;
 }

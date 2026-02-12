@@ -15,7 +15,7 @@ private:
 	~PercentEncoder() = delete;
 
 public:
-	static void percent_encoding(std::string &buffer);
+	static std::string percent_encoding(std::string buffer);
 };
 
 #endif /* PERCENT_ENCODER */

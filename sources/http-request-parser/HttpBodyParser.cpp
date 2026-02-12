@@ -19,11 +19,14 @@ uint HttpBodyParser::validate_request_body()
 
 void HttpBodyParser::parse()
 {
-	const std::string method = _request.get_header_value("method");
 	const std::string content_type = _request.get_header_value("content-type");
-	const std::string request_target = _request.get_header_value("request-target");
 
-	if (method == "POST" && content_type.find("multipart/form-data") != std::string::npos) {
+	if (_request.get_method() != HttpMethod::e_code::POST) {
+		_request.set_status_code(200);
+		return ;
+	}
+
+	if (content_type.find("multipart/form-data") != std::string::npos) {
 
 		std::string content_type = _request.get_header_value("_content_type");
 		MultipartDataValidator validator(_multipartFormDatas, content_type, _buffer, _raw_bits);
@@ -31,7 +34,7 @@ void HttpBodyParser::parse()
 	}
 
 	FileUploadHandler file_uploader("data/", _request);
-	if (method == "POST" && _request.get_header_count("transfer-encoding") > 0) {
+	if (_request.get_header_count("transfer-encoding") > 0) {
 
 		TransferEncodingChunkedParser chunked_parser(_raw_bits, _request);
 		chunked_parser.parse();
@@ -42,11 +45,7 @@ void HttpBodyParser::parse()
 		return ;
 	}
 
-	if (method == "POST") {
-		file_uploader.write_into_file(_raw_bits);
-		_request.set_status_code(204);
-		return ;
-	}
-
-	_request.set_status_code(200);
+	file_uploader.write_into_file(_raw_bits);
+	_request.set_status_code(204);
+	return ;
 }

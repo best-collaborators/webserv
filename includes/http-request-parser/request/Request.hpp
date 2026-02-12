@@ -7,9 +7,12 @@
 #include "HttpMessage.hpp"
 #include "HttpStatus.hpp"
 
+#include "HttpMethod.hpp"
+
 class Request : public HttpMessage
 {
 private:
+	HttpMethod::e_code	_method;
 	HttpStatus::e_code	_status_code;
 	std::string			_current_chunk;
 	size_t				_current_chunk_size;
@@ -20,9 +23,10 @@ public:
 	Request(const Request &other) = default;
 	Request(Request &&other) = default;
 	Request & operator=( Request && ) noexcept = default;
-	~Request();
+	~Request() = default;
 
 	HttpStatus::e_code	 get_status_code() const;
+	HttpMethod::e_code	 get_method() const;
 	void				 set_status_code(uint status_code);
 	void				 set_status_code(HttpStatus::e_code status_code);
 	void				 print_http_request_values() const;
@@ -34,10 +38,12 @@ public:
 	bool	is_chunk_received() const;
 	
 	
+	void	set_method(std::string method);
 	void	set_chunk_size(size_t amount);
 	void	set_current_chunk(std::string &&chunk);
 	void	set_is_chunk_received(bool status);
 	void	increase_chunk_size(size_t amount);
+
 };
 
 #endif /* HTTP_REQUEST */

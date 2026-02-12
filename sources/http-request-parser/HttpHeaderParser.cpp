@@ -5,26 +5,26 @@ HttpHeaderParser::HttpHeaderParser( std::string &raw_bits, Request &request )
 
 bool HttpHeaderParser::_isValidHeader()
 {
-	std::string name = RegexMatcher::get_regex_value(_buffer, HttpRegexPatterns::HEADER());
-	if (name == "") return false;
+	std::string name;
+	if (!RequestStringUtils::tryExtractHeaderField(name, _buffer, HttpRegexPatterns::HEADER(), "[parser] Http header is invalid.")) {
+		return false;
+	}
 
-	Trimmer::trim(_buffer);
-	if (_buffer.length() > http::limits::max_header_value_length) return false;
+	if (name.length() > http::limits::max_header_value_length) return false;
 
-	Trimmer::trim(name);
 	name.erase(name.length() - 1);
 	RequestStringUtils::transform_to_lower(name);
 
 	if ((name == "host" || name == "content-length") && _buffer.empty())
 		return false;
-	
+
 	if (_request.get_header_count(name)) {
 		if (name == "host" || name == "content-length") {
 			std::cerr << "ERR: HEADER DUPLICATION: " << name << std::endl;
 			return false;
 		}
 		else {
-			if (_request.get_header_value(name) != _buffer || _request.get_header_value(name) != _buffer)
+			if (_request.get_header_value(name) != _buffer)
 			_request.append_header_value(name, _buffer);
 			return true;
 		}
@@ -58,7 +58,8 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 		_buffer = RequestStringUtils::cut_after_new_line(_raw_bits);
 	}
 
-	if (_request.get_header_value("method") == "POST"
+	_request.set_method(_request.get_header_value("method"));
+	if (_request.get_method() == HttpMethod::e_code::POST
 		&& !_request.get_header_count("content-length")
 		&& !_request.get_header_count("transfer-encoding")) {
 
@@ -74,13 +75,6 @@ HttpStatus::e_code HttpHeaderParser::parse()
 	if (_raw_bits.empty())
 		RequestGenerator::create_post_request(_raw_bits);
 
-	RequestLineValidator request_line_validator(_raw_bits, _request);
-	HttpStatus::e_code request_line_validation_status = request_line_validator.validate();
-	if (HttpStatus::is_bad(request_line_validation_status)) {
-		_request.set_status_code(request_line_validation_status);
-		return request_line_validation_status;
-	}
-
 	HttpStatus::e_code headers_validation_status = _validateRequestHeaders();
 	if (HttpStatus::is_bad(headers_validation_status)) {
 		_request.set_status_code(headers_validation_status);
@@ -94,7 +88,6 @@ HttpStatus::e_code HttpHeaderParser::parse()
 HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 
 	if (_request.get_header_count("transfer-encoding")) {
-		// std::cerr << "ERR: TRANSFER-ENCODING + CONTENT LENGTH" << std::endl;
 		std::cerr << "400 Bad Request transfer-encoding + content-length" << std::endl;
 		return HttpStatus::code_from_number(400);
 	}
@@ -103,7 +96,6 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 		const std::string content_length_str = _request.get_header_value("content-length");
 		int test_length = std::stoll(content_length_str, &pos, 10);
 		if (content_length_str.length() != pos) {
-			// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
 			std::cerr << "400 Bad Request - content-length is NAN" << std::endl; 
 			return HttpStatus::code_from_number(400);
 		}
@@ -117,7 +109,6 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 
 	}
 	catch(const std::exception& e) {
-		// std::cerr << "ERR: INVALID CONTENT LENGTH" << '\n';
 		std::cerr << "400 Bad Request - content-length is NAN" << std::endl;
 		return HttpStatus::code_from_number(413);
 	}

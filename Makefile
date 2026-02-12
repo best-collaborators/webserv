@@ -16,24 +16,25 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
+	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/FileUploadHandler.cpp \
+	$(SRC_DIR)/http-request-parser/RequestLineValidator.cpp \
+	$(SRC_DIR)/http-request-parser/TransferEncodingChunked.cpp \
+	$(SRC_DIR)/http-request-parser/RequestStringUtils.cpp \
 	$(SRC_DIR)/http-request-parser/PercentEncoder.cpp \
 	$(SRC_DIR)/http-request-parser/HttpBodyParser.cpp \
-	$(SRC_DIR)/http-request-parser/TransferEncodingChunked.cpp \
 	$(SRC_DIR)/http-request-parser/HttpHeaderParser.cpp \
-	$(SRC_DIR)/http-request-parser/RegexMatcher.cpp \
-	$(SRC_DIR)/http-request-parser/HttpRegexPatterns.cpp \
-	$(SRC_DIR)/http-request-parser/RequestLineValidator.cpp \
+	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
-	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
+	$(SRC_DIR)/http-request-parser/HttpMethod.cpp \
+	$(SRC_DIR)/http-request-parser/HttpRegexPatterns.cpp \
+	$(SRC_DIR)/http-request-parser/RegexMatcher.cpp \
 	$(SRC_DIR)/http-request-parser/Response.cpp \
 	$(SRC_DIR)/http-request-parser/Trimmer.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartFormData.cpp \
 	$(SRC_DIR)/http-request-parser/MultipartDataValidator.cpp \
-	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
-	$(SRC_DIR)/http-request-parser/RequestStringUtils.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMessage.cpp \
-	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/Request.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \

@@ -245,10 +245,10 @@ void Connection::_consumeHeader() noexcept
 HeaderState Connection::_handleHeaderMethod() noexcept
 {
 	std::string method = _request.get_header_value("method");
-	if (method == "GET"	|| method == "OPTIONS" || method == "HEAD") {
+	if (!HttpMethod::hasBody(_request.get_method())) {
 
 		if (_request.get_content_length() != -1 || _read_buffer.size() > 0) {
-			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)";
+			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)" << std::endl;
 			return HeaderState::Wrong;
 		}
 	}
@@ -299,11 +299,11 @@ BodyState Connection::_checkBodyState() noexcept
 	if (_read_bytes == 0) {
 		return BodyState::Complete;
 	}
-	if (_read_buffer.size() == 0 && _request.get_header_value("method") != "POST") {
+	if (_read_buffer.size() == 0 && _request.get_method() != HttpMethod::e_code::POST) {
 		return BodyState::Complete;
 	}
 
-	if (_request.get_header_value("method") != "POST" && _read_bytes != 0) {
+	if (_request.get_method() != HttpMethod::e_code::POST && _read_bytes != 0) {
 		return BodyState::Invalid;
 	}
 	_stored_body_bytes = _read_buffer.size();

@@ -1,8 +1,6 @@
 #include "Request.hpp"
 
-Request::Request() : _status_code(HttpStatus::code_from_number(0)), _current_chunk_size(0) {}
-
-Request::~Request() { }
+Request::Request() : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)), _current_chunk_size(0) {}
 
 HttpStatus::e_code Request::get_status_code() const {
 	return _status_code;
@@ -62,4 +60,14 @@ size_t Request::get_current_chunk_size_actual() const
 void Request::set_current_chunk(std::string &&chunk)
 {
 	_current_chunk = chunk;
+}
+
+HttpMethod::e_code Request::get_method() const
+{
+	return _method;
+}
+
+void	Request::set_method(std::string method)
+{
+	_method = HttpMethod::fromString(method);
 }

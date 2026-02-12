@@ -105,7 +105,7 @@ void Response::read_body_partially()
 {
 	if (_response_length > 0 && (_body.size() == _response_length || _body.size() >= _buffer || _bytes_sent > _response_length)) return ;
 
-	std::string filename = _root + get_header_value("request-target");
+	std::string filename = _root + get_header_value("request-target-decoded");
 	std::fstream ifs (filename, std::ios::binary | std::ios::in);
 	if (!is_fstream_successful(ifs)) return;
 
@@ -138,7 +138,7 @@ void Response::set_content_type(std::string filename)
 
 std::streampos Response::get_file_size()
 {
-	std::string filename = _root + get_header_value("request-target");
+	std::string filename = _root + get_header_value("request-target-decoded");
 	std::fstream ifs(filename, std::ios::in | std::ios::binary);
 	if (!is_fstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
@@ -161,11 +161,14 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	_bytes_sent = 0;
 
 	set_header_value("request-target", http_request_values["request-target"]);
+	set_header_value("request-target-decoded", http_request_values["request-target-decoded"]);
 	set_header_value("method", http_request_values["method"]);
+
+	http_request_values.clear();
 
 	is_set_default_page();
 
-	if (!_is_default_page && (get_header_value("request-target")).size() < 2) {
+	if (!_is_default_page && (get_header_value("request-target-decoded")).size() < 2) {
 		_status_code = HttpStatus::e_code(200);
 		_body = serve_html_webserv_page("Root not configured");
 		_is_default_page = true;
@@ -175,10 +178,10 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	if (!_is_default_page)
 	{
 		std::cout << "[response] Not a default page" << std::endl;
-		std::cout << "[response] file to send back: " << _root + get_header_value("request-target") << std::endl;
+		std::cout << "[response] file to send back: " << _root + get_header_value("request-target-decoded") << std::endl;
 		get_file_size();
 		if (HttpStatus::is_good(_status_code)) {
-			set_content_type(get_header_value("request-target"));
+			set_content_type(get_header_value("request-target-decoded"));
 			if (body.empty())
 				read_body_partially();
 			else

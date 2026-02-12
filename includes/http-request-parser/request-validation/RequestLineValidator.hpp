@@ -12,6 +12,7 @@
 #include "HttpLimits.hpp"
 
 #include "HttpStatus.hpp"
+#include "HttpMethod.hpp"
 
 class RequestLineValidator
 {

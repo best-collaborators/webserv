@@ -1,7 +1,9 @@
 #include "PercentEncoder.hpp"
 
-void PercentEncoder::percent_encoding(std::string &buffer)
+std::string PercentEncoder::percent_encoding(std::string buffer)
 {
+	std::string copy = buffer;
+
 	auto pos = std::find(buffer.begin(), buffer.end(), '%');
 	while (pos != buffer.end() && (pos + 1) != buffer.end() && (pos + 2) != buffer.end())
 	{
@@ -19,4 +21,5 @@ void PercentEncoder::percent_encoding(std::string &buffer)
 		catch(const std::exception& e) { std::cout << "[http-parser] Not a percent encoding character" << std::endl; }
 		pos = std::find(buffer.begin() + index + 1, buffer.end(), '%');
 	}
+	return copy;
 }
