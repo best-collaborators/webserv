@@ -6,5 +6,6 @@ enum class IoState
 	Closed,		// Peer closed connection
 	Error,		// Socket error
 	Sent,		// Sent data
-	Received	// Received data
+	Received,	// Received data
+	CGI			// CGI init
 };
