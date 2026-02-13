@@ -32,6 +32,7 @@ public:
 	ssize_t										get_content_length() const;
 
 	void										append_body_value(std::string addition);
+	void										append_body_value(std::string addition, size_t bytes);
 	std::string									&get_body();
 };
 

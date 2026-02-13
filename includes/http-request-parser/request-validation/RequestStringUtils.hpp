@@ -20,7 +20,7 @@ private:
 public:
 	static std::string cut_after_new_line(std::string &line);
 	static std::string transform_to_lower(std::string &str);
-	static std::string consume_next_line(std::string raw_bits);
+	static std::string consume_next_line(std::string &raw_bits);
 
 	static bool tryExtractHeaderField(
 		std::string &value,

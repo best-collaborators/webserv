@@ -29,7 +29,7 @@ void FileUploadHandler::write_into_file( std::string &_body )
 		_filename = _request.get_header_value(_request.get_header_value("x-filename"));
 	}
 	else {
-		std::string content_type = _request.get_header_count("content-type") > 0 ? _request.get_header_value("content-type") : "";
+		std::string content_type = _request.getContentType();
 
 		if (content_type.empty())
 			_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-updoad.bin";
@@ -49,5 +49,6 @@ void FileUploadHandler::write_into_file( std::string &_body )
 	fout.write(_body.c_str(), _body.size());
 
 	_uploaded_files_count++;
+	_request.set_status_code(201);
 	fout.close();
 }

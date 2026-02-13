@@ -1,28 +1,31 @@
 #ifndef HTTP_BODY_PARSER
 #define HTTP_BODY_PARSER
 
-#include "Request.hpp"
 #include "MultipartDataValidator.hpp"
 #include "TransferEncodingChunkedParser.hpp"
 #include "FileUploadHandler.hpp"
 
+#include "ParseContext.hpp"
+
 class HttpBodyParser
 {
 private:
-	Request							&_request;
-	std::string						&_raw_bits;
-	std::string						_buffer;
+	ParseContext					&_parse_context;
 	std::vector<MultipartFormData>	_multipartFormDatas;
+
+	void _handleMultipart();
+	void _handleChunked();
+	void _handleRawUpload();
+
 
 	HttpBodyParser() = delete;
 	HttpBodyParser(const HttpBodyParser && other) = delete;
 	HttpBodyParser(const HttpBodyParser & other) = delete;
 
 public:
-	HttpBodyParser( std::string &_raw_bits, Request &_request );
+	HttpBodyParser( ParseContext &parse_context );
 	~HttpBodyParser() = default;
 
-	uint validate_request_body();
 	void parse();
 };
 

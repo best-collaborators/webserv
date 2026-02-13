@@ -17,7 +17,7 @@ std::string RequestStringUtils::transform_to_lower(std::string &str)
 	return str;
 }
 
-std::string RequestStringUtils::consume_next_line(std::string raw_bits) {
+std::string RequestStringUtils::consume_next_line(std::string &raw_bits) {
 	std::string temp = RequestStringUtils::cut_after_new_line(raw_bits);
 	if (temp.empty() && !raw_bits.empty()) {
 		temp = std::move(raw_bits);

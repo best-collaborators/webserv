@@ -1,51 +1,48 @@
 #include "HttpBodyParser.hpp"
 
-HttpBodyParser::HttpBodyParser( std::string &raw_bits, Request &request )
-: _request(request), _raw_bits(raw_bits) { }
+HttpBodyParser::HttpBodyParser( ParseContext &parse_context )
+: _parse_context(parse_context) { }
 
-uint HttpBodyParser::validate_request_body()
+void HttpBodyParser::_handleMultipart()
 {
-	//if post and content length is not 0 - error!
-	if (_raw_bits.size() < http::limits::min_body_length) {
-		if (_request.get_header_value("method") == "POST" && _request.get_header_count("content-length")) {
-			std::cerr << "Body required!" << std::endl;
-			return 400;
-		}
-		return 200;
-	}
+	std::string content_type = _parse_context.request.getContentType();
+	MultipartDataValidator validator(_multipartFormDatas, content_type, _parse_context.raw_bits);
+	_parse_context.request.set_status_code(validator.parse_multipart_data_form());
+}
 
-	return 0;
+void HttpBodyParser::_handleChunked()
+{
+	FileUploadHandler file_uploader("data/", _parse_context.request);
+
+	TransferEncodingChunkedParser chunked_parser(_parse_context);
+	chunked_parser.parse();
+
+	if (!_parse_context.request.is_chunk_received()) return ;
+
+	file_uploader.write_into_file(_parse_context.request.get_body());
+	return ;
+}
+
+void HttpBodyParser::_handleRawUpload()
+{
+	FileUploadHandler file_uploader("data/", _parse_context.request);
+	file_uploader.write_into_file(_parse_context.raw_bits);
+	_parse_context.request.set_status_code(204);
 }
 
 void HttpBodyParser::parse()
 {
-	const std::string content_type = _request.get_header_value("content-type");
-
-	if (_request.get_method() != HttpMethod::e_code::POST) {
-		_request.set_status_code(200);
+	if (!_parse_context.request.expectsBody()) {
 		return ;
 	}
 
-	if (content_type.find("multipart/form-data") != std::string::npos) {
-
-		std::string content_type = _request.get_header_value("_content_type");
-		MultipartDataValidator validator(_multipartFormDatas, content_type, _buffer, _raw_bits);
-		_request.set_status_code(validator.parse_multipart_data_form());
+	if (_parse_context.request.isMultipart()) {
+		_handleMultipart(); return ;
 	}
 
-	FileUploadHandler file_uploader("data/", _request);
-	if (_request.get_header_count("transfer-encoding") > 0) {
-
-		TransferEncodingChunkedParser chunked_parser(_raw_bits, _request);
-		chunked_parser.parse();
-
-		if (!_request.is_chunk_received()) return ;
-
-		file_uploader.write_into_file(_request.get_body());
-		return ;
+	if (_parse_context.request.isChunked()) {
+		_handleChunked(); return ;
 	}
 
-	file_uploader.write_into_file(_raw_bits);
-	_request.set_status_code(204);
-	return ;
+	_handleRawUpload();
 }

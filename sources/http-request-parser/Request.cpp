@@ -71,3 +71,29 @@ void	Request::set_method(std::string method)
 {
 	_method = HttpMethod::fromString(method);
 }
+
+bool Request::has_body_required_headers() const
+{
+	return get_header_count("content-length")
+		|| get_header_count("transfer-encoding");
+}
+
+std::string Request::getContentType() const
+{
+	return get_header_value("content-type");
+}
+
+bool Request::expectsBody() const
+{
+	return _method == HttpMethod::e_code::POST;
+}
+
+bool Request::isChunked() const
+{
+	return get_header_count("transfer-encoding") > 0;
+}
+
+bool Request::isMultipart() const
+{
+	return getContentType().find("multipart/form-data") != std::string::npos;
+}

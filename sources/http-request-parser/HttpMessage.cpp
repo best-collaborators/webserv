@@ -63,7 +63,12 @@ std::unordered_map<std::string, std::string> HttpMessage::copy_headers()
 
 void HttpMessage::append_body_value(std::string addition)
 {
-	_body += addition;
+	_body.append(addition);
+}
+
+void HttpMessage::append_body_value(std::string addition, size_t bytes)
+{
+	_body.append(addition, bytes);
 }
 
 std::string &HttpMessage::get_body()

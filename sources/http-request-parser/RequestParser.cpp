@@ -1,25 +1,25 @@
 #include "RequestParser.hpp"
 
-RequestParser::RequestParser(Request &request, std::string &raw_bits)
-: _request(request), _raw_bits(raw_bits) { }
+RequestParser::RequestParser(Request &request, std::string &raw_bits) : _parse_context{request, raw_bits} {
+}
 
 void RequestParser::parse_body()
 {
-	HttpBodyParser body_parser(_raw_bits, _request);
+	HttpBodyParser body_parser(_parse_context);
 	body_parser.parse();
 }
 
 void RequestParser::parse_headers()
 {
-	RequestLineValidator line_validator(_raw_bits, _request);
+	RequestLineValidator line_validator(_parse_context);
 	HttpStatus::e_code status = line_validator.validate();
 
-	if (HttpStatus::is_bad(status)) { _request.set_status_code(status); return; }
+	if (HttpStatus::is_bad(status)) { _parse_context.request.set_status_code(status); return; }
 
 	std::cout << "AFTER REQUEST LINE" << std::endl;
-	HttpHeaderParser header_parser(_raw_bits, _request);
+	HttpHeaderParser header_parser(_parse_context);
 	status = header_parser.parse();
-	if (HttpStatus::is_bad(status)) { _request.set_status_code(status); return; }
+	if (HttpStatus::is_bad(status)) { _parse_context.request.set_status_code(status); return; }
 
-	_request.set_status_code(200);
+	_parse_context.request.set_status_code(200);
 }

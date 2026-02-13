@@ -7,9 +7,7 @@
 class RequestParser
 {
 private:
-	std::string										_buffer;
-	Request											&_request;
-	std::string										&_raw_bits;
+	ParseContext _parse_context;
 
 	RequestParser(const RequestParser &other) = delete;
 	RequestParser(RequestParser &&other) = delete;

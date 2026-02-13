@@ -6,19 +6,25 @@
 #include "RegexMatcher.hpp"
 #include "HttpRegexPatterns.hpp"
 
+#include "ParseContext.hpp"
+
 class TransferEncodingChunkedParser
 {
 private:
-	Request							&_request;
-	std::string						&_raw_bits;
-	std::string						_buffer;
+	ParseContext &_parse_context;
+	unsigned long long				_chunk_size = 0;
 
 	TransferEncodingChunkedParser() = delete;
 	TransferEncodingChunkedParser(const TransferEncodingChunkedParser && other) = delete;
 	TransferEncodingChunkedParser(const TransferEncodingChunkedParser & other) = delete;
 
+	bool _isFinalChunk( std::string &buffer);
+	bool _tryGetNewChunk( std::string &buffer);
+	bool _isBad( std::string &buffer);
+	bool _isComplete( std::string &buffer);
+
 public:
-	TransferEncodingChunkedParser( std::string &_raw_bits, Request &_request );
+	TransferEncodingChunkedParser( ParseContext &parse_context );
 	~TransferEncodingChunkedParser() = default;
 
 	void parse();

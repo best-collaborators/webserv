@@ -6,13 +6,13 @@
 #include "RegexMatcher.hpp"
 #include "HttpRegexPatterns.hpp"
 #include "Trimmer.hpp"
-#include "Request.hpp"
 #include "RequestStringUtils.hpp"
 #include "PercentEncoder.hpp"
 #include "HttpLimits.hpp"
 
 #include "HttpStatus.hpp"
 #include "HttpMethod.hpp"
+#include "ParseContext.hpp"
 
 class RequestLineValidator
 {
@@ -21,22 +21,22 @@ private:
 	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
 	const char *ERROR_HTTP_VESRION = "LOG: ERROR INVALID REQUEST VERSION";
 
-	std::string		_buffer;
-	std::string		&_raw_bits;
-	Request			&_request;
+	ParseContext &_parse_context;
 
 	//Add to separate utils:
-	bool add_value_to_map( std::regex regex_str, std::string errmsg, std::string key );
+	
+	bool _addValueToMap( std::regex regex_str, std::string &buffer, const char *errmsg, std::string key );
 
 	RequestLineValidator() = delete;
 	RequestLineValidator(const RequestLineValidator & other) = delete;
 	RequestLineValidator(const RequestLineValidator && other) = delete;
 
+	bool				_isValidRequestLine(std::string &buffer);
+
 public:
-	RequestLineValidator( std::string &raw_bits, Request &request );
+	RequestLineValidator( ParseContext &parse_context );
 	~RequestLineValidator() = default;
 
-	bool				is_valid_request_line();
 	HttpStatus::e_code	validate();
 };
 
