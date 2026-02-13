@@ -8,7 +8,9 @@
 
 #include "ParseContext.hpp"
 
-class TransferEncodingChunkedParser
+#include "IParser.hpp"
+
+class TransferEncodingChunkedParser : public IParser
 {
 private:
 	ParseContext &_parse_context;

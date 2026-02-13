@@ -2,7 +2,7 @@
 
 std::bitset<8> HttpMethod::_allowed_methods;
 
-HttpMethod::HttpMethod()
+void HttpMethod::initAllowedMethods()
 {
 	_allowed_methods.set();
 	_allowed_methods.set(_code_to_uint(e_code::INVALID), 0);

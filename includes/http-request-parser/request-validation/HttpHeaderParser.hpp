@@ -8,13 +8,14 @@
 #include "RequestGenerator.hpp"
 #include "RequestLineValidator.hpp"
 #include "HttpLimits.hpp"
+#include "HttpHeaders.hpp"
 
 #include "HttpStatus.hpp"
 #include "ParseContext.hpp"
 
 #include "IParser.hpp"
 
-class HttpHeaderParser : IParser
+class HttpHeaderParser : public IParser
 {
 private:
 	ParseContext	&_parse_context;

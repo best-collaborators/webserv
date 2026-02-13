@@ -14,10 +14,9 @@ public:
 		INVALID
 	} t_code;
 
-	HttpMethod();
-	~HttpMethod() = default;
-
 	static std::bitset<8> _allowed_methods;
+
+	static void			 initAllowedMethods();
 
 	static e_code 		 fromString(const std::string& method);
 	static std::string	 toString(e_code code);
@@ -32,9 +31,13 @@ public:
 
 	static void			 printAllowedMethods();
 
+	HttpMethod & operator=( HttpMethod && ) noexcept = default;
+
 private:
 	HttpMethod(const HttpMethod && other) = delete;
 	HttpMethod(const HttpMethod & other) = delete;
+	HttpMethod() = default;
+	~HttpMethod() = default;
 
 	static uint _code_to_uint(HttpMethod::e_code method);
 };

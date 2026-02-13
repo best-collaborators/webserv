@@ -33,7 +33,7 @@ size_t HttpMessage::amount_of_headers() const
 
 ssize_t HttpMessage::get_content_length() const
 {
-	auto it = _headers.find("content-length");
+	auto it = _headers.find(http::headers::CONTENT_LENGTH);
 	if (it == _headers.end())
 		return -1;
 	return std::stoll(it->second);

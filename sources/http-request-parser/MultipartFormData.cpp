@@ -49,3 +49,10 @@ void MultipartFormData::set_content(const std::string &content) {
 void MultipartFormData::append_content(const std::string &content, std::streamsize size) {
 	_content.append(content + "\n", _content.size(), size);
 }
+
+void MultipartFormData::clear()
+{
+	_filename.clear();
+	_name.clear();
+	_content.clear();
+}

@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "HttpContentType.hpp"
+#include "HttpHeaders.hpp"
 #include "Trimmer.hpp"
 
 class  HttpMessage

@@ -1,43 +1,55 @@
 #include "FileUploadHandler.hpp"
 
 size_t FileUploadHandler::_uploaded_files_count = 0;
+bool FileUploadHandler::_initialized = false;
 
-FileUploadHandler::FileUploadHandler( std::string upload_dir, Request &request ) : 
-_upload_dir(upload_dir), _filename(""), _request(request) {
+FileUploadHandler::FileUploadHandler( std::string upload_dir, Request &request, std::string filename ) : 
+_upload_dir(upload_dir),  _filename(filename), _request(request) {
 
 	if (!_initialized) initialize_count(upload_dir);
 }
 
-void FileUploadHandler::write_into_file( std::string &_body )
+void FileUploadHandler::_getFileName()
 {
-	if (HttpStatus::is_bad(_request.get_status_code()))
-		return ;
+	if (!_filename.empty()) return ;
 
 	if (_request.get_header_count("x-filename")) {
 		_filename = _request.get_header_value(_request.get_header_value("x-filename"));
 	}
 	else {
-		std::string content_type = _request.getContentType();
+		_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-upload";
+		
+		const std::string content_type = _request.getContentType();
 
+		std::string_view extension;
 		if (content_type.empty())
-			_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-upload..bin";
+			extension = ".bin";
 		else 
-			_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-upload" + HttpContentType::get_extension_by_content_type(content_type);
+			extension = HttpContentType::get_extension_by_content_type(content_type);
+
+		_filename.append(extension);
 	}
+	_filename.insert(_filename.begin(), _upload_dir.begin(), _upload_dir.end());
+}
 
-	std::string full_filename = std::string(_upload_dir) + std::string(_filename);
+void FileUploadHandler::write_into_file( const std::string &_body )
+{
+	if (HttpStatus::is_bad(_request.get_status_code()))
+		return ;
 
-	std::fstream fout(full_filename, std::ios::binary | std::ios::out);
+	_getFileName();
+
+	std::fstream fout(_filename, std::ios::binary | std::ios::out);
 	if (!fout) {
 		std::cerr << "[http] Error happened while writing into " << _filename << std::endl;
-		_request.set_status_code(500);
+		_request.set_status_code(HttpStatus::e_code::INTERNAL_SERVER_ERROR);
 		return ;
 	}
 
 	fout.write(_body.c_str(), _body.size());
 
 	_uploaded_files_count++;
-	_request.set_status_code(201);
+	_request.set_status_code(HttpStatus::e_code::CREATED);
 	fout.close();
 }
 
@@ -45,7 +57,7 @@ void FileUploadHandler::initialize_count(const std::string& dir)
 {
 	try
 	{
-		for (const auto& entry : std::filesystem::directory_iterator("data")) {
+		for (const auto& entry : std::filesystem::directory_iterator(dir)) {
 			if (std::filesystem::is_regular_file(entry.status())) {
 				++_uploaded_files_count;
 			}

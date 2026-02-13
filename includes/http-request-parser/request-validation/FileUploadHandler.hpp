@@ -10,21 +10,21 @@ class FileUploadHandler
 {
 private:
 	const std::string	_upload_dir;
-	static size_t		_uploaded_files_count;
 	std::string			_filename;
 	Request 			&_request;
 
-	static size_t _uploaded_files_count;
-	static bool _initialized;
+	static size_t		_uploaded_files_count;
+	static bool			_initialized;
 
 	FileUploadHandler(const FileUploadHandler && other) = delete;
 	FileUploadHandler(const FileUploadHandler & other) = delete;
 
+	void _getFileName();
 public:
-	FileUploadHandler( std::string upload_dir, Request &_request );
+	FileUploadHandler( std::string upload_dir, Request &request, std::string filename = "" );
 	~FileUploadHandler() = default;
 
-	void write_into_file( std::string &_body );
+	void write_into_file( const std::string &_body );
 	static void initialize_count(const std::string& dir);
 };
 

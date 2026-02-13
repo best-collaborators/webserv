@@ -13,6 +13,7 @@
 #include <filesystem>
 
 #include "HttpStatus.hpp"
+#include "HttpHeaders.hpp"
 #include "HttpMessage.hpp"
 
 class Response : HttpMessage

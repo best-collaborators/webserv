@@ -15,6 +15,7 @@ std::string HttpStatus::get_status_code_name(e_code s)
 		case e_code::URI_TOO_LONG: 				  return "Uri Too Long";
 		case e_code::HTTP_VERSION_NOT_SUPPORTED:  return "Http Version Not Supported";
 		case e_code::SERVICE_UNAVAILABLE: 		  return "Service Unavailable";
+		case e_code::INTERNAL_SERVER_ERROR: 	  return "Internal Server Error";
 		default:
 			return "";
 	}
@@ -37,10 +38,10 @@ HttpStatus::e_code HttpStatus::code_from_number(uint code)
 
 bool HttpStatus::is_bad(e_code code)
 {
-	return static_cast<int>(code) >= 400;
+	return static_cast<int>(code) >= static_cast<std::underlying_type_t<e_code>>(e_code::BAD_REQUEST);
 }
 
 bool HttpStatus::is_good(e_code code)
 {
-	return static_cast<int>(code) < 400;
+	return static_cast<int>(code) < static_cast<std::underlying_type_t<e_code>>(e_code::BAD_REQUEST);
 }

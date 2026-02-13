@@ -11,9 +11,14 @@ void RequestParser::parse_body()
 
 void RequestParser::parse_headers()
 {
+	HttpMethod::initAllowedMethods();
+
 	RequestLineValidator line_validator(_parse_context);
 	line_validator.parse();
+
 	if (_parse_context.request.isStatusCodeBad()) { return; }
+
+	std::cout << "REQUEST LINE PARSED" << std::endl;
 
 	HttpHeaderParser header_parser(_parse_context);
 	header_parser.parse();

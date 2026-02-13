@@ -11,12 +11,13 @@
 #include "HttpLimits.hpp"
 
 #include "HttpStatus.hpp"
+#include "HttpHeaders.hpp"
 #include "HttpMethod.hpp"
 #include "ParseContext.hpp"
 
 #include "IParser.hpp"
 
-class RequestLineValidator : IParser
+class RequestLineValidator : public IParser
 {
 private:
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";

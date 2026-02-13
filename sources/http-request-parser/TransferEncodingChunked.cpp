@@ -11,7 +11,7 @@ bool TransferEncodingChunkedParser::_tryGetNewChunk( std::string &buffer )
 	}
 	catch(const std::exception& e) { 
 		std::cout << "[http-parser] Invalid size in transfer-encoding --> " << hex << std::endl; 
-		_parse_context.request.set_status_code(400);
+		_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 		_parse_context.request.set_is_chunk_received(true);
 		_parse_context.request.set_current_chunk("");
 		_parse_context.request.set_chunk_size(0);
@@ -26,7 +26,7 @@ bool TransferEncodingChunkedParser::_tryGetNewChunk( std::string &buffer )
 bool TransferEncodingChunkedParser::_isFinalChunk( std::string &buffer )
 {
 	if (_chunk_size == 0 && buffer.empty() && _parse_context.raw_bits.empty()) {
-		_parse_context.request.set_status_code(200);
+		_parse_context.request.set_status_code(HttpStatus::e_code::OK);
 		_parse_context.request.set_is_chunk_received(true);
 		_parse_context.request.set_current_chunk("");
 		_parse_context.request.set_chunk_size(0);
@@ -40,7 +40,7 @@ bool TransferEncodingChunkedParser::_isBad( std::string &buffer )
 {
 	if ((_chunk_size > 0 && buffer.empty())) {
 		std::cout << "[http-parser] Invalid chunk in transfer-encoding" << std::endl; 
-		_parse_context.request.set_status_code(400);
+		_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 		_parse_context.request.set_is_chunk_received(true);
 		_parse_context.request.set_current_chunk("");
 		_parse_context.request.set_chunk_size(0);
@@ -89,7 +89,7 @@ void TransferEncodingChunkedParser::parse()
 
 		if (buffer.size() > _chunk_size) {
 			std::cout << "[http-parser] Invalid chunk in transfer-encoding (too big)" << std::endl; 
-			_parse_context.request.set_status_code(400);
+			_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 		}
 	}
 }

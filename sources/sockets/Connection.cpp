@@ -244,7 +244,7 @@ void Connection::_consumeHeader() noexcept
 
 HeaderState Connection::_handleHeaderMethod() noexcept
 {
-	std::string method = _request.get_header_value("method");
+	std::string method = _request.get_header_value(http::headers::METHOD);
 	if (!HttpMethod::hasBody(_request.get_method())) {
 
 		if (_request.get_content_length() != -1 || _read_buffer.size() > 0) {
@@ -285,7 +285,7 @@ IoState Connection::_processHeader() noexcept
 		//! CHECK RETURN STATUS CLOSE
 		case HeaderState::Wrong:
 			std::cout << "[io] Request received. Request header invalid." << std::endl;
-			_request.set_status_code(404);
+			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return IoState::Received;
 
 		default:
@@ -308,16 +308,16 @@ BodyState Connection::_checkBodyState() noexcept
 	}
 	_stored_body_bytes = _read_buffer.size();
 	std::cout << "\n[io] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
-	if (_request.get_header_count("transfer-encoding")) {
+	if (_request.get_header_count(http::headers::TRANSFER_ENCODING)) {
 		return BodyState::Chunked;
 	}
 	if (_stored_body_bytes == _request.get_content_length()) {
 		return BodyState::Complete;
 	}
-	else if ( _request.get_header_count("content-length") && _stored_body_bytes > _request.get_content_length())
+	else if ( _request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
 	{
 		std::cout << "Read buffer size" << _read_buffer.size() << std::endl;
-		_request.set_status_code(404);
+		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 		return BodyState::Overflow;
 	}
 	return BodyState::Incomplete;
@@ -388,12 +388,12 @@ IoState Connection::_processBody() noexcept
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
 			std::cout << "[io] Request received. Body too long." << std::endl;
-			_request.set_status_code(404);
+			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return IoState::Received;
 
 		case BodyState::Invalid:
 			std::cout << "[io] Request received. Request is not suppose to have body." << std::endl;
-			_request.set_status_code(404);
+			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return IoState::Received;
 	}
 	return IoState::Received;

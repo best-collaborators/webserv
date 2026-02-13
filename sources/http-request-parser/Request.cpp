@@ -74,31 +74,48 @@ void	Request::set_method(std::string method)
 
 bool Request::has_body_required_headers() const
 {
-	return get_header_count("content-length")
-		|| get_header_count("transfer-encoding");
+	return get_header_count(http::headers::CONTENT_LENGTH)
+		|| get_header_count(http::headers::TRANSFER_ENCODING);
 }
 
 std::string Request::getContentType() const
 {
-	return get_header_value("content-type");
+	return get_header_value(http::headers::CONTENT_TYPE);
 }
 
-bool Request::expectsBody() const
-{
-	return _method == HttpMethod::e_code::POST;
-}
+// bool Request::expectsBody() const
+// {
+// 	
+// }
 
-bool Request::isChunked() const
-{
-	return get_header_count("transfer-encoding") > 0;
-}
+// bool Request::isChunked() const
+// {
+// 	return 
+// }
 
-bool Request::isMultipart() const
-{
-	return getContentType().find("multipart/form-data") != std::string::npos;
-}
+// bool Request::isMultipart() const
+// {
+// 	return ;
+// }
 
 bool Request::isStatusCodeBad() const
 {
 	return HttpStatus::is_bad(_status_code);
+}
+
+RequestBodyStatus Request::getBodyStatus() const
+{
+	if (_method == HttpMethod::e_code::POST)
+	{
+		return RequestBodyStatus::RAW_BODY;
+	}
+	else if (get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	{
+		return RequestBodyStatus::CHUNKED;
+	}
+	else if (getContentType().find("multipart/form-data") != std::string::npos)
+	{
+		return RequestBodyStatus::MULTIPART;
+	}
+	return RequestBodyStatus::NO_BODY;
 }

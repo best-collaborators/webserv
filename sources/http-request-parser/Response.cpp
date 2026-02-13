@@ -18,7 +18,7 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(std::string msg)
 {
-    set_header_value("content-type", "text/html");
+    set_header_value(http::headers::CONTENT_TYPE, "text/html");
 
     return "<!DOCTYPE html>\n"
            "<html lang=\"en\">\n"
@@ -44,9 +44,9 @@ std::string Response::serve_html_webserv_page(std::string msg)
 
 void Response::is_set_default_page()
 {
-	std::string method = get_header_value("method");
-	if (method == "OPTIONS" || _status_code == static_cast<HttpStatus::e_code>(204)) {
-		_status_code = HttpStatus::e_code(204);
+	std::string method = get_header_value(http::headers::METHOD);
+	if (method == "OPTIONS" || _status_code == HttpStatus::e_code::NO_CONTENT) {
+		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body = "";
 	}
 	else if (method == "POST") {
@@ -75,16 +75,16 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 		case 2:
 			//No such file or directory
 			std::cout << "[response] No such file or directory" << std::endl;
-			_status_code = HttpStatus::e_code(404);
+			_status_code = HttpStatus::e_code::NOT_FOUND;
 			break;
 		case 13:
 			//Permission denied
 			std::cout << "[response] Permission denied" << std::endl;
-			_status_code = HttpStatus::e_code(503);
+			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 		default:
 			std::cout << "[response] Permission denied" << std::endl;
-			_status_code = HttpStatus::e_code(503);
+			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
 	ifs.close();
@@ -105,7 +105,7 @@ void Response::read_body_partially()
 {
 	if (_response_length > 0 && (_body.size() == _response_length || _body.size() >= _buffer || _bytes_sent > _response_length)) return ;
 
-	std::string filename = _root + get_header_value("request-target-decoded");
+	std::string filename = _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
 	std::fstream ifs (filename, std::ios::binary | std::ios::in);
 	if (!is_fstream_successful(ifs)) return;
 
@@ -123,7 +123,7 @@ void Response::read_body_partially()
 	_bytes_read += gcount;
 
 	if (!ifs && _bytes_sent < _response_length) {
-		_status_code = HttpStatus::e_code(503);
+		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 		return;
 	}
 	ifs.close();
@@ -133,16 +133,16 @@ void Response::set_content_type(std::string filename)
 {
 	std::filesystem::path path = filename;
 	auto extension = path.extension();
-	set_header_value("content-type", HttpContentType::get_content_type_by_extension(extension.string()));
+	set_header_value(http::headers::CONTENT_TYPE, HttpContentType::get_content_type_by_extension(extension.string()));
 }
 
 std::streampos Response::get_file_size()
 {
-	std::string filename = _root + get_header_value("request-target-decoded");
+	std::string filename = _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
 	std::fstream ifs(filename, std::ios::in | std::ios::binary);
 	if (!is_fstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
-		_status_code = HttpStatus::e_code(503);
+		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -160,16 +160,16 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	_bytes_read = 0;
 	_bytes_sent = 0;
 
-	set_header_value("request-target", http_request_values["request-target"]);
-	set_header_value("request-target-decoded", http_request_values["request-target-decoded"]);
-	set_header_value("method", http_request_values["method"]);
+	set_header_value(http::headers::REQUEST_TARGET, http_request_values[http::headers::REQUEST_TARGET]);
+	set_header_value(http::headers::REQUEST_TARGET_DECODED, http_request_values[http::headers::REQUEST_TARGET_DECODED]);
+	set_header_value(http::headers::METHOD, http_request_values[http::headers::METHOD]);
 
 	http_request_values.clear();
 
 	is_set_default_page();
 
-	if (!_is_default_page && (get_header_value("request-target-decoded")).size() < 2) {
-		_status_code = HttpStatus::e_code(200);
+	if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
+		_status_code = HttpStatus::e_code(HttpStatus::e_code::OK);
 		_body = serve_html_webserv_page("Root not configured");
 		_is_default_page = true;
 		_content_length = _body.size();
@@ -178,10 +178,10 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	if (!_is_default_page)
 	{
 		std::cout << "[response] Not a default page" << std::endl;
-		std::cout << "[response] file to send back: " << _root + get_header_value("request-target-decoded") << std::endl;
+		std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
 		get_file_size();
 		if (HttpStatus::is_good(_status_code)) {
-			set_content_type(get_header_value("request-target-decoded"));
+			set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
 			if (body.empty())
 				read_body_partially();
 			else
@@ -207,13 +207,13 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 		<< "Date: " << get_date_GMT() << "\r\n";
 
 	if (!_body.empty()) {
-		ostringstream  << "Content-Type: " << get_header_value("content-type") << "\r\n";
+		ostringstream  << "Content-Type: " << get_header_value(http::headers::CONTENT_TYPE) << "\r\n";
 		ostringstream << "Content-Length: " << _content_length << "\r\n";
 	}
 
 	//For cache
-	// if (get_header_value("method") != "POST" && _status_code != 201 && _status_code < 300)
-	// 	ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value("request-target")) << "\r\n";
+	// if (get_header_value(http::headers::METHOD) != "POST" && _status_code != HttpStatus::e_code::CREATED &&/*  _status_code < 300 */)
+	// 	ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value(http::headers::REQUEST_TARGET)) << "\r\n";
 
 	if (HttpStatus::is_bad(_status_code))
 		ostringstream << "Connection: close" << "\r\n";

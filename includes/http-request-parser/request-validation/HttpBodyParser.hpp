@@ -1,14 +1,14 @@
 #ifndef HTTP_BODY_PARSER
 #define HTTP_BODY_PARSER
 
-#include "MultipartDataValidator.hpp"
+#include "MultipartDataParser.hpp"
 #include "TransferEncodingChunkedParser.hpp"
 #include "FileUploadHandler.hpp"
 
 #include "ParseContext.hpp"
 #include "IParser.hpp"
 
-class HttpBodyParser : IParser
+class HttpBodyParser : public IParser
 {
 private:
 	ParseContext					&_parse_context;
@@ -17,7 +17,6 @@ private:
 	void _handleMultipart();
 	void _handleChunked();
 	void _handleRawUpload();
-
 
 	HttpBodyParser() = delete;
 	HttpBodyParser(const HttpBodyParser && other) = delete;

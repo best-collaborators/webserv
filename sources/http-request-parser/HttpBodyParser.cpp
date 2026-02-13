@@ -6,8 +6,8 @@ HttpBodyParser::HttpBodyParser( ParseContext &parse_context )
 void HttpBodyParser::_handleMultipart()
 {
 	std::string content_type = _parse_context.request.getContentType();
-	MultipartDataValidator validator(_multipartFormDatas, content_type, _parse_context.raw_bits);
-	_parse_context.request.set_status_code(validator.parse_multipart_data_form());
+	MultipartDataParser validator(_multipartFormDatas, _parse_context);
+	validator.parse();
 }
 
 void HttpBodyParser::_handleChunked()
@@ -27,22 +27,33 @@ void HttpBodyParser::_handleRawUpload()
 {
 	FileUploadHandler file_uploader("data/", _parse_context.request);
 	file_uploader.write_into_file(_parse_context.raw_bits);
-	_parse_context.request.set_status_code(204);
+	_parse_context.request.set_status_code(HttpStatus::e_code::NO_CONTENT);
 }
 
 void HttpBodyParser::parse()
 {
-	if (!_parse_context.request.expectsBody()) {
-		return ;
-	}
+	RequestBodyStatus body_status = _parse_context.request.getBodyStatus();
 
-	if (_parse_context.request.isMultipart()) {
-		_handleMultipart(); return ;
-	}
+	switch (body_status)
+	{
+	case RequestBodyStatus::CGI:
+		/* code */
+		break;
 
-	if (_parse_context.request.isChunked()) {
-		_handleChunked(); return ;
-	}
+	case RequestBodyStatus::CHUNKED:
+		_handleChunked();
+		break;
 
-	_handleRawUpload();
+	case RequestBodyStatus::MULTIPART:
+		_handleMultipart();
+		break;
+
+	case RequestBodyStatus::RAW_BODY:
+		_handleRawUpload();
+		break;
+
+	default:
+		break;
+	}
+	
 }

@@ -1,0 +1,13 @@
+#ifndef REQUEST_BODY_STATUS_HPP
+#define REQUEST_BODY_STATUS_HPP
+
+enum class RequestBodyStatus
+{
+	NO_BODY,
+	RAW_BODY,
+	MULTIPART,
+	CHUNKED,
+	CGI
+};
+
+#endif /* REQUEST_BODY_STATUS_HPP */
