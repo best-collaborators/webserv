@@ -68,17 +68,16 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 	return HttpStatus::code_from_number(200);
 }
 
-HttpStatus::e_code HttpHeaderParser::parse()
+void HttpHeaderParser::parse()
 {
 	if (_parse_context.raw_bits.empty())
 		RequestGenerator::create_post_request(_parse_context.raw_bits);
 
 	HttpStatus::e_code headers_validation_status = _validateRequestHeaders();
 	if (HttpStatus::is_bad(headers_validation_status)) {
-		return headers_validation_status;
+		_parse_context.request.set_status_code(headers_validation_status);
 	}
-
-	return HttpStatus::code_from_number(200);
+	_parse_context.request.set_status_code(200);
 }
 
 HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){

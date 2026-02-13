@@ -14,7 +14,9 @@
 #include "HttpMethod.hpp"
 #include "ParseContext.hpp"
 
-class RequestLineValidator
+#include "IParser.hpp"
+
+class RequestLineValidator : IParser
 {
 private:
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
@@ -31,13 +33,17 @@ private:
 	RequestLineValidator(const RequestLineValidator & other) = delete;
 	RequestLineValidator(const RequestLineValidator && other) = delete;
 
-	bool				_isValidRequestLine(std::string &buffer);
+	bool _isValidRequestLine(std::string &buffer);
+	bool _isValidHttpVersion();
+	bool _isValidUriLength();
+	bool _isMethodAllowed();
+
 
 public:
 	RequestLineValidator( ParseContext &parse_context );
 	~RequestLineValidator() = default;
 
-	HttpStatus::e_code	validate();
+	void	parse();
 };
 
 #endif /* REQUEST_LINE_VALIDATOR */

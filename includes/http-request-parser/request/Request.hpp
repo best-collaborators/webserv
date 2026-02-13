@@ -48,6 +48,8 @@ public:
 	bool isChunked() const;
 	bool isMultipart() const;
 	bool expectsBody() const;
+
+	bool isStatusCodeBad() const;
 };
 
 #endif /* HTTP_REQUEST */

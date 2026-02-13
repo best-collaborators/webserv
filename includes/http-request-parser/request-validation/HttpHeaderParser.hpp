@@ -12,7 +12,9 @@
 #include "HttpStatus.hpp"
 #include "ParseContext.hpp"
 
-class HttpHeaderParser
+#include "IParser.hpp"
+
+class HttpHeaderParser : IParser
 {
 private:
 	ParseContext	&_parse_context;
@@ -29,7 +31,7 @@ public:
 	HttpHeaderParser( ParseContext &parse_context );
 	~HttpHeaderParser() = default;
 
-	HttpStatus::e_code parse();
+	void parse();
 };
 
 #endif /* HEADER_VALIDATOR */

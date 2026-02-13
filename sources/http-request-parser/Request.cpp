@@ -97,3 +97,8 @@ bool Request::isMultipart() const
 {
 	return getContentType().find("multipart/form-data") != std::string::npos;
 }
+
+bool Request::isStatusCodeBad() const
+{
+	return HttpStatus::is_bad(_status_code);
+}

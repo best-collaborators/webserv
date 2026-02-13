@@ -6,8 +6,9 @@
 #include "FileUploadHandler.hpp"
 
 #include "ParseContext.hpp"
+#include "IParser.hpp"
 
-class HttpBodyParser
+class HttpBodyParser : IParser
 {
 private:
 	ParseContext					&_parse_context;
