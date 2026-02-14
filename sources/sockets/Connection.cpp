@@ -123,10 +123,7 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	// 	<< std::quoted(_read_buffer)
 	// 	<< "\n===============\n";
 
-	if (is_header_received && _processBody() == IoState::Pending)
-		return IoState::Pending;
-
-	if (_processBody() != IoState::Received)
+	if (is_header_received && _processBody() != IoState::Received)
 		return IoState::Pending;
 
 	if (_request.get_header_value("request-target") == "/cgi/test.js")

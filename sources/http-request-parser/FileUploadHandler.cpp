@@ -68,4 +68,5 @@ void FileUploadHandler::initialize_count(const std::string& dir)
 		std::cerr << "[data] Cannot retrieve amount of uploaded files" << std::endl;
 		// _request.set_status_code(500);
 	}
+	_initialized = true;
 }
