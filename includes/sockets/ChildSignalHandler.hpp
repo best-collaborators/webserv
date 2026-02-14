@@ -5,7 +5,10 @@
 #include <sys/wait.h>
 #include <sys/signalfd.h>
 
+#include <vector>
 #include <iostream>
+
+#include "ChildExitInfo.hpp"
 
 class ChildSignalHandler
 {
@@ -19,6 +22,6 @@ public:
 	~ChildSignalHandler();
 
 	int		getFD() const noexcept;
-	void	handleFinishedChildren() noexcept;
+	std::vector<ChildExitInfo>	handleFinishedChildren() noexcept;
 };
 

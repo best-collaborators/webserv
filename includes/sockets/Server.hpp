@@ -15,6 +15,8 @@
 #include "Connection.hpp"
 #include "Poller.hpp"
 #include "CGIOperation.hpp"
+#include "ChildExitInfo.hpp"
+#include "CGIExitStatus.hpp"
 #include "ChildSignalHandler.hpp"
 
 extern volatile sig_atomic_t	g_running;
@@ -26,10 +28,11 @@ private:
 	Poller						_poller;
 	std::map<int, Connection>	_connections;
 	std::unordered_map<int, Connection *>	_fd_to_connection;
+	std::unordered_map<pid_t, Connection *>	_pid_to_connection;
 	ChildSignalHandler						_childHandler;
 
 	void					acceptConnection();
-	void					handleEvent( epoll_event const & event ) noexcept;
+	void					_handleEvent( epoll_event const & event );
 	void					modifyEvent( int fd, uint32_t events ) noexcept;
 	void					closeConnection( int fd ) noexcept;
 
@@ -38,9 +41,14 @@ private:
 
 	void					_handleError( Connection & connection, int fd, bool isActiveCGI );
 	void					_handleClose( int fd, bool isActiveCGI );
-	void					_handleReceived( Connection & connection, int fd, bool isActiveCGI );
+	void					_handleReceived( int fd );
 	void					_handleSent( Connection & connection, int fd, bool isActiveCGI );
-	void					_handleInitCGI( Connection & connection );
+	void					_handleCGIInit( Connection & connection );
+	void					_handleCGIDone( Connection & connection );
+
+	void					_handleFinishedChildren();
+	Connection *			_getConnectionByFD( int fd );
+	Connection *			_getConnectionByPID( pid_t fd );
 public:
 	Server() = delete;
 	Server( std::string const & port );

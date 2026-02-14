@@ -10,6 +10,11 @@ CGIExecutor::CGIExecutor( CGIConfig & config ): _pid(-1)
 	_read_pipe[STDOUT_FILENO].reset();
 }
 
+int CGIExecutor::getPID() const noexcept
+{
+	return _pid;
+}
+
 int CGIExecutor::releaseWriteFD() noexcept
 {
 	return _write_pipe[STDOUT_FILENO].release();
@@ -94,7 +99,6 @@ void CGIExecutor::_initChildPipes()
 	// Read pipe
 	_read_pipe[STDIN_FILENO].reset();
 	_dup2FD(_read_pipe[STDOUT_FILENO].get(), STDOUT_FILENO);
-	_dup2FD(_read_pipe[STDOUT_FILENO].get(), STDERR_FILENO);
 	_read_pipe[STDOUT_FILENO].reset();
 }
 

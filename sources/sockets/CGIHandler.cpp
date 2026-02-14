@@ -4,12 +4,18 @@ CGIHandler::CGIHandler( CGIConfig & config )
 {
 	CGIExecutor	executor(config);
 
+	_pid = executor.getPID();
 	_write_fd = PipeFD(executor.releaseWriteFD());
 	_read_fd = PipeFD(executor.releaseReadFD());
 }
 
 CGIHandler::~CGIHandler()
 {}
+
+int CGIHandler::getPID() const noexcept
+{
+	return _pid;
+}
 
 int CGIHandler::getWriteFD() const noexcept
 {

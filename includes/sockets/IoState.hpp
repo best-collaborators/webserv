@@ -7,5 +7,6 @@ enum class IoState
 	Error,		// Socket error
 	Sent,		// Sent data
 	Received,	// Received data
-	CGI			// CGI init
+	CGIInit,	// CGI init
+	CGIDone		// CGI done
 };

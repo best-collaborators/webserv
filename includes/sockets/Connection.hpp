@@ -18,6 +18,14 @@
 #include "CGIOperation.hpp"
 #include "CGIConfig.hpp"
 #include "CGIHandler.hpp"
+#include "ChildExitInfo.hpp"
+#include "CGIExitStatus.hpp"
+
+enum class EventAction : short
+{
+	NoAction,
+	EnableOutput
+};
 
 class Connection
 {
@@ -31,11 +39,16 @@ private:
 	Response	_response;
 
 	Socket		_socket;
+	int			_cgi_pid;
 	std::unique_ptr<CGIHandler> _cgi_handler;
+
+	bool		_cgi_output_ready = false;
+	bool		_cgi_child_dead = false;
+	CGIExitStatus	_cgi_exit_status = CGIExitStatus::EMPTY;
+	bool		_response_formed = false;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
 	ssize_t		_read_bytes;
-	ssize_t		_stored_bytes;
 	ssize_t		_sent_bytes;
 	std::string	_read_buffer;
 
@@ -61,6 +74,9 @@ private:
 
 	IoState		_getSocketState() const noexcept;
 
+	void		_formResponse();
+	void		_resetCGIState();
+
 public:
 	Connection() = default;
 	Connection( Socket && socket );
@@ -77,7 +93,11 @@ public:
 
 	IoState	processEvents( uint32_t const events ) noexcept;
 
+	int		getCGIPID() const noexcept;
 	int		getCGIPipe( CGIOperation op );
 	void	closeCGIPipe( CGIOperation op );
 	bool	hasActiveCGI() const noexcept;
+
+	EventAction	onCGIOutputReady();
+	EventAction	onChildProcessExited( ChildExitInfo const & info );
 };

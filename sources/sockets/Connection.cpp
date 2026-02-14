@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _stored_body_bytes(0), _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
+Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _stored_body_bytes(0), _socket(std::move(socket)), _cgi_pid(-1), _read_bytes(0), _sent_bytes(0)
 {}
 
 int Connection::getFD() const noexcept
@@ -11,29 +11,24 @@ int Connection::getFD() const noexcept
 IoState Connection::processEvents( uint32_t const events ) noexcept
 {
 	if (events & EPOLLERR)
+	{
+		std::cout << "EPOLLERR" << std::endl;
 		return IoState::Error;
+	}
 
 	if (events & EPOLLHUP)
 	{
+		std::cout << "EPOLLHUP" << std::endl;
 		if (_cgi_handler)
-		{
-			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
-			_removeBodyFromBuffer();
-			return IoState::Received;
-		}
+			return IoState::CGIDone;
+
 		return IoState::Closed;
 	}
 
 	if (events & EPOLLIN)
 	{
+		std::cout << "EPOLLIN" << std::endl;
 		IoState state = _cgi_handler ? _cgi_handler->readFromCGI() : _receiveData();
-
-		if (state == IoState::Received)
-		{
-			_response.form_response(_request.get_status_code(), _request.copy_headers());
-			_removeBodyFromBuffer();
-			return state;
-		}
 
 		if (state != IoState::Pending)
 			return state;
@@ -41,6 +36,10 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 
 	if (events & EPOLLOUT)
 	{
+		std::cout << "EPOLLOUT" << std::endl;
+
+		_formResponse();
+
 		IoState state = _cgi_handler ? _cgi_handler->writeToCGI(_read_buffer) : _sendData();
 
 		if (state != IoState::Pending)
@@ -48,6 +47,47 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 	}
 
 	return IoState::Pending;
+}
+
+void	Connection::_formResponse()
+{
+	if (_response_formed)
+		return;
+
+	if (_cgi_handler)
+	{
+		if (!_cgi_output_ready || _cgi_exit_status == CGIExitStatus::EMPTY)
+			return;
+
+		if (_cgi_exit_status == CGIExitStatus::SUCCESS)
+		{
+			std::cout << "CGI STATUS SUCCESS" << std::endl;
+			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
+		}
+		else
+		{
+			std::cout << "CGI STATUS ERROR" << std::endl;
+			_response.form_response(_request.get_status_code(), _request.copy_headers());
+		}
+
+		_resetCGIState();
+	}
+	else
+	{
+		_response.form_response(_request.get_status_code(), _request.copy_headers());
+	}
+
+	_removeBodyFromBuffer();
+	_response_formed = true;
+}
+
+void	Connection::_resetCGIState()
+{
+	_cgi_handler.reset();
+	_cgi_pid = -1;
+	_cgi_exit_status = CGIExitStatus::EMPTY;
+	_cgi_output_ready = false;
+	_cgi_child_dead = false;
 }
 
 IoState Connection::_receiveData() noexcept
@@ -76,7 +116,6 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	}
 
 	_read_buffer.append(_recv_buffer, _read_bytes);
-	_stored_bytes += _read_bytes;
 
 	_processHeader();
 
@@ -110,13 +149,14 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 					};
 
 					_cgi_handler = std::make_unique<CGIHandler>(config);
+					_cgi_pid = _cgi_handler->getPID();
 				}
 				catch(const std::exception& e)
 				{
 					std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
 					return IoState::Received; //! Return 500 error code and send response back
 				}
-				return IoState::CGI;
+				return IoState::CGIInit;
 			}
 		}
 	}
@@ -129,7 +169,37 @@ bool Connection::hasActiveCGI() const noexcept
 	return _cgi_handler != nullptr;
 }
 
-int Connection::getCGIPipe( CGIOperation op )
+EventAction Connection::onChildProcessExited( ChildExitInfo const & info )
+{
+	if (info.success())
+		_cgi_exit_status = CGIExitStatus::SUCCESS;
+	else
+		_cgi_exit_status = CGIExitStatus::ERROR;
+
+	_cgi_child_dead = true;
+
+	if (_cgi_output_ready)
+		return EventAction::EnableOutput;
+
+	return EventAction::NoAction;
+}
+
+EventAction	Connection::onCGIOutputReady()
+{
+	_cgi_output_ready = true;
+
+	if (_cgi_child_dead)
+		return EventAction::EnableOutput;
+
+	return EventAction::NoAction;
+}
+
+int Connection::getCGIPID() const noexcept
+{
+	return _cgi_pid;
+}
+
+int Connection::getCGIPipe(CGIOperation op)
 {
 	if (!_cgi_handler)
 		return -1;	
@@ -141,10 +211,7 @@ void Connection::closeCGIPipe( CGIOperation op )
 	if (!_cgi_handler)
 		return;
 	if (op == CGIOperation::READ)
-	{
 		_cgi_handler->closeReadPipe();
-		_cgi_handler.reset();
-	}
 	else
 		_cgi_handler->closeWritePipe();
 }
@@ -192,7 +259,7 @@ HeaderState Connection::_checkHeaderState() noexcept
 	_parseHeaders();
 	_consumeHeader();
 
-	_request.print_http_request_values();
+	// _request.print_http_request_values();
 
 	is_header_received = true;
 	return _handleHeaderMethod();
@@ -294,14 +361,6 @@ void	Connection::_removeBodyFromBuffer() noexcept
 IoState	Connection::_saveToBuffer() noexcept
 {
 	_read_buffer.append(_recv_buffer, _read_bytes);
-	_stored_bytes += _read_bytes;
-
-	// std::cout << "\n[io] read_bytes: " << _read_bytes
-	// 	<< "\n===============\n";
-	// 	std::cout << "connection fd " << _socket.getFD()
-	// 	<< "\n=================\n"
-	// 	<< _read_buffer.substr(0, _stored_bytes)
-	// 	<< "=================\n";
 
 	_processHeader();
 	if (_processBody() == IoState::Pending) {
@@ -317,8 +376,8 @@ IoState	Connection::_saveToBuffer() noexcept
 
 IoState	Connection::_sendData() noexcept
 {
-	int	fd = _socket.getFD();
-	std::cout << "\n[io] EPOLLOUT triggered for fd " << fd << std::endl;
+	std::cout << "Connection::_sendData" << std::endl;
+	std::cout << "\n[io] EPOLLOUT triggered for fd " << _fd << std::endl;
 
 	std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
 
@@ -338,7 +397,7 @@ IoState	Connection::_sendData() noexcept
 		<< _read_buffer << std::endl
 		<< "============================================\n";
 
-	ssize_t curr_sent_bytes = send(fd, body, msg_len, 0);
+	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 
 	_response.consume_body(curr_sent_bytes);
 	_sent_bytes += curr_sent_bytes;
@@ -358,6 +417,7 @@ IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 	else if (sent_bytes == message_length)
 	{
 		std::cout << "[io] Response sent (complete)." << std::endl;
+		_response_formed = false;
 		return IoState::Sent;
 	}
 	else if (sent_bytes < message_length) //! Implement partial send

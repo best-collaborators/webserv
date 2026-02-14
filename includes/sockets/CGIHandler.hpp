@@ -8,6 +8,7 @@
 class CGIHandler
 {
 private:
+	int			_pid;
 	PipeFD		_write_fd;
 	PipeFD		_read_fd;
 
@@ -18,6 +19,7 @@ public:
 	CGIHandler( CGIConfig & config );
 	~CGIHandler();
 
+	int			getPID() const noexcept;
 	int			getWriteFD() const noexcept;
 	int			getReadFD() const noexcept;
 

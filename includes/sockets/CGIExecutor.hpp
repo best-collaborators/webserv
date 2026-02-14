@@ -31,6 +31,8 @@ public:
 	CGIExecutor( CGIConfig & config );
 	~CGIExecutor() = default;
 
+	int	getPID() const noexcept;
+
 	int	releaseWriteFD() noexcept;
 	int	releaseReadFD() noexcept;
 };
