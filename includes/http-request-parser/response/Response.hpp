@@ -39,7 +39,7 @@ public:
 
 	// Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values);
 
-	std::string form_response(uint _status_code, std::unordered_map<std::string, std::string> &&_http_request_values);
+	std::string form_response(uint status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body = "");
 	uint status_code();
 	size_t get_total_response_length();
 	size_t get_current_length();

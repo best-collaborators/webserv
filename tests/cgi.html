@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Client Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 40px auto;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    #result {
+      margin-top: 15px;
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Send Data to CGI</h2>
+
+  <input id="name" type="text" placeholder="Your Name" />
+  <input id="email" type="email" placeholder="Your Email" />
+  <textarea id="message" placeholder="Type your message"></textarea>
+  
+  <button onclick="send()">Send JSON</button>
+
+  <div id="result"></div>
+
+<script>
+  function send() {
+    const resultDiv = document.getElementById("result");
+    resultDiv.textContent = "Sending...";
+
+    // 1. Get text values
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const message = document.getElementById("message").value;
+    
+    // 2. Prepare the data object
+    const dataToSend = {
+      name: name,
+      email: email,
+      message: message
+    };
+
+    // 3. Send Request
+    fetch("http://127.0.0.1:3490/cgi/test.js", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(dataToSend)
+    })
+    .then(response => response.text()) 
+    .then(data => {
+      resultDiv.innerHTML = data;
+    })
+    .catch(err => {
+      resultDiv.textContent = "Error: " + err;
+    });
+  }
+</script>
+
+</body>
+</html>
