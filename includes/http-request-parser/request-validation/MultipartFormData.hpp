@@ -35,6 +35,8 @@ public:
 	void 					set_content(const std::string &content);
 	void					append_content(const std::string &content, std::streamsize size);
 
+	void					clear();
+
 	void print_all_data();
 };
 

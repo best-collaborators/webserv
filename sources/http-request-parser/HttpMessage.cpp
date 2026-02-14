@@ -33,7 +33,7 @@ size_t HttpMessage::amount_of_headers() const
 
 ssize_t HttpMessage::get_content_length() const
 {
-	auto it = _headers.find("content-length");
+	auto it = _headers.find(http::headers::CONTENT_LENGTH);
 	if (it == _headers.end())
 		return -1;
 	return std::stoll(it->second);
@@ -59,4 +59,19 @@ void HttpMessage::append_header_value(std::string key, std::string additional_va
 std::unordered_map<std::string, std::string> HttpMessage::copy_headers()
 {
 	return std::move(_headers);
+}
+
+void HttpMessage::append_body_value(std::string addition)
+{
+	_body.append(addition);
+}
+
+void HttpMessage::append_body_value(std::string addition, size_t bytes)
+{
+	_body.append(addition, bytes);
+}
+
+std::string &HttpMessage::get_body()
+{
+	return _body;
 }

@@ -5,22 +5,49 @@
 #include <unordered_map>
 #include <string>
 #include "HttpMessage.hpp"
+#include "HttpStatus.hpp"
+
+#include "HttpMethod.hpp"
+#include "HttpHeaders.hpp"
+
+#include "RequestBodyStatus.hpp"
+#include "ChunkHandler.hpp"
 
 class Request : public HttpMessage
 {
 private:
-	uint _status_code;
+	HttpMethod::e_code	_method;
+	std::string			_version;
+	std::string			_uri;
+
+	HttpStatus::e_code	_status_code;
+	ChunkHandler		_chunk_handler;
 
 public:
 	Request();
 	Request(const Request &other) = default;
 	Request(Request &&other) = default;
 	Request & operator=( Request && ) noexcept = default;
-	~Request();
+	~Request() = default;
 
-	uint get_status_code() const;
-	void set_status_code(uint status_code);
-	void print_http_request_values() const;
+	HttpStatus::e_code	 get_status_code() const;
+	void				 set_status_code(HttpStatus::e_code status_code);
+
+	HttpMethod::e_code	 get_method() const;
+	void				 set_method(std::string method);
+
+	std::string			 getContentType() const;
+
+	void				 print_http_request_values() const;
+
+	bool				 has_body_required_headers() const;
+
+	ChunkHandler&		 chunkHandler();
+	void				 reset();
+
+	bool isStatusCodeBad() const;
+
+	RequestBodyStatus getBodyStatus() const;
 };
 
 #endif /* HTTP_REQUEST */
