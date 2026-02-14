@@ -345,7 +345,7 @@ BodyState Connection::_handleChunkedBody() noexcept
 	parser.parse_body();
 
 	std::cout << "Chunk received, chunk size is :"
-			<< _request.get_current_chunk_size() << std::endl;
+			<< _request.chunkHandler().getExpectedSize() << std::endl;
 
 	std::cout << "Body is\n"
 			<< _request.get_body() << std::endl;
@@ -353,7 +353,7 @@ BodyState Connection::_handleChunkedBody() noexcept
 	std::cout << "_read_buffer is\n"
 			<< _read_buffer << std::endl;
 
-	if (_request.is_chunk_received()) {
+	if (_request.chunkHandler().isReceived()) {
 
 		std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
@@ -428,7 +428,7 @@ IoState	Connection::_sendData() noexcept
 	std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
 
 	is_header_received = false;
-	_request.set_is_chunk_received(false);
+	_request.reset();
 
 	std::cout << "[io] send() starting..." << std::endl;
 

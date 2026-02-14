@@ -17,7 +17,8 @@ void HttpBodyParser::_handleChunked()
 	TransferEncodingChunkedParser chunked_parser(_parse_context);
 	chunked_parser.parse();
 
-	if (!_parse_context.request.is_chunk_received()) return ;
+	// std::cout << std::boolalpha << _parse_context.request.chunkHandler().isReceived() << std::endl;
+	if (!_parse_context.request.chunkHandler().isReceived()) return ;
 
 	file_uploader.write_into_file(_parse_context.request.get_body());
 	return ;
@@ -34,6 +35,7 @@ void HttpBodyParser::parse()
 {
 	RequestBodyStatus body_status = _parse_context.request.getBodyStatus();
 
+	std::cout << body_status << std::endl;
 	switch (body_status)
 	{
 	case RequestBodyStatus::CGI:

@@ -11,19 +11,17 @@
 #include "HttpHeaders.hpp"
 
 #include "RequestBodyStatus.hpp"
+#include "ChunkHandler.hpp"
 
 class Request : public HttpMessage
 {
 private:
 	HttpMethod::e_code	_method;
-	std::string_view	_version;
-	std::string_view	_uri;
+	std::string			_version;
+	std::string			_uri;
 
 	HttpStatus::e_code	_status_code;
-
-	std::string			_current_chunk;
-	size_t				_current_chunk_size;
-	bool				_chunk_received;
+	ChunkHandler		_chunk_handler;
 
 public:
 	Request();
@@ -42,16 +40,10 @@ public:
 
 	void				 print_http_request_values() const;
 
-	std::string 		 get_current_chunk() const;
-	size_t				 get_current_chunk_size_actual() const;
-	size_t				 get_current_chunk_size() const;
-	void				 set_chunk_size(size_t amount);
-	void				 set_current_chunk(std::string &&chunk);
-	void				 set_is_chunk_received(bool status);
-	void				 increase_chunk_size(size_t amount);
-
 	bool				 has_body_required_headers() const;
-	bool				 is_chunk_received() const;
+
+	ChunkHandler&		 chunkHandler();
+	void				 reset();
 
 	bool isStatusCodeBad() const;
 

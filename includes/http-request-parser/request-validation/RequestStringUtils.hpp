@@ -8,6 +8,8 @@
 #include "RegexMatcher.hpp"
 #include "Trimmer.hpp"
 
+#include <iomanip>
+
 class RequestStringUtils
 {
 private:
