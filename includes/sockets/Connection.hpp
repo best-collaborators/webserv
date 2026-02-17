@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include <memory>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
@@ -18,18 +18,14 @@
 #include "CGIOperation.hpp"
 #include "CGIConfig.hpp"
 #include "CGIHandler.hpp"
-#include "ChildExitInfo.hpp"
 #include "CGIExitStatus.hpp"
-
-enum class EventAction : short
-{
-	NoAction,
-	EnableOutput
-};
+#include "EventAction.hpp"
 
 class Connection
 {
 private:
+	using opt_cgi = std::optional<CGIHandler>;
+
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
 	int			_fd;
@@ -39,12 +35,8 @@ private:
 	Response	_response;
 
 	Socket		_socket;
-	int			_cgi_pid;
-	std::unique_ptr<CGIHandler> _cgi_handler;
+	opt_cgi		_cgi_handler;
 
-	bool		_cgi_output_ready = false;
-	bool		_cgi_child_dead = false;
-	CGIExitStatus	_cgi_exit_status = CGIExitStatus::EMPTY;
 	bool		_response_formed = false;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
@@ -71,12 +63,9 @@ private:
 	IoState		_handleReceiveState( ssize_t read_bytes ) noexcept;
 	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
 
-	IoState		_saveToBuffer() noexcept;
-
 	IoState		_getSocketState() const noexcept;
 
 	void		_formResponse();
-	void		_resetCGIState();
 
 public:
 	Connection() = default;
@@ -90,15 +79,16 @@ public:
 
 	~Connection() = default;
 
-	int		getFD() const noexcept;
+	int			getFD() const noexcept;
 
-	IoState	processEvents( uint32_t const events ) noexcept;
+	IoResult	processConnectionEvents( uint32_t const events );
+	IoResult	processCGIEvents( uint32_t const events );
 
-	int		getCGIPID() const noexcept;
-	int		getCGIPipe( CGIOperation op );
-	void	closeCGIPipe( CGIOperation op );
-	bool	hasActiveCGI() const noexcept;
+	int			getCGIPID() const noexcept;
+	int			getCGIPipe( CGIOperation op );
+	void		closeCGIPipe( CGIOperation op );
 
 	EventAction	onCGIOutputReady();
 	EventAction	onChildProcessExited( ChildExitInfo const & info );
+	
 };

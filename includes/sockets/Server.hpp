@@ -1,19 +1,16 @@
 #pragma once
 
 #include <iostream>
+#include <map>
+#include <unordered_set>
 
-// epoll_create1, epoll_ctl, epoll_wait, epoll_event, EPOLLIN, EPOLL_CTL_ADD
-#include <sys/epoll.h>
-
-// fcntl, F_SETFL, O_NONBLOCK
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/epoll.h>
 
-#include <map>
-
+#include "Poller.hpp"
 #include "Listener.hpp"
 #include "Connection.hpp"
-#include "Poller.hpp"
 #include "CGIOperation.hpp"
 #include "ChildExitInfo.hpp"
 #include "CGIExitStatus.hpp"
@@ -24,27 +21,31 @@ extern volatile sig_atomic_t	g_running;
 class Server
 {
 private:
-	Listener					_listener;
-	Poller						_poller;
-	std::map<int, Connection>	_connections;
-	std::unordered_map<int, Connection *>	_fd_to_connection;
-	std::unordered_map<pid_t, Connection *>	_pid_to_connection;
-	ChildSignalHandler						_childHandler;
+	using connections_map = std::map<int, Connection>;
+	using cgi_pipe_fds_set = std::unordered_set<int>;
+	using fd_to_connection_map = std::unordered_map<int, Connection *>;
+	using pid_to_connection_map = std::unordered_map<pid_t, Connection *>;
 
-	void					acceptConnection();
+	Poller					_poller;
+	Listener				_listener;
+	ChildSignalHandler		_childHandler;
+
+	connections_map			_connections;
+	cgi_pipe_fds_set		_cgi_pipe_fds;
+
+	fd_to_connection_map	_fd_to_connection;
+	pid_to_connection_map	_pid_to_connection;
+
+	void					_acceptConnection();
 	void					_handleEvent( epoll_event const & event );
-	void					modifyEvent( int fd, uint32_t events ) noexcept;
-	void					closeConnection( int fd ) noexcept;
+	void					_modifyEvent( int fd, uint32_t events ) noexcept;
+	void					_closeConnection( int fd ) noexcept;
 
 	void					_registerConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
 	void					_unregisterConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
 
-	void					_handleError( Connection & connection, int fd, bool isActiveCGI );
-	void					_handleClose( int fd, bool isActiveCGI );
-	void					_handleReceived( int fd );
-	void					_handleSent( Connection & connection, int fd, bool isActiveCGI );
-	void					_handleCGIInit( Connection & connection );
-	void					_handleCGIDone( Connection & connection );
+	void					_handleConnectionEvent( IoEvent event, int fd );
+	void					_handleCGIEvent( IoEvent event, Connection & connection );
 
 	void					_handleFinishedChildren();
 	Connection *			_getConnectionByFD( int fd );

@@ -27,6 +27,11 @@ int CGIHandler::getReadFD() const noexcept
 	return _read_fd.get();
 }
 
+CGIExitStatus CGIHandler::getExitStatus() const noexcept
+{
+	return _exit_status;
+}
+
 void CGIHandler::closeWritePipe() noexcept
 {
 	_write_fd.reset();
@@ -81,4 +86,37 @@ IoState CGIHandler::readFromCGI() noexcept
 std::string & CGIHandler::getBuffer() noexcept
 {
 	return _recv_buffer;
+}
+
+bool CGIHandler::isResponseReady() const noexcept
+{
+	if (_is_output_ready && _is_child_dead && _exit_status != CGIExitStatus::EMPTY)
+		return true;
+
+	return false;
+}
+
+EventAction CGIHandler::onChildProcessExited( ChildExitInfo const & info )
+{
+	if (info.success())
+		_exit_status = CGIExitStatus::SUCCESS;
+	else
+		_exit_status = CGIExitStatus::ERROR;
+
+	_is_child_dead = true;
+
+	if (_is_output_ready)
+		return EventAction::EnableOutput;
+
+	return EventAction::NoAction;
+}
+
+EventAction	CGIHandler::onCGIOutputReady()
+{
+	_is_output_ready = true;
+
+	if (_is_child_dead)
+		return EventAction::EnableOutput;
+
+	return EventAction::NoAction;
 }
