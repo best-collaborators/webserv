@@ -33,21 +33,21 @@ public:
 
 	~CGIHandler();
 
-	int			getPID() const noexcept;
-	int			getWriteFD() const noexcept;
-	int			getReadFD() const noexcept;
+	int				getPID() const noexcept;
+	int				getWriteFD() const noexcept;
+	int				getReadFD() const noexcept;
 	CGIExitStatus	getExitStatus() const noexcept;
 
-	void		closeWritePipe() noexcept;
-	void		closeReadPipe() noexcept;
+	void			closeWritePipe() noexcept;
+	void			closeReadPipe() noexcept;
 
-	IoState		writeToCGI( std::string const & buffer ) noexcept;
-	IoState		readFromCGI() noexcept;
+	IoState			writeToCGI( std::string const & buffer ) noexcept;
+	IoState			readFromCGI() noexcept;
 
-	std::string & getBuffer() noexcept;
+	std::string &	getBuffer() noexcept;
 
-	bool		isResponseReady() const noexcept;
+	bool			isResponseReady() const noexcept;
 
-	EventAction	onChildProcessExited( ChildExitInfo const & info );
-	EventAction	onCGIOutputReady();
+	EventAction		onCGIOutputReady();
+	EventAction		onChildProcessExited( ChildExitInfo const & info );
 };

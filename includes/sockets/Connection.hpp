@@ -24,6 +24,8 @@
 class Connection
 {
 private:
+	using opt_cgi = std::optional<CGIHandler>;
+
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
 	int			_fd;
@@ -33,7 +35,7 @@ private:
 	Response	_response;
 
 	Socket		_socket;
-	std::optional<CGIHandler> _cgi_handler;
+	opt_cgi		_cgi_handler;
 
 	bool		_response_formed = false;
 
@@ -77,15 +79,16 @@ public:
 
 	~Connection() = default;
 
-	int		getFD() const noexcept;
+	int			getFD() const noexcept;
 
-	IoState	processEvents( uint32_t const events ) noexcept;
+	IoResult	processConnectionEvents( uint32_t const events );
+	IoResult	processCGIEvents( uint32_t const events );
 
-	int		getCGIPID() const noexcept;
-	int		getCGIPipe( CGIOperation op );
-	void	closeCGIPipe( CGIOperation op );
-	bool	hasActiveCGI() const noexcept;
+	int			getCGIPID() const noexcept;
+	int			getCGIPipe( CGIOperation op );
+	void		closeCGIPipe( CGIOperation op );
 
 	EventAction	onCGIOutputReady();
 	EventAction	onChildProcessExited( ChildExitInfo const & info );
+	
 };

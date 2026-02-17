@@ -8,30 +8,49 @@ int Connection::getFD() const noexcept
 	return _fd;
 }
 
-IoState Connection::processEvents( uint32_t const events ) noexcept
+IoEvent toIoEvent(IoState state)
+{
+	switch (state)
+	{
+	case IoState::Pending:
+		return IoEvent::Pending;
+	case IoState::Closed:
+		return IoEvent::Closed;
+	case IoState::Error:
+		return IoEvent::Error;
+	case IoState::Sent:
+		return IoEvent::Sent;
+	case IoState::Received:
+		return IoEvent::Received;
+	case IoState::Init:
+		return IoEvent::Init;
+	}
+	return IoEvent::Error;
+}
+
+IoResult	Connection::processConnectionEvents( uint32_t const events )
 {
 	if (events & EPOLLERR)
 	{
 		std::cout << "EPOLLERR" << std::endl;
-		return IoState::Error;
+		return { IoSource::Connection, IoEvent::Error };
 	}
 
 	if (events & EPOLLHUP)
 	{
 		std::cout << "EPOLLHUP" << std::endl;
-		if (_cgi_handler)
-			return IoState::CGIDone;
-
-		return IoState::Closed;
+		return { IoSource::Connection, IoEvent::Closed };
 	}
 
 	if (events & EPOLLIN)
 	{
 		std::cout << "EPOLLIN" << std::endl;
-		IoState state = _cgi_handler ? _cgi_handler->readFromCGI() : _receiveData();
+		IoState state = _receiveData();
 
+		if (state == IoState::Init)
+			return { IoSource::CGI, IoEvent::Init };
 		if (state != IoState::Pending)
-			return state;
+			return { IoSource::Connection, toIoEvent(state) };
 	}
 
 	if (events & EPOLLOUT)
@@ -40,13 +59,48 @@ IoState Connection::processEvents( uint32_t const events ) noexcept
 
 		_formResponse();
 
-		IoState state = _cgi_handler ? _cgi_handler->writeToCGI(_read_buffer) : _sendData();
+		IoState state = _sendData();
 
 		if (state != IoState::Pending)
-			return state;
+			return { IoSource::Connection, toIoEvent(state) };
 	}
 
-	return IoState::Pending;
+	return { IoSource::Connection, IoEvent::Pending };
+}
+
+IoResult Connection::processCGIEvents( uint32_t const events )
+{
+	if (events & EPOLLERR)
+	{
+		std::cout << "EPOLLERR" << std::endl;
+		return { IoSource::CGI, IoEvent::Error };
+	}
+
+	if (events & EPOLLHUP)
+	{
+		std::cout << "EPOLLHUP" << std::endl;
+		return { IoSource::CGI, IoEvent::Done };
+	}
+
+	if (events & EPOLLIN)
+	{
+		std::cout << "EPOLLIN" << std::endl;
+		IoState state = _cgi_handler->readFromCGI();
+
+		if (state != IoState::Pending)
+			return { IoSource::CGI, toIoEvent(state) };
+	}
+
+	if (events & EPOLLOUT)
+	{
+		std::cout << "EPOLLOUT" << std::endl;
+		IoState state = _cgi_handler->writeToCGI(_read_buffer);
+
+		if (state != IoState::Pending)
+			return { IoSource::CGI, toIoEvent(state) };
+	}
+
+	return { IoSource::CGI, IoEvent::Pending };
 }
 
 void	Connection::_formResponse()
@@ -62,7 +116,7 @@ void	Connection::_formResponse()
 		CGIExitStatus	status = _cgi_handler->getExitStatus();
 
 		std::cout << "CGI exit status: " << (status == CGIExitStatus::SUCCESS ? "Success" : "Error") << std::endl;
-		
+
 		if (status == CGIExitStatus::SUCCESS)
 			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
 		else
@@ -71,9 +125,7 @@ void	Connection::_formResponse()
 		_cgi_handler.reset();
 	}
 	else
-	{
 		_response.form_response(_request.get_status_code(), _request.copy_headers());
-	}
 
 	_removeBodyFromBuffer();
 	_response_formed = true;
@@ -118,7 +170,7 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	if (_request.get_header_value("request-target") == "/cgi/test.js")
 	{
 		std::string const	contentLength = _request.get_header_value("content-length");
-		
+
 		if (!contentLength.empty())
 		{
 			std::size_t	pos {};
@@ -139,14 +191,13 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 					};
 
 					_cgi_handler.emplace(config);
-					// _cgi_pid = _cgi_handler->getPID();
 				}
 				catch(const std::exception& e)
 				{
 					std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
 					return IoState::Received; //! Return 500 error code and send response back
 				}
-				return IoState::CGIInit;
+				return IoState::Init;
 			}
 		}
 	}
@@ -154,11 +205,6 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 		return IoState::Pending;
 
 	return IoState::Received;
-}
-
-bool Connection::hasActiveCGI() const noexcept
-{
-	return _cgi_handler.has_value();
 }
 
 EventAction Connection::onChildProcessExited( ChildExitInfo const & info )
@@ -188,7 +234,7 @@ int Connection::getCGIPID() const noexcept
 int Connection::getCGIPipe(CGIOperation op)
 {
 	if (!_cgi_handler)
-		return -1;	
+		return -1;
 	return op == CGIOperation::READ ? _cgi_handler->getReadFD() : _cgi_handler->getWriteFD();
 }
 
