@@ -22,10 +22,8 @@ std::string MultipartDataParser::_getMultipartFormBoundary()
 		return "";
 	}
 
-	//Check with wrong multiformdata request
-	std::regex reg1("$\\s^");
-	std::regex_search(boundary, match, reg1);
-	if (!match.empty()) {
+	std::regex reg1(R"(^\s*$)");
+	if (std::regex_match(boundary, reg1)) {
 		return "";
 	}
 	return boundary;
@@ -61,7 +59,7 @@ bool MultipartDataParser::_checkMultipartContentType(const std::string &buffer, 
 void MultipartDataParser::_createMultipartDataFormFiles()
 {
 	std::string upload_dir = "data/";
-	for (auto data : _multipartFormDatas)
+	for (auto &data : _multipartFormDatas)
 	{
 		// data.print_all_data();
 		if (!data.get_filename().empty())

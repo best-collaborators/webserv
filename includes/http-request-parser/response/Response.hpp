@@ -33,7 +33,7 @@ private:
 	std::_Put_time<char>	get_date_GMT();
 	std::string				serve_html_webserv_page(std::string errmsg);
 	void					is_set_default_page();
-	bool					is_fstream_successful(std::fstream &ifs);
+	bool					is_ifstream_successful(std::ifstream &ifs);
 	void					set_content_type(std::string filename);
 	std::streampos			get_file_size();
 	std::streampos			get_file_read_position();

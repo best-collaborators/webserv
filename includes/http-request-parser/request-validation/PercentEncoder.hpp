@@ -11,11 +11,11 @@ private:
 	PercentEncoder() = delete;
 	PercentEncoder(const PercentEncoder && other) = delete;
 	PercentEncoder(const PercentEncoder & other) = delete;
-	PercentEncoder & operator=( PercentEncoder && ) noexcept = default;
+	PercentEncoder & operator=( PercentEncoder && ) noexcept = delete;
 	~PercentEncoder() = delete;
 
 public:
-	static std::string percent_encoding(std::string buffer);
+	static std::string percent_encoding(std::string &buffer);
 };
 
 #endif /* PERCENT_ENCODER */
