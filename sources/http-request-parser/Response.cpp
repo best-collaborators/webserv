@@ -50,10 +50,10 @@ void Response::is_set_default_page()
 		_body = "";
 	}
 	else if (method == "POST") {
-		_body = serve_html_webserv_page("Successfull post.");
+		_body = serve_html_webserv_page("Successful post.");
 	}
 	else if (HttpStatus::is_bad(_status_code)) {
-		_body = serve_html_webserv_page("Error happend.");
+		_body = serve_html_webserv_page("Error happened.");
 	}
 	else if (_status_code == static_cast<HttpStatus::e_code>(304)) {
 		_body = serve_html_webserv_page("Other message.");
@@ -79,11 +79,11 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 			break;
 		case 13:
 			//Permission denied
-			std::cout << "[response] Permission denied" << std::endl;
+			std::cout << "[response] File system error" << std::endl;
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 		default:
-			std::cout << "[response] Permission denied" << std::endl;
+			std::cout << "[response] File system error" << std::endl;
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}

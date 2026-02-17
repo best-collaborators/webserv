@@ -69,7 +69,8 @@ void RequestLineValidator::parse()
 		return ;
 	}
 
-	std::string decoded_path = PercentEncoder::percent_encoding(_parse_context.request.get_header_value(http::headers::REQUEST_TARGET));
+	std::string request_parser = _parse_context.request.get_header_value(http::headers::REQUEST_TARGET);
+	std::string decoded_path = PercentEncoder::percent_encoding(request_parser);
 	_parse_context.request.set_header_value(http::headers::REQUEST_TARGET_DECODED, decoded_path);
 
 	if (!_isValidHttpVersion()
