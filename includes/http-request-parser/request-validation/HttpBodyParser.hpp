@@ -16,6 +16,7 @@ private:
 
 	void _handleMultipart();
 	void _handleChunked();
+	void _handleCGIRequest();
 	void _handleRawUpload();
 
 	HttpBodyParser() = delete;

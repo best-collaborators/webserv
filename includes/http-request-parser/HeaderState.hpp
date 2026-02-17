@@ -5,5 +5,6 @@ enum class HeaderState
 	Complete,
 	Incomplete,
 	ContainsBody,
-	Bad
+	Error,
+	CGI
 };

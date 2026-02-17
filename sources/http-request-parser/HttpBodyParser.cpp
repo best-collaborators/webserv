@@ -38,10 +38,6 @@ void HttpBodyParser::parse()
 	std::cout << body_status << std::endl;
 	switch (body_status)
 	{
-	case RequestBodyStatus::CGI:
-		/* code */
-		break;
-
 	case RequestBodyStatus::CHUNKED:
 		_handleChunked();
 		break;

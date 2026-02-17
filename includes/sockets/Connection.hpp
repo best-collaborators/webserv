@@ -21,42 +21,27 @@
 #include "CGIExitStatus.hpp"
 #include "EventAction.hpp"
 
+#include "HttpRequestReader.hpp"
+#include "HttpResponseWriter.hpp"
+#include "ConnectionState.hpp"
+
 class Connection
 {
 private:
 	using opt_cgi = std::optional<CGIHandler>;
 
-	static constexpr int	READ_BUFFER_SIZE = 32768;
-
 	int			_fd;
-	bool		is_header_received = false;
-	ssize_t		_stored_body_bytes;
-	bool		_isBad = false;
-	Request		_request;
-	Response	_response;
-
+	
 	Socket		_socket;
 	opt_cgi		_cgi_handler;
 
-	bool		_response_formed = false;
+	ConnectionState _state;
+	BufferManager _buffer_manager;
+	HttpRequestReader _request_reader;
+	HttpResponseWriter _response_writer;
 
-	char		_recv_buffer[READ_BUFFER_SIZE];
-	ssize_t		_read_bytes;
 	ssize_t		_sent_bytes;
-	std::string	_read_buffer;
-
-	BodyState	_checkBodyState() noexcept;
-	void		_handleCompleteBody() noexcept;
-	IoState		_processBody() noexcept;
-
-	IoState		_processHeader() noexcept;
-	bool		_headersComplete() const noexcept;
-	void		_parseHeaders() noexcept;
-	void		_consumeHeader() noexcept;
-	HeaderState	_handleHeaderMethod() noexcept;
-	HeaderState	_checkHeaderState() noexcept;
-	void		_removeBodyFromBuffer() noexcept;
-	BodyState	_handleChunkedBody() noexcept;
+	size_t		_read_bytes;
 
 	IoState		_receiveData() noexcept;
 	IoState		_sendData() noexcept;
@@ -65,8 +50,6 @@ private:
 	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
 
 	IoState		_getSocketState() const noexcept;
-
-	void		_formResponse();
 
 public:
 	Connection() = default;
