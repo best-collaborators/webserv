@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _stored_body_bytes(0), _socket(std::move(socket)), _cgi_pid(-1), _read_bytes(0), _sent_bytes(0)
+Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _stored_body_bytes(0), _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
 {}
 
 int Connection::getFD() const noexcept
@@ -56,21 +56,19 @@ void	Connection::_formResponse()
 
 	if (_cgi_handler)
 	{
-		if (!_cgi_output_ready || _cgi_exit_status == CGIExitStatus::EMPTY)
+		if (!_cgi_handler->isResponseReady())
 			return;
 
-		if (_cgi_exit_status == CGIExitStatus::SUCCESS)
-		{
-			std::cout << "CGI STATUS SUCCESS" << std::endl;
-			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
-		}
-		else
-		{
-			std::cout << "CGI STATUS ERROR" << std::endl;
-			_response.form_response(_request.get_status_code(), _request.copy_headers());
-		}
+		CGIExitStatus	status = _cgi_handler->getExitStatus();
 
-		_resetCGIState();
+		std::cout << "CGI exit status: " << (status == CGIExitStatus::SUCCESS ? "Success" : "Error") << std::endl;
+		
+		if (status == CGIExitStatus::SUCCESS)
+			_response.form_response(_request.get_status_code(), _request.copy_headers(), _cgi_handler->getBuffer());
+		else
+			_response.form_response(_request.get_status_code(), _request.copy_headers());
+
+		_cgi_handler.reset();
 	}
 	else
 	{
@@ -79,15 +77,6 @@ void	Connection::_formResponse()
 
 	_removeBodyFromBuffer();
 	_response_formed = true;
-}
-
-void	Connection::_resetCGIState()
-{
-	_cgi_handler.reset();
-	_cgi_pid = -1;
-	_cgi_exit_status = CGIExitStatus::EMPTY;
-	_cgi_output_ready = false;
-	_cgi_child_dead = false;
 }
 
 IoState Connection::_receiveData() noexcept
@@ -139,7 +128,7 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 			{
 				try
 				{
-					std::string	executable = "/usr/local/bin/node";
+					std::string	executable = "/home/rmzvr/.nvm/versions/node/v24.11.1/bin/node";
 					std::string	scriptPath = "tests/test.js";
 					std::vector<std::string> envVariables = { "TEST=Test!" };
 
@@ -149,8 +138,8 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 						envVariables
 					};
 
-					_cgi_handler = std::make_unique<CGIHandler>(config);
-					_cgi_pid = _cgi_handler->getPID();
+					_cgi_handler.emplace(config);
+					// _cgi_pid = _cgi_handler->getPID();
 				}
 				catch(const std::exception& e)
 				{
@@ -169,37 +158,31 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 
 bool Connection::hasActiveCGI() const noexcept
 {
-	return _cgi_handler != nullptr;
+	return _cgi_handler.has_value();
 }
 
 EventAction Connection::onChildProcessExited( ChildExitInfo const & info )
 {
-	if (info.success())
-		_cgi_exit_status = CGIExitStatus::SUCCESS;
-	else
-		_cgi_exit_status = CGIExitStatus::ERROR;
-
-	_cgi_child_dead = true;
-
-	if (_cgi_output_ready)
-		return EventAction::EnableOutput;
+	if (_cgi_handler)
+		return _cgi_handler->onChildProcessExited(info);
 
 	return EventAction::NoAction;
 }
 
 EventAction	Connection::onCGIOutputReady()
 {
-	_cgi_output_ready = true;
-
-	if (_cgi_child_dead)
-		return EventAction::EnableOutput;
+	if (_cgi_handler)
+		return _cgi_handler->onCGIOutputReady();
 
 	return EventAction::NoAction;
 }
 
 int Connection::getCGIPID() const noexcept
 {
-	return _cgi_pid;
+	if (!_cgi_handler)
+		return -1;
+
+	return _cgi_handler->getPID();
 }
 
 int Connection::getCGIPipe(CGIOperation op)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include <memory>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
@@ -18,14 +18,8 @@
 #include "CGIOperation.hpp"
 #include "CGIConfig.hpp"
 #include "CGIHandler.hpp"
-#include "ChildExitInfo.hpp"
 #include "CGIExitStatus.hpp"
-
-enum class EventAction : short
-{
-	NoAction,
-	EnableOutput
-};
+#include "EventAction.hpp"
 
 class Connection
 {
@@ -39,12 +33,8 @@ private:
 	Response	_response;
 
 	Socket		_socket;
-	int			_cgi_pid;
-	std::unique_ptr<CGIHandler> _cgi_handler;
+	std::optional<CGIHandler> _cgi_handler;
 
-	bool		_cgi_output_ready = false;
-	bool		_cgi_child_dead = false;
-	CGIExitStatus	_cgi_exit_status = CGIExitStatus::EMPTY;
 	bool		_response_formed = false;
 
 	char		_recv_buffer[READ_BUFFER_SIZE];
@@ -76,7 +66,6 @@ private:
 	IoState		_getSocketState() const noexcept;
 
 	void		_formResponse();
-	void		_resetCGIState();
 
 public:
 	Connection() = default;
