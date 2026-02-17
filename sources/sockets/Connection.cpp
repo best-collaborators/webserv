@@ -384,22 +384,6 @@ void	Connection::_removeBodyFromBuffer() noexcept
 	_read_buffer.erase(0, _request.get_content_length());
 }
 
-IoState	Connection::_saveToBuffer() noexcept
-{
-	_read_buffer.append(_recv_buffer, _read_bytes);
-
-	_processHeader();
-	if (is_header_received && _processBody() == IoState::Pending) {
-		return IoState::Pending;
-	}
-
-	// !CGI
-
-	_response.form_response(_request.get_status_code(), _request.copy_headers());
-	_removeBodyFromBuffer();
-	return IoState::Received;
-}
-
 IoState	Connection::_sendData() noexcept
 {
 	std::cout << "Connection::_sendData" << std::endl;

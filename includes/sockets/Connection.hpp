@@ -61,8 +61,6 @@ private:
 	IoState		_handleReceiveState( ssize_t read_bytes ) noexcept;
 	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
 
-	IoState		_saveToBuffer() noexcept;
-
 	IoState		_getSocketState() const noexcept;
 
 	void		_formResponse();
