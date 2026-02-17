@@ -31,6 +31,7 @@ private:
 	int			_fd;
 	bool		is_header_received = false;
 	ssize_t		_stored_body_bytes;
+	bool		_isBad = false;
 	Request		_request;
 	Response	_response;
 

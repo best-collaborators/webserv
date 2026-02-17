@@ -164,6 +164,9 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	// 	<< std::quoted(_read_buffer)
 	// 	<< "\n===============\n";
 
+	if (_isBad) 
+		return IoState::Received;
+
 	if (is_header_received && _processBody() != IoState::Received)
 		return IoState::Pending;
 
@@ -264,8 +267,8 @@ void Connection::_parseHeaders() noexcept
 
 void Connection::_consumeHeader() noexcept
 {
-	// size_t header_end_position = _read_buffer.find("\r\n\r\n");
-	// _read_buffer.erase(0, header_end_position + 4);
+	size_t header_end_position = _read_buffer.find("\r\n\r\n");
+	_read_buffer.erase(0, header_end_position + 4);
 }
 
 HeaderState Connection::_handleHeaderMethod() noexcept
@@ -289,7 +292,13 @@ HeaderState Connection::_checkHeaderState() noexcept
 		return HeaderState::Incomplete;
 
 	_parseHeaders();
-	_consumeHeader();
+	if (HttpStatus::is_bad(_request.get_status_code()))
+	{
+		is_header_received = true;
+		_isBad = true;
+		_consumeHeader();
+		return HeaderState::Bad;
+	}
 
 	// _request.print_http_request_values();
 
@@ -311,7 +320,6 @@ IoState Connection::_processHeader() noexcept
 		//! CHECK RETURN STATUS CLOSE
 		case HeaderState::Bad:
 			std::cout << "[io] Request received. Request header invalid." << std::endl;
-			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return IoState::Received;
 
 		default:
@@ -451,13 +459,13 @@ IoState	Connection::_sendData() noexcept
 	// std::cout << "msg_len " << msg_len << std::endl;
 	// std::cout << "total_msg_len " << total_msg_len << std::endl;
 
-	std::cout << "==================RESPONSE==================\n"
-		<< std::quoted(_response.get_body()) << std::endl
-		<< "============================================\n";
+	// std::cout << "==================RESPONSE==================\n"
+	// 	<< std::quoted(_response.get_body()) << std::endl
+	// 	<< "============================================\n";
 
-	std::cout << "==================REQUEST==================\n"
-		<< std::quoted(_read_buffer) << std::endl
-		<< "============================================\n";
+	// std::cout << "==================REQUEST==================\n"
+	// 	<< std::quoted(_read_buffer) << std::endl
+	// 	<< "============================================\n";
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 

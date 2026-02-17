@@ -46,7 +46,7 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 
 		if (_parse_context.request.amount_of_headers() >= http::limits::max_header_count) {
 			std::cerr << "431 Request Header Fields Too Large" << std::endl;
-			return HttpStatus::e_code::BAD_REQUEST;
+			return HttpStatus::e_code::REQUEST_HEADER_FIELDS_TOO_LARGE;
 		}
 
 		if (_parse_context.request.get_header_count(http::headers::CONTENT_LENGTH)) {
@@ -94,17 +94,14 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 			return HttpStatus::e_code::BAD_REQUEST;
 		}
 
-		// max size is 1mb = 1048576b
-		//! REQUEST TOO LARGE - REMOVE
-		if (test_length < 0) {
+		if (test_length < 0 && test_length > http::limits::max_body_length) {
 			std::cerr << "413 Request Entity Too Large" << std::endl;
 			return HttpStatus::e_code::CONTENT_TOO_LARGE;
 		}
-
 	}
 	catch(const std::exception& e) {
 		std::cerr << "400 Bad Request - content-length is NAN" << std::endl;
-		return HttpStatus::e_code::CONTENT_TOO_LARGE;
+		return HttpStatus::e_code::BAD_REQUEST;
 	}
 	return HttpStatus::e_code::OK;
 }
