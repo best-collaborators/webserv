@@ -246,7 +246,7 @@ HeaderState Connection::_handleHeaderMethod() noexcept
 
 		if (_request.get_content_length() != -1 || _read_buffer.size() > 0) {
 			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)" << std::endl;
-			return HeaderState::Wrong;
+			return HeaderState::Bad;
 		}
 	}
 	return HeaderState::Complete;
@@ -280,7 +280,7 @@ IoState Connection::_processHeader() noexcept
 			return IoState::Received;
 
 		//! CHECK RETURN STATUS CLOSE
-		case HeaderState::Wrong:
+		case HeaderState::Bad:
 			std::cout << "[io] Request received. Request header invalid." << std::endl;
 			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return IoState::Received;
@@ -335,20 +335,20 @@ BodyState Connection::_handleChunkedBody() noexcept
 {
 	std::cout << "[io] Request received (chunked)." << std::endl;
 
-	std::cout << "_read_buffer is\n"
-			<< _read_buffer << std::endl;
+	// std::cout << "_read_buffer is\n"
+			// << _read_buffer << std::endl;
 
 	RequestParser parser(_request, _read_buffer);
 	parser.parse_body();
 
-	std::cout << "Chunk received, chunk size is :"
-			<< _request.chunkHandler().getExpectedSize() << std::endl;
+	// std::cout << "Chunk received, chunk size is :"
+	// 		<< _request.chunkHandler().getExpectedSize() << std::endl;
 
-	std::cout << "Body is\n"
-			<< _request.get_body() << std::endl;
+	// std::cout << "Body is\n"
+	// 		<< _request.get_body() << std::endl;
 
-	std::cout << "_read_buffer is\n"
-			<< _read_buffer << std::endl;
+	// std::cout << "_read_buffer is\n"
+	// 		<< _read_buffer << std::endl;
 
 	if (_request.chunkHandler().isReceived()) {
 

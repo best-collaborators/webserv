@@ -50,7 +50,7 @@ bool Request::isStatusCodeBad() const
 
 RequestBodyStatus Request::getBodyStatus() const
 {
-if (get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	if (get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
 	{
 		return RequestBodyStatus::CHUNKED;
 	}
@@ -77,4 +77,6 @@ void Request::reset()
 	_version.clear();
 	_uri.clear();
 	_chunk_handler.reset();
+	_headers.clear();
+	_body.clear();
 }

@@ -72,7 +72,7 @@ void TransferEncodingChunkedParser::parse()
 			if (!_tryGetNewChunk(buffer)) return ;
 		}
 		else {
-			std::cout << "DEBIG" << std::endl;
+			std::cout << "DEBUG" << std::endl;
 			_chunk_size = _parse_context.request.chunkHandler().getExpectedSize();
 		}
 

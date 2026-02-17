@@ -1,3 +1,6 @@
+#ifndef CHUNK_HANDLER
+#define CHUNK_HANDLER
+
 #include <string>
 
 class ChunkHandler
@@ -23,3 +26,4 @@ public:
 	void				 append_to(std::string& body);
 };
 
+#endif /* CHUNK_HANDLER */

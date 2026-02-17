@@ -18,8 +18,6 @@ void RequestParser::parse_headers()
 
 	if (_parse_context.request.isStatusCodeBad()) { return; }
 
-	std::cout << "REQUEST LINE PARSED" << std::endl;
-
 	HttpHeaderParser header_parser(_parse_context);
 	header_parser.parse();
 	if (_parse_context.request.isStatusCodeBad()) { return; }
