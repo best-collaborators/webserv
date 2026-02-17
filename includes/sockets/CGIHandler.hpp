@@ -24,6 +24,13 @@ private:
 public:
 	CGIHandler() = default;
 	CGIHandler( CGIConfig & config );
+
+	CGIHandler( CGIConfig const & ) = delete;
+	CGIHandler & operator=( CGIHandler const & ) = delete;
+
+	CGIHandler( CGIHandler && ) noexcept = default;
+	CGIHandler & operator=( CGIHandler && ) noexcept = default;
+
 	~CGIHandler();
 
 	int			getPID() const noexcept;
