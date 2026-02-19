@@ -35,21 +35,24 @@ private:
 	Socket		_socket;
 	opt_cgi		_cgi_handler;
 
-	ConnectionState _state;
 	BufferManager _buffer_manager;
 	HttpRequestReader _request_reader;
 	HttpResponseWriter _response_writer;
 
+	bool _response_formed = false;
+
 	ssize_t		_sent_bytes;
-	size_t		_read_bytes;
-
-	IoState		_receiveData() noexcept;
-	IoState		_sendData() noexcept;
-
-	IoState		_handleReceiveState( ssize_t read_bytes ) noexcept;
-	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
+	ssize_t		_read_bytes;
 
 	IoState		_getSocketState() const noexcept;
+	IoState		_tryInitCGI() noexcept;
+
+	IoState		_receiveData() noexcept;
+	IoState		_handleReceiveState( ssize_t read_bytes ) noexcept;
+
+	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
+	void		_formResponse();
+	IoState		_sendData() noexcept;
 
 public:
 	Connection() = default;

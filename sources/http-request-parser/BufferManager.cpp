@@ -1,5 +1,10 @@
 #include "BufferManager.hpp"
 
+BufferManager::BufferManager() 
+{
+	_recv_buffer = new char[READ_BUFFER_SIZE];
+}
+
 char *BufferManager::getRecvBuffer() noexcept
 {
 	return _recv_buffer;
@@ -7,7 +12,7 @@ char *BufferManager::getRecvBuffer() noexcept
 
 size_t BufferManager::getReceiveBufferSize() noexcept
 {
-	return _read_buffer.size();
+	return READ_BUFFER_SIZE;
 }
 
 void BufferManager::append(size_t bytes) noexcept
@@ -17,7 +22,7 @@ void BufferManager::append(size_t bytes) noexcept
 
 void BufferManager::consume(size_t bytes) noexcept
 {
-	_read_buffer.erase(bytes);
+	_read_buffer.erase(0, bytes);
 }
 
 void BufferManager::clear() noexcept

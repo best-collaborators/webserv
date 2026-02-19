@@ -2,18 +2,32 @@
 #define HTTP_RESPONSE_WRITER_HPP
 
 #include "Response.hpp"
+#include "Request.hpp"
+#include "CGIExitStatus.hpp"
 
 class HttpResponseWriter
 {
 private:
-	bool		_response_formed = false;
-	Response	_response;
+	Response		_response;
 
 public:
-	HttpResponseWriter(/* args */);
-	~HttpResponseWriter();
+	HttpResponseWriter() = default;
+	~HttpResponseWriter() = default;
 
-	void formResponse();
+	HttpResponseWriter( HttpResponseWriter const & ) = delete;
+	HttpResponseWriter & operator=( HttpResponseWriter const & ) = delete;
+
+	HttpResponseWriter( HttpResponseWriter && ) noexcept = default;
+	HttpResponseWriter & operator=( HttpResponseWriter && ) noexcept = default;
+
+	void		formResponse(Request &_request, CGIExitStatus status, std::string &buffer);
+	void		formResponse(Request &_request);
+
+	void		write();
+	size_t		totalLength() const noexcept;
+	size_t		currResponseLength() const noexcept;
+	const char	*getResponseData() const noexcept;
+	void		consume(size_t bytes) noexcept;
 };
 
 #endif /* HTTP_RESPONSE_WRITER_HPP */

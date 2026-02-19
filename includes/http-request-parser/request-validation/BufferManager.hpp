@@ -2,6 +2,11 @@
 #define BUFFER_MANAGER
 
 #include <iostream>
+#include <vector>
+
+#include <sys/socket.h>
+#include <sys/epoll.h>
+#include <sys/wait.h>
 
 class BufferManager
 {
@@ -9,10 +14,10 @@ private:
 	static constexpr int	READ_BUFFER_SIZE = 32768;
 
 	std::string	_read_buffer;
-	char		_recv_buffer[READ_BUFFER_SIZE];
+	char *_recv_buffer;
 
 public:
-	BufferManager() = default;
+	BufferManager() ;
 	~BufferManager() = default;
 
 	char				*getRecvBuffer() noexcept;

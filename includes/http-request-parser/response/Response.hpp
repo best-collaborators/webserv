@@ -11,6 +11,7 @@
 #include <chrono>
 #include <iomanip>
 #include <filesystem>
+#include <vector>
 
 #include "HttpStatus.hpp"
 #include "HttpHeaders.hpp"
@@ -45,16 +46,13 @@ public:
 	Response & operator=( Response && ) noexcept = default;
 	~Response() = default;
 
-	// Response(uint status_code, std::unordered_map<std::string, std::string> http_request_values);
-
-	std::string form_response(HttpStatus::e_code _status_code, std::unordered_map<std::string, std::string> &&_http_request_values, std::string body = "");
-	HttpStatus::e_code status_code();
-	size_t get_total_response_length();
-	size_t get_current_length();
-	// void set_response_length(size_t response_length);
-	void consume_body(size_t consume_length);
-	void					read_body_partially();
-	std::string &get_body();
+	std::string 		form_response(HttpStatus::e_code _status_code, std::unordered_map<std::string, std::string> &&_http_request_values, std::string body = "");
+	HttpStatus::e_code	status_code() const noexcept;
+	size_t				get_total_response_length() const noexcept;
+	size_t				get_current_length() const noexcept;
+	const char			*getResponseData() const noexcept;
+	void				consume_body(size_t consume_length);
+	void				read_body_partially();
 };
 
 #endif /* RESPONSE_GENERATOR_HPP */

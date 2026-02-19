@@ -33,20 +33,20 @@ void HttpBodyParser::_handleRawUpload()
 
 void HttpBodyParser::parse()
 {
-	RequestBodyStatus body_status = _parse_context.request.getBodyStatus();
+	RequestType body_status = _parse_context.request.getBodyStatus();
 
 	std::cout << body_status << std::endl;
 	switch (body_status)
 	{
-	case RequestBodyStatus::CHUNKED:
+	case RequestType::CHUNKED:
 		_handleChunked();
 		break;
 
-	case RequestBodyStatus::MULTIPART:
+	case RequestType::MULTIPART:
 		_handleMultipart();
 		break;
 
-	case RequestBodyStatus::RAW_BODY:
+	case RequestType::RAW_BODY:
 		_handleRawUpload();
 		break;
 

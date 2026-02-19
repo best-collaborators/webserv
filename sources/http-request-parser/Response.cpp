@@ -152,7 +152,7 @@ std::streampos Response::get_file_size()
 	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
-		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
+		_status_code = HttpStatus::e_code::NOT_FOUND;
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -175,7 +175,6 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	set_header_value(http::headers::METHOD, http_request_values[http::headers::METHOD]);
 
 	http_request_values.clear();
-
 	is_set_default_page();
 
 	if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
@@ -238,26 +237,31 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	_response_length = _header_str.size() + _content_length;
 	// std::cout << "content length" << _content_length << std::endl;
-	// std::cout << "body:                  ==> \n" << _body << std::endl;
+	std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
 	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
 	// std::cout << "size:                  ==> " << _body.size() << std::endl;
 
 	return _body;
 }
 
-HttpStatus::e_code Response::status_code()
+HttpStatus::e_code Response::status_code() const noexcept 
 {
 	return _status_code;
 }
 
-size_t Response::get_total_response_length()
+size_t Response::get_total_response_length() const noexcept
 {
 	return _response_length;
 }
 
-size_t Response::get_current_length()
+size_t Response::get_current_length() const noexcept 
 {
 	return _body.size();
+}
+
+const char *Response::getResponseData() const noexcept
+{
+	return _body.c_str();
 }
 
 void Response::consume_body(size_t consume_length)
@@ -266,9 +270,4 @@ void Response::consume_body(size_t consume_length)
 		consume_length = _body.size();
 	_body.erase(0, consume_length);
 	_bytes_sent += consume_length;
-}
-
-std::string &Response::get_body()
-{
-	return _body;
 }

@@ -1,13 +1,5 @@
 #include "HttpRequestReader.hpp"
 
-HttpRequestReader::HttpRequestReader()
-{
-}
-
-HttpRequestReader::~HttpRequestReader()
-{
-}
-
 bool HttpRequestReader::_headersComplete(const std::string &read_buffer) const noexcept
 {
 	return read_buffer.find("\r\n\r\n") != std::string::npos;
@@ -54,14 +46,15 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Error;
 	}
 
+	_request.print_http_request_values();
+
 	if (_request.get_method() != HttpMethod::e_code::POST && read_buffer.size() != 0) {
 		return HeaderState::Error;
 	}
 
-	if (_request.getBodyStatus() == RequestBodyStatus::CGI) {
+	if (_request.getBodyStatus() == RequestType::CGI) {
 		return HeaderState::CGI;
 	}
-	// _request.print_http_request_values();
 
 	return _handleHeaderMethod(read_buffer);
 }
@@ -87,7 +80,7 @@ ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 
 		case HeaderState::CGI:
 			std::cout << "[request-reader] Request is CGI" << std::endl;
-			return ReaderState::Error;
+			return ReaderState::CGI;
 
 		default:
 			return ReaderState::Complete;
@@ -211,12 +204,12 @@ ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
 	return _curr_state;
 }
 
-const Request &HttpRequestReader::request() const noexcept
+Request &HttpRequestReader::request() noexcept
 {
 	return _request;
 }
 
-size_t HttpRequestReader::getStoredBodyBytes()
+ssize_t HttpRequestReader::getStoredBodyBytes()
 {
 	return _stored_body_bytes;
 }

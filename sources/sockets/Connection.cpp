@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 
-Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _socket(std::move(socket)), _read_bytes(0), _sent_bytes(0)
+Connection::Connection( Socket && socket ) : _fd(socket.getFD()), _socket(std::move(socket)), _sent_bytes(0), _read_bytes(0)
 {}
 
 int Connection::getFD() const noexcept
@@ -26,6 +26,33 @@ IoEvent toIoEvent(IoState state)
 		return IoEvent::Init;
 	}
 	return IoEvent::Error;
+}
+
+void	Connection::_formResponse()
+{
+	if (_response_formed)
+		return;
+
+	if (_cgi_handler)
+	{
+		if (!_cgi_handler->isResponseReady())
+			return;
+
+		CGIExitStatus	status = _cgi_handler->getExitStatus();
+
+		std::cout << "CGI exit status: " << (status == CGIExitStatus::SUCCESS ? "Success" : "Error") << std::endl;
+
+		_response_writer.formResponse(_request_reader.request(), status, _cgi_handler->getBuffer());
+		_cgi_handler.reset();
+	}
+	else
+	{
+		std::cout << "Status code before response: " << _request_reader.request().get_status_code() << std::endl;
+		_response_writer.formResponse(_request_reader.request());
+	}
+
+	_buffer_manager.consume(_request_reader.request().get_content_length());
+	_response_formed = true;
 }
 
 IoResult	Connection::processConnectionEvents( uint32_t const events )
@@ -57,7 +84,7 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 	{
 		std::cout << "EPOLLOUT" << std::endl;
 
-		_response_writer.formResponse();
+		_formResponse();
 
 		IoState state = _sendData();
 
@@ -105,19 +132,52 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 
 IoState Connection::_receiveData() noexcept
 {
-	std::cout << "\n[io] EPOLLIN triggered on fd " << _socket.getFD() << std::endl;
+	std::cout << "\n[io] EPOLLIN triggered on fd " << _fd << std::endl;
 	std::cout << "[io] recv() starting..." << std::endl;
 
 	_read_bytes = recv(
-		_socket.getFD(),
+		_fd,
 		_buffer_manager.getRecvBuffer(),
 		_buffer_manager.getReceiveBufferSize(),
 		0
 	);
 
+	// _read_bytes = _buffer_manager.receive(_fd);
+
+	std::cout << "[io] recv() " << _read_bytes << std::endl;
 	std::cout << "[io] recv() completed." << std::endl;
 
 	return _handleReceiveState(_read_bytes);
+}
+
+IoState Connection::_tryInitCGI() noexcept
+{
+	ssize_t content_length = _request_reader.request().get_content_length();
+	if (content_length == _request_reader.getStoredBodyBytes())
+	{
+		try
+		{
+			std::string	executable = "/home/rmzvr/.nvm/versions/node/v24.11.1/bin/node";
+			std::string	scriptPath = "tests/test.js";
+			std::vector<std::string> envVariables = { "TEST=Test!" };
+
+			CGIConfig	config = {
+				executable,
+				scriptPath,
+				envVariables
+			};
+
+			_cgi_handler.emplace(config);
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
+			_request_reader.request().set_status_code(HttpStatus::e_code::SERVICE_UNAVAILABLE);
+			return IoState::Received; //! Return 500 error code and send response back
+		}
+		return IoState::Init;
+	}
+	return IoState::Pending;
 }
 
 IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
@@ -128,50 +188,19 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	}
 	else if (read_bytes == 0)
 	{
-		std::cout << "[io] Peer closed fd " << _socket.getFD() << "." << std::endl;
+		std::cout << "[io] Peer closed fd " << _fd << "." << std::endl;
 		return IoState::Closed;
 	}
 
 	_buffer_manager.append(_read_bytes);
 	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
+
+	std::cout << "READER STATE: " << reader_state << std::endl;
+	std::cout << "buffer \n" << _buffer_manager.getBuffer() << std::endl;
 	switch (reader_state)
 	{
 	case CGI:
-		if (_request_reader.request().get_header_value("request-target") == "/cgi/test.js")
-		{
-			std::string const	contentLength = _request_reader.request().get_header_value("content-length");
-
-			if (!contentLength.empty())
-			{
-				std::size_t	pos {};
-				const int i = std::stoi(contentLength, &pos);
-
-				if (static_cast<ssize_t>(i) == _request_reader.getStoredBodyBytes())
-				{
-					try
-					{
-						std::string	executable = "/home/rmzvr/.nvm/versions/node/v24.11.1/bin/node";
-						std::string	scriptPath = "tests/test.js";
-						std::vector<std::string> envVariables = { "TEST=Test!" };
-
-						CGIConfig	config = {
-							executable,
-							scriptPath,
-							envVariables
-						};
-
-						_cgi_handler.emplace(config);
-					}
-					catch(const std::exception& e)
-					{
-						std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
-						return IoState::Received; //! Return 500 error code and send response back
-					}
-					return IoState::Init;
-				}
-			}
-		}
-		break;
+		return _tryInitCGI();
 
 	case AwaitingHeaders:
 	case AwaitingBody:
@@ -184,8 +213,6 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	default:
 		break;
 	}
-
-
 
 	return IoState::Received;
 }
@@ -235,37 +262,22 @@ IoState	Connection::_sendData() noexcept
 {
 	std::cout << "Connection::_sendData" << std::endl;
 	std::cout << "\n[io] EPOLLOUT triggered for fd " << _fd << std::endl;
-
-	// std::cout << "[parser] Status code before response " << _request.get_status_code() << std::endl;
-	_request_reader.reset();
-
 	std::cout << "[io] send() starting..." << std::endl;
 
-	_response.read_body_partially();
+	_response_writer.write();
 
-	size_t msg_len = _response.get_current_length();
-	size_t total_msg_len = _response.get_total_response_length();
-	const char *body = _response.get_body().c_str();
-
-	// std::cout << "msg_len " << msg_len << std::endl;
-	// std::cout << "total_msg_len " << total_msg_len << std::endl;
-
-	// std::cout << "==================RESPONSE==================\n"
-	// 	<< std::quoted(_response.get_body()) << std::endl
-	// 	<< "============================================\n";
-
-	// std::cout << "==================REQUEST==================\n"
-	// 	<< std::quoted(_read_buffer) << std::endl
-	// 	<< "============================================\n";
+	size_t msg_len = _response_writer.currResponseLength();
+	size_t total_msg_len = _response_writer.totalLength();
+	const char *body =  _response_writer.getResponseData();
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 
-	_response.consume_body(curr_sent_bytes);
-	_sent_bytes += curr_sent_bytes;
+	if (curr_sent_bytes > 0)
+	{
+		_response_writer.consume(curr_sent_bytes);
+		_sent_bytes += curr_sent_bytes;
+	}
 
-	// std::cout << "curr send bytes " << curr_sent_bytes << std::endl;
-	// std::cout << "send bytes " << _sent_bytes << std::endl;
-	// std::cout << "body ==>" << _response.get_body() << std::endl;
 	return _handleSendState(_sent_bytes, total_msg_len);
 }
 
@@ -281,6 +293,7 @@ IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 		std::cout << "[io] Response sent (complete)." << std::endl;
 		_response_formed = false;
 		_sent_bytes = 0;
+		_request_reader.reset();
 		return IoState::Sent;
 	}
 	else if (sent_bytes < message_length) //! Implement partial send

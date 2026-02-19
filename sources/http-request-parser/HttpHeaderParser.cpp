@@ -59,7 +59,7 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 	}
 
 	_parse_context.request.set_method(_parse_context.request.get_header_value(http::headers::METHOD));
-	if (_parse_context.request.getBodyStatus() != RequestBodyStatus::NO_BODY
+	if (_parse_context.request.getBodyStatus() != RequestType::NO_BODY
 		&& !_parse_context.request.has_body_required_headers()) {
 
 		std::cerr << "411 Length Required" << std::endl;

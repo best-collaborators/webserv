@@ -48,21 +48,25 @@ bool Request::isStatusCodeBad() const
 	return HttpStatus::is_bad(_status_code);
 }
 
-RequestBodyStatus Request::getBodyStatus() const
+RequestType Request::getBodyStatus() const
 {
-	if (get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	if (get_header_value(http::headers::REQUEST_TARGET) == "/cgi/test.js")
 	{
-		return RequestBodyStatus::CHUNKED;
+		return RequestType::CGI;
+	}
+	else if (get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	{
+		return RequestType::CHUNKED;
 	}
 	else if (getContentType().find("multipart/form-data") != std::string::npos)
 	{
-		return RequestBodyStatus::MULTIPART;
+		return RequestType::MULTIPART;
 	}
 	else if (_method == HttpMethod::e_code::POST)
 	{
-		return RequestBodyStatus::RAW_BODY;
+		return RequestType::RAW_BODY;
 	}
-	return RequestBodyStatus::NO_BODY;
+	return RequestType::NO_BODY;
 }
 
 ChunkHandler& Request::chunkHandler() 

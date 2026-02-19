@@ -32,16 +32,22 @@ private:
 	void		_removeBodyFromBuffer() noexcept;
 
 public:
-	HttpRequestReader();
-	~HttpRequestReader();
+	HttpRequestReader() = default;
+	~HttpRequestReader() = default;
+
+	HttpRequestReader( HttpRequestReader const & ) = delete;
+	HttpRequestReader & operator=( HttpRequestReader const & ) = delete;
+
+	HttpRequestReader( HttpRequestReader && ) noexcept = default;
+	HttpRequestReader & operator=( HttpRequestReader && ) noexcept = default;
 
 	ReaderState		_processBody(std::string &buffer, size_t bytes_read) noexcept;
 	ReaderState		_processHeader(std::string &buffer) noexcept;
 	void			reset();
 
 	ReaderState		read(std::string &buffer, size_t bytes_read);
-	const Request	&request() const noexcept;
-	size_t 			getStoredBodyBytes();
+	Request			&request() noexcept;
+	ssize_t 		getStoredBodyBytes();
 };
 
 #endif /* HTTP_REQUEST_HANDLER */
