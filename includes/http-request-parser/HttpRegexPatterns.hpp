@@ -20,6 +20,9 @@ public:
 	static const std::regex& PERCENT_ENCODING();
 	static const std::regex& HEX_VALUE();
 
+	// CGI patterns
+	static const std::regex& CGI_VALID_PATH();
+
 private:
 	HttpRegexPatterns() = delete;
 
@@ -32,6 +35,7 @@ private:
 	static const std::regex CONTENT_TYPE_PATTERN;
 	static const std::regex BOUNDARY_PATTERN;
 	static const std::regex HEX_VALUE_PATTERN;
+	static const std::regex CGI_VALID_PATH_PATTERN;
 };
 
 #endif /* HTTP_REGEX_PATTERNS_HPP */
