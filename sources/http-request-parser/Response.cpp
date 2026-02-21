@@ -49,11 +49,11 @@ void Response::is_set_default_page()
 		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body = "";
 	}
-	else if (method == "POST") {
-		_body = serve_html_webserv_page("Successfull post.");
-	}
 	else if (HttpStatus::is_bad(_status_code)) {
-		_body = serve_html_webserv_page("Error happend.");
+		_body = serve_html_webserv_page("Error happened.");
+	}
+	else if (method == "POST") {
+		_body = serve_html_webserv_page("Successful post.");
 	}
 	else if (_status_code == static_cast<HttpStatus::e_code>(304)) {
 		_body = serve_html_webserv_page("Other message.");
@@ -66,7 +66,7 @@ void Response::is_set_default_page()
 	_is_default_page = true;
 }
 
-bool Response::is_fstream_successful(std::fstream &ifs)
+bool Response::is_ifstream_successful(std::ifstream &ifs)
 {
 	if (ifs.is_open()) return true;
 
@@ -79,11 +79,11 @@ bool Response::is_fstream_successful(std::fstream &ifs)
 			break;
 		case 13:
 			//Permission denied
-			std::cout << "[response] Permission denied" << std::endl;
+			std::cout << "[response] File system error" << std::endl;
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 		default:
-			std::cout << "[response] Permission denied" << std::endl;
+			std::cout << "[response] File system error" << std::endl;
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
@@ -103,24 +103,34 @@ std::streampos Response::get_file_read_position()
 
 void Response::read_body_partially()
 {
-	if (_response_length > 0 && (_body.size() == _response_length || _body.size() >= _buffer || _bytes_sent > _response_length)) return ;
+	if (_response_length > 0 &&
+		(_body.size() >= _response_length ||
+		_body.size() >= _buffer ||
+		_bytes_sent > _response_length))
+	{
+		return;
+	}
 
-	std::string filename = _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
-	std::fstream ifs (filename, std::ios::binary | std::ios::in);
-	if (!is_fstream_successful(ifs)) return;
+	std::string filename
+		= _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
 
-	ssize_t size_to_add = _buffer - _body.size();
-	char buffer[size_to_add];
+	std::ifstream ifs (filename, std::ios::binary);
+	if (!is_ifstream_successful(ifs)) return;
 
-	std::streampos file_pos = get_file_read_position();
-	ifs.seekg(file_pos);
-	ifs.read(buffer, size_to_add);
+	const std::size_t current_size = _body.size();
+	const std::size_t size_to_read = _buffer - current_size;
 
-	std::streamsize gcount = ifs.gcount();
-	buffer[gcount] = '\0';
-	_body.append(buffer, gcount);
+	std::vector<char> buffer(size_to_read);
 
-	_bytes_read += gcount;
+	ifs.seekg(get_file_read_position());
+	ifs.read(buffer.data(), size_to_read);
+	const std::streamsize curr_bytes_read = ifs.gcount();
+
+	if (curr_bytes_read > 0)
+	{
+		_body.append(buffer.data(), curr_bytes_read);
+		_bytes_read += curr_bytes_read;
+	}
 
 	if (!ifs && _bytes_sent < _response_length) {
 		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
@@ -139,10 +149,9 @@ void Response::set_content_type(std::string filename)
 std::streampos Response::get_file_size()
 {
 	std::string filename = _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
-	std::fstream ifs(filename, std::ios::in | std::ios::binary);
-	if (!is_fstream_successful(ifs)) {
+	std::ifstream ifs(filename, std::ios::binary);
+	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
-		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -166,26 +175,31 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	http_request_values.clear();
 
-	is_set_default_page();
-
-	if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
-		_status_code = HttpStatus::e_code(HttpStatus::e_code::OK);
-		_body = serve_html_webserv_page("Root not configured");
-		_is_default_page = true;
+	if (!body.empty())
+	{
+		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();
 	}
-
-	if (!_is_default_page)
+	else
 	{
-		std::cout << "[response] Not a default page" << std::endl;
-		std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
-		get_file_size();
-		if (HttpStatus::is_good(_status_code)) {
-			set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
-			if (body.empty())
+		is_set_default_page();
+
+		if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
+			_status_code = HttpStatus::e_code::OK;
+			_body = serve_html_webserv_page("Root not configured");
+			_is_default_page = true;
+			_content_length = _body.size();
+		}
+
+		if (!_is_default_page)
+		{
+			std::cout << "[response] Not a default page" << std::endl;
+			std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
+			get_file_size();
+			if (HttpStatus::is_good(_status_code)) {
+				set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
 				read_body_partially();
-			else
-				_body = serve_html_webserv_page(body);
+			}
 		}
 	}
 
@@ -228,26 +242,31 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	_response_length = _header_str.size() + _content_length;
 	// std::cout << "content length" << _content_length << std::endl;
-	// std::cout << "body:                  ==> \n" << _body << std::endl;
+	// std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
 	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
 	// std::cout << "size:                  ==> " << _body.size() << std::endl;
 
 	return _body;
 }
 
-HttpStatus::e_code Response::status_code()
+HttpStatus::e_code Response::status_code() const noexcept 
 {
 	return _status_code;
 }
 
-size_t Response::get_total_response_length()
+size_t Response::get_total_response_length() const noexcept
 {
 	return _response_length;
 }
 
-size_t Response::get_current_length()
+size_t Response::get_current_length() const noexcept 
 {
 	return _body.size();
+}
+
+const char *Response::getResponseData() const noexcept
+{
+	return _body.c_str();
 }
 
 void Response::consume_body(size_t consume_length)
@@ -256,9 +275,4 @@ void Response::consume_body(size_t consume_length)
 		consume_length = _body.size();
 	_body.erase(0, consume_length);
 	_bytes_sent += consume_length;
-}
-
-std::string &Response::get_body()
-{
-	return _body;
 }

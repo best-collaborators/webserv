@@ -14,7 +14,7 @@ void FileUploadHandler::_getFileName()
 	if (!_filename.empty()) return ;
 
 	if (_request.get_header_count("x-filename")) {
-		_filename = _request.get_header_value(_request.get_header_value("x-filename"));
+		_filename = _request.get_header_value("x-filename");
 	}
 	else {
 		_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-upload";

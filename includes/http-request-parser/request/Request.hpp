@@ -47,7 +47,7 @@ public:
 
 	bool isStatusCodeBad() const;
 
-	RequestBodyStatus getBodyStatus() const;
+	RequestType getBodyStatus() const;
 };
 
 #endif /* HTTP_REQUEST */

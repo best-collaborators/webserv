@@ -37,6 +37,9 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpMessage.cpp \
 	$(SRC_DIR)/http-request-parser/Request.cpp \
 	$(SRC_DIR)/http-request-parser/ChunkHandler.cpp \
+	$(SRC_DIR)/http-request-parser/HttpRequestReader.cpp \
+	$(SRC_DIR)/http-request-parser/HttpResponseWriter.cpp \
+	$(SRC_DIR)/http-request-parser/BufferManager.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \
 	$(SRC_DIR)/sockets/Poller.cpp \

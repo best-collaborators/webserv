@@ -3,7 +3,7 @@
 
 #include <ostream>
 
-enum class RequestBodyStatus
+enum class RequestType
 {
 	NO_BODY,
 	RAW_BODY,
@@ -12,23 +12,23 @@ enum class RequestBodyStatus
 	CGI
 };
 
-inline std::ostream& operator<<(std::ostream& os, RequestBodyStatus status)
+inline std::ostream& operator<<(std::ostream& os, RequestType status)
 {
 	switch (status)
 	{
-		case RequestBodyStatus::NO_BODY:
+		case RequestType::NO_BODY:
 			os << "NO_BODY";
 			break;
-		case RequestBodyStatus::RAW_BODY:
+		case RequestType::RAW_BODY:
 			os << "RAW_BODY";
 			break;
-		case RequestBodyStatus::MULTIPART:
+		case RequestType::MULTIPART:
 			os << "MULTIPART";
 			break;
-		case RequestBodyStatus::CHUNKED:
+		case RequestType::CHUNKED:
 			os << "CHUNKED";
 			break;
-		case RequestBodyStatus::CGI:
+		case RequestType::CGI:
 			os << "CGI";
 			break;
 	}
