@@ -152,7 +152,6 @@ std::streampos Response::get_file_size()
 	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
-		_status_code = HttpStatus::e_code::NOT_FOUND;
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -243,7 +242,7 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	_response_length = _header_str.size() + _content_length;
 	// std::cout << "content length" << _content_length << std::endl;
-	std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
+	// std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
 	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
 	// std::cout << "size:                  ==> " << _body.size() << std::endl;
 

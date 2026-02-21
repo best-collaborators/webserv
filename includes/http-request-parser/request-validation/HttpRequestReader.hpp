@@ -29,7 +29,6 @@ private:
 	HeaderState	_handleHeaderMethod(std::string &read_buffer) noexcept;
 
 	bool		_headersComplete(const std::string &read_buffer) const noexcept;
-	void		_removeBodyFromBuffer() noexcept;
 
 public:
 	HttpRequestReader() = default;

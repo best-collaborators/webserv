@@ -1,8 +1,20 @@
 #include "BufferManager.hpp"
 
-BufferManager::BufferManager() 
+BufferManager::BufferManager() : _recv_buffer(new char[READ_BUFFER_SIZE]) { }
+
+BufferManager::~BufferManager() 
 {
-	_recv_buffer = new char[READ_BUFFER_SIZE];
+	delete []_recv_buffer;
+}
+
+BufferManager &BufferManager::operator=(const BufferManager &other)
+{
+	if (this != &other)
+	{
+		// _recv_buffer is a fixed-size buffer; reuse existing allocation.
+		_read_buffer = other._read_buffer;
+	}
+	return *this;
 }
 
 char *BufferManager::getRecvBuffer() noexcept

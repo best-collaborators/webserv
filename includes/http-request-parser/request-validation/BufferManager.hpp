@@ -17,8 +17,10 @@ private:
 	char *_recv_buffer;
 
 public:
-	BufferManager() ;
-	~BufferManager() = default;
+	BufferManager();
+	~BufferManager();
+
+	BufferManager &operator=(const BufferManager &other);
 
 	char				*getRecvBuffer() noexcept;
 	size_t				getReceiveBufferSize() noexcept;

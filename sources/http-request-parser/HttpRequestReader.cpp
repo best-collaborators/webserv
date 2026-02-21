@@ -17,7 +17,8 @@ void HttpRequestReader::_parseHeaders(std::string &read_buffer) noexcept
 void HttpRequestReader::_consumeHeader(std::string &read_buffer) noexcept
 {
 	size_t header_end_position = read_buffer.find("\r\n\r\n");
-	read_buffer.erase(0, header_end_position + 4);
+	if (header_end_position != std::string::npos)
+		read_buffer.erase(0, header_end_position + 4);
 }
 
 HeaderState HttpRequestReader::_handleHeaderMethod(std::string &read_buffer) noexcept
@@ -41,8 +42,8 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Incomplete;
 
 	_parseHeaders(read_buffer);
+	_consumeHeader(read_buffer);
 	if (HttpStatus::is_bad(_request.get_status_code())) {
-		_consumeHeader(read_buffer);
 		return HeaderState::Error;
 	}
 

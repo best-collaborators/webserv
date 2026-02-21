@@ -4,7 +4,7 @@ std::string PercentEncoder::percent_encoding(std::string &buffer)
 {
 	std::string copy = buffer;
 
-	auto pos = std::find(buffer.begin(), copy.end(), '%');
+	auto pos = std::find(copy.begin(), copy.end(), '%');
 	while (pos != copy.end() && (pos + 1) != copy.end() && (pos + 2) != copy.end())
 	{
 		size_t index = pos - copy.begin();

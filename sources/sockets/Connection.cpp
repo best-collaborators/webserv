@@ -52,7 +52,9 @@ void	Connection::_formResponse()
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders());
 	}
 
-	_buffer_manager.consume(_request_reader.getContentLength());
+	size_t content_length = _request_reader.getContentLength();
+	if (content_length > 0)
+		_buffer_manager.consume(content_length);
 	_response_formed = true;
 }
 
@@ -161,7 +163,7 @@ IoState Connection::_tryInitCGI() noexcept
 	{
 		try
 		{
-			std::string	executable = "/home/kvalerii/.nvm/versions/node/v22.21.1/bin/node1";
+			std::string	executable = "/home/kvalerii/.nvm/versions/node/v22.21.1/bin/node";
 			std::string	scriptPath = "tests/test.js";
 			std::vector<std::string> envVariables = { "TEST=Test!" };
 

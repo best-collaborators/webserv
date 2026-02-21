@@ -94,7 +94,7 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 			return HttpStatus::e_code::BAD_REQUEST;
 		}
 
-		if (test_length < 0 && test_length > http::limits::max_body_length) {
+		if (test_length > http::limits::max_body_length) {
 			std::cerr << "413 Request Entity Too Large" << std::endl;
 			return HttpStatus::e_code::CONTENT_TOO_LARGE;
 		}
