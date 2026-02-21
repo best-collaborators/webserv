@@ -41,17 +41,18 @@ void	Connection::_formResponse()
 		CGIExitStatus	status = _cgi_handler->getExitStatus();
 
 		std::cout << "CGI exit status: " << (status == CGIExitStatus::SUCCESS ? "Success" : "Error") << std::endl;
-
-		_response_writer.formResponse(_request_reader.request(), status, _cgi_handler->getBuffer());
+		if (status == CGIExitStatus::ERROR)
+			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), status, _cgi_handler->getBuffer());
 		_cgi_handler.reset();
 	}
 	else
 	{
-		std::cout << "Status code before response: " << _request_reader.request().get_status_code() << std::endl;
-		_response_writer.formResponse(_request_reader.request());
+		std::cout << "Status code before response: " << _request_reader.getStatusCode() << std::endl;
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders());
 	}
 
-	_buffer_manager.consume(_request_reader.request().get_content_length());
+	_buffer_manager.consume(_request_reader.getContentLength());
 	_response_formed = true;
 }
 
@@ -152,12 +153,15 @@ IoState Connection::_receiveData() noexcept
 
 IoState Connection::_tryInitCGI() noexcept
 {
-	ssize_t content_length = _request_reader.request().get_content_length();
-	if (content_length == _request_reader.getStoredBodyBytes())
+	ssize_t content_length = _request_reader.getContentLength();
+	std::cout << "INIT CGI " <<  content_length << std::endl;
+	std::cout << "INIT CGI " <<  _request_reader.getStoredBodyBytes() << std::endl;
+
+	if (content_length < 0 || content_length == _request_reader.getStoredBodyBytes())
 	{
 		try
 		{
-			std::string	executable = "/home/rmzvr/.nvm/versions/node/v24.11.1/bin/node";
+			std::string	executable = "/home/kvalerii/.nvm/versions/node/v22.21.1/bin/node1";
 			std::string	scriptPath = "tests/test.js";
 			std::vector<std::string> envVariables = { "TEST=Test!" };
 
@@ -172,7 +176,7 @@ IoState Connection::_tryInitCGI() noexcept
 		catch(const std::exception& e)
 		{
 			std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
-			_request_reader.request().set_status_code(HttpStatus::e_code::SERVICE_UNAVAILABLE);
+			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 			return IoState::Received; //! Return 500 error code and send response back
 		}
 		return IoState::Init;

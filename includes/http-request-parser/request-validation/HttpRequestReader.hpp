@@ -14,7 +14,7 @@ class HttpRequestReader
 private:
 	Request		_request;
 
-	ssize_t		_stored_body_bytes;
+	ssize_t		_stored_body_bytes = 0;
 	ReaderState	_curr_state = ReaderState::AwaitingHeaders;
 
 	HeaderState	_checkHeaderState(std::string &read_buffer) noexcept;
@@ -41,13 +41,18 @@ public:
 	HttpRequestReader( HttpRequestReader && ) noexcept = default;
 	HttpRequestReader & operator=( HttpRequestReader && ) noexcept = default;
 
-	ReaderState		_processBody(std::string &buffer, size_t bytes_read) noexcept;
-	ReaderState		_processHeader(std::string &buffer) noexcept;
-	void			reset();
+	ReaderState			_processBody(std::string &buffer, size_t bytes_read) noexcept;
+	ReaderState			_processHeader(std::string &buffer) noexcept;
+	void				reset();
 
-	ReaderState		read(std::string &buffer, size_t bytes_read);
-	Request			&request() noexcept;
-	ssize_t 		getStoredBodyBytes();
+	ReaderState			read(std::string &buffer, size_t bytes_read);
+	ssize_t 			getStoredBodyBytes() const noexcept;
+	ssize_t				getContentLength() const noexcept;
+
+	void				setStatusCode(HttpStatus::e_code status);
+	HttpStatus::e_code	getStatusCode();
+
+	std::unordered_map<std::string, std::string> moveHeaders();
 };
 
 #endif /* HTTP_REQUEST_HANDLER */

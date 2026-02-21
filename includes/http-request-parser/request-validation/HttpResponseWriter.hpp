@@ -19,9 +19,9 @@ public:
 
 	HttpResponseWriter( HttpResponseWriter && ) noexcept = default;
 	HttpResponseWriter & operator=( HttpResponseWriter && ) noexcept = default;
-
-	void		formResponse(Request &_request, CGIExitStatus status, std::string &buffer);
-	void		formResponse(Request &_request);
+	
+	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers, CGIExitStatus status, std::string &buffer);
+	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers);
 
 	void		write();
 	size_t		totalLength() const noexcept;

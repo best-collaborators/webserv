@@ -41,8 +41,8 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Incomplete;
 
 	_parseHeaders(read_buffer);
-	_consumeHeader(read_buffer);
 	if (HttpStatus::is_bad(_request.get_status_code())) {
+		_consumeHeader(read_buffer);
 		return HeaderState::Error;
 	}
 
@@ -80,6 +80,7 @@ ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 
 		case HeaderState::CGI:
 			std::cout << "[request-reader] Request is CGI" << std::endl;
+			_stored_body_bytes = read_buffer.size();
 			return ReaderState::CGI;
 
 		default:
@@ -204,12 +205,27 @@ ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
 	return _curr_state;
 }
 
-Request &HttpRequestReader::request() noexcept
-{
-	return _request;
-}
-
-ssize_t HttpRequestReader::getStoredBodyBytes()
+ssize_t HttpRequestReader::getStoredBodyBytes() const noexcept
 {
 	return _stored_body_bytes;
+}
+
+ssize_t HttpRequestReader::getContentLength() const noexcept
+{
+	return _request.get_content_length();
+}
+
+void HttpRequestReader::setStatusCode(HttpStatus::e_code status)
+{
+	_request.set_status_code(status);
+}
+
+HttpStatus::e_code HttpRequestReader::getStatusCode()
+{
+	return _request.get_status_code();
+}
+
+std::unordered_map<std::string, std::string> HttpRequestReader::moveHeaders()
+{
+	return _request.copy_headers();
 }

@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "HttpStatus.hpp"
+#include "HttpMethod.hpp"
 #include "HttpHeaders.hpp"
 #include "HttpMessage.hpp"
 

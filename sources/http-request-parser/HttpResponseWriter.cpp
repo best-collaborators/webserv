@@ -1,16 +1,22 @@
 #include "HttpResponseWriter.hpp"
 
-void HttpResponseWriter::formResponse(Request &_request, CGIExitStatus status, std::string &buffer)
+void HttpResponseWriter::formResponse(
+	HttpStatus::e_code status_code,
+	std::unordered_map<std::string, std::string> &&_headers,
+	CGIExitStatus status, std::string &buffer)
 {
 	if (status == CGIExitStatus::SUCCESS)
-		_response.form_response(_request.get_status_code(), _request.copy_headers(), buffer);
+		_response.form_response(status_code, std::move(_headers), buffer);
 	else
-		_response.form_response(_request.get_status_code(), _request.copy_headers());
+		_response.form_response(status_code, std::move(_headers));
 }
 
-void HttpResponseWriter::formResponse(Request &_request)
+void HttpResponseWriter::formResponse(
+	HttpStatus::e_code status_code,
+	std::unordered_map<std::string, std::string> &&_headers
+)
 {
-	_response.form_response(_request.get_status_code(), _request.copy_headers());
+	_response.form_response(status_code, std::move(_headers));
 }
 
 void	HttpResponseWriter::write()

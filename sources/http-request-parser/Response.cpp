@@ -49,11 +49,11 @@ void Response::is_set_default_page()
 		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body = "";
 	}
-	else if (method == "POST") {
-		_body = serve_html_webserv_page("Successful post.");
-	}
 	else if (HttpStatus::is_bad(_status_code)) {
 		_body = serve_html_webserv_page("Error happened.");
+	}
+	else if (method == "POST") {
+		_body = serve_html_webserv_page("Successful post.");
 	}
 	else if (_status_code == static_cast<HttpStatus::e_code>(304)) {
 		_body = serve_html_webserv_page("Other message.");
@@ -175,26 +175,32 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	set_header_value(http::headers::METHOD, http_request_values[http::headers::METHOD]);
 
 	http_request_values.clear();
-	is_set_default_page();
 
-	if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
-		_status_code = HttpStatus::e_code::OK;
-		_body = serve_html_webserv_page("Root not configured");
-		_is_default_page = true;
+	if (!body.empty())
+	{
+		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();
 	}
-
-	if (!_is_default_page)
+	else
 	{
-		std::cout << "[response] Not a default page" << std::endl;
-		std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
-		get_file_size();
-		if (HttpStatus::is_good(_status_code)) {
-			set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
-			if (body.empty())
+		is_set_default_page();
+
+		if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
+			_status_code = HttpStatus::e_code::OK;
+			_body = serve_html_webserv_page("Root not configured");
+			_is_default_page = true;
+			_content_length = _body.size();
+		}
+
+		if (!_is_default_page)
+		{
+			std::cout << "[response] Not a default page" << std::endl;
+			std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
+			get_file_size();
+			if (HttpStatus::is_good(_status_code)) {
+				set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
 				read_body_partially();
-			else
-				_body = serve_html_webserv_page(body);
+			}
 		}
 	}
 
