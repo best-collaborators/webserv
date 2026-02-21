@@ -226,6 +226,11 @@ HttpStatus::e_code HttpRequestReader::getStatusCode()
 	return _request.get_status_code();
 }
 
+std::unordered_map<std::string, std::string> HttpRequestReader::getHeaders()
+{
+	return _request.get_headers();
+}
+
 std::unordered_map<std::string, std::string> HttpRequestReader::moveHeaders()
 {
 	return _request.copy_headers();
