@@ -199,10 +199,10 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	}
 
 	_buffer_manager.append(_read_bytes);
+	// std::cout << "buffer \n" << _buffer_manager.getBuffer() << std::endl;
 	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
 	std::cout << "READER STATE: " << reader_state << std::endl;
-	std::cout << "buffer \n" << _buffer_manager.getBuffer() << std::endl;
 	switch (reader_state)
 	{
 	case CGI:
