@@ -1,11 +1,19 @@
-#!/usr/bin/env python3
-
 import os
 import sys
 import json
 import html
 import tempfile
+import signal
 from urllib.parse import parse_qs
+
+# ============================
+# 0. PREVENT BROKEN PIPE CRASH
+# ============================
+
+def sigpipe_handler(signum, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGPIPE, sigpipe_handler)
 
 # ============================
 # 1. ENVIRONMENT VARIABLES

@@ -1,5 +1,17 @@
 #!/usr/bin/env php
 <?php
+
+// ============================
+// 0. PREVENT BROKEN PIPE CRASH (CGI SAFE)
+// ============================
+
+// Exit silently if webserver closes pipe
+if (function_exists('pcntl_signal')) {
+    pcntl_signal(SIGPIPE, function () {
+        exit(0);
+    });
+}
+
 /**
  * Stateless PHP CGI Script
  * No cookies, no sessions

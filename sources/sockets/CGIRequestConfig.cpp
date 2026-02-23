@@ -49,7 +49,6 @@ namespace
 
 	std::string	scriptPathResolver( std::unordered_map<std::string, std::string> const & headers )
 	{
-		std::cout << "TARGET" << std::endl;
 		std::regex	reg_ex("(\\w+\\.(?:js|py|php|cgi))");
 		std::string	target = headers.at("request-target");
 		std::string filename = RegexMatcher::get_regex_value(target, reg_ex);
@@ -102,7 +101,6 @@ namespace
 
 bool	cgi::isCGITarget( std::string const & target )
 {
-	std::cout << "TARGET" << std::endl;
 	const std::regex regex("(^/cgi-bin/\\w+.(?:js|py|php|cgi))");
 	std::smatch match;
 

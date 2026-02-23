@@ -177,10 +177,16 @@ void Server::_modifyEvent(int fd, uint32_t events) noexcept
 
 void Server::_closeConnection(int fd) noexcept
 {
+	Connection * connection = _getConnectionByFD(fd);
+	if (connection) {
+		_unregisterConnectionCGI(*connection, CGIOperation::READ);
+		_unregisterConnectionCGI(*connection, CGIOperation::WRITE);
+	}
 	if (_poller.del(fd) == true)
 	{
 		_connections.erase(fd);
 		_fd_to_connection.erase(fd);
+		_pid_to_connection.erase(fd);
 
 		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
 	}
@@ -218,6 +224,7 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 
 	if (fd == -1)
 	{
+		// Logger::displayLog(Logger::e_log_level::ERROR, "no valid fd", "[CGI] (Server::closeCGI)");
 		std::cerr << "[CGI] (Server::closeCGI) no valid fd " << std::endl;
 		return;
 	}

@@ -1,0 +1,2 @@
+http://localhost:3490/
+http://localhost:3490/cgi-bin/cgi.js

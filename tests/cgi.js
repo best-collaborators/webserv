@@ -1,5 +1,22 @@
 #!/usr/bin/env node
 
+// ============================
+// 0. PREVENT CGI BROKEN PIPE CRASH
+// ============================
+
+// If webserver closes pipe (client disconnect, timeout, invalid headers)
+// exit silently instead of crashing with EPIPE
+process.on('SIGPIPE', () => {
+    process.exit(0);
+});
+
+process.stdout.on('error', (err) => {
+    if (err.code === 'EPIPE') {
+        process.exit(0);
+    }
+    throw err;
+});
+
 /**
  * Stateless Node.js CGI Script
  * No cookies, no sessions
@@ -71,7 +88,6 @@ function readStdin(callback) {
         process.stdin.on('data', chunk => {
             received += chunk.length;
 
-            // Prevent oversized payload attacks
             if (received > CONTENT_LENGTH) {
                 console.error("Payload exceeded declared size");
                 process.exit(1);
@@ -172,7 +188,6 @@ readStdin(() => {
 
     const POST = parsePost();
 
-    // JSON API mode
     if (GET.format === 'json') {
 
         sendHeaders("application/json");
@@ -190,7 +205,6 @@ readStdin(() => {
         return;
     }
 
-    // HTML output
     sendHeaders("text/html");
 
     process.stdout.write("<html><body>");
