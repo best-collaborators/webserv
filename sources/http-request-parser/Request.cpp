@@ -50,11 +50,7 @@ bool Request::isStatusCodeBad() const
 
 RequestType Request::getBodyStatus() const
 {
-	if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::REQUEST_TARGET) == "/cgi/test.js")
-	{
-		return RequestType::CGI;
-	}
-	else if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
 	{
 		return RequestType::CHUNKED;
 	}

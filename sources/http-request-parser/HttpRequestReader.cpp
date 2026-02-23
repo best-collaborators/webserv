@@ -53,9 +53,11 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Error;
 	}
 
-	if (_request.getBodyStatus() == RequestType::CGI) {
+	std::string	target = _request.get_header_value(http::headers::REQUEST_TARGET);
+	std::string path = RegexMatcher::get_regex_value(target, HttpRegexPatterns::CGI_VALID_PATH());
+
+	if (!path.empty())
 		return HeaderState::CGI;
-	}
 
 	return _handleHeaderMethod(read_buffer);
 }

@@ -24,6 +24,7 @@
 #include "HttpRequestReader.hpp"
 #include "HttpResponseWriter.hpp"
 #include "ConnectionState.hpp"
+#include "CGIRequestConfig.hpp"
 
 class Connection
 {

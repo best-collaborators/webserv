@@ -145,8 +145,6 @@ IoState Connection::_receiveData() noexcept
 		0
 	);
 
-	// _read_bytes = _buffer_manager.receive(_fd);
-
 	std::cout << "[io] recv() " << _read_bytes << std::endl;
 	std::cout << "[io] recv() completed." << std::endl;
 
@@ -155,23 +153,18 @@ IoState Connection::_receiveData() noexcept
 
 IoState Connection::_tryInitCGI() noexcept
 {
-	ssize_t content_length = _request_reader.getContentLength();
-	std::cout << "INIT CGI " <<  content_length << std::endl;
-	std::cout << "INIT CGI " <<  _request_reader.getStoredBodyBytes() << std::endl;
+	
+	auto headers = _request_reader.getHeaders();
+	
+	if (!cgi::isCGITarget(headers["request-target"]))
+	return IoState::Error; //! Handle correct return from invalid CGI
 
+	ssize_t content_length = _request_reader.getContentLength();
 	if (content_length < 0 || content_length == _request_reader.getStoredBodyBytes())
 	{
 		try
 		{
-			std::string	executable = "/home/kvalerii/.nvm/versions/node/v22.21.1/bin/node";
-			std::string	scriptPath = "tests/test.js";
-			std::vector<std::string> envVariables = { "TEST=Test!" };
-
-			CGIConfig	config = {
-				executable,
-				scriptPath,
-				envVariables
-			};
+			CGIConfig	config = cgi::buildConfig(headers);
 
 			_cgi_handler.emplace(config);
 		}
@@ -202,7 +195,6 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	// std::cout << "buffer \n" << _buffer_manager.getBuffer() << std::endl;
 	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
-	std::cout << "READER STATE: " << reader_state << std::endl;
 	switch (reader_state)
 	{
 	case CGI:

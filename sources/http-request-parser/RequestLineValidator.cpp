@@ -87,8 +87,7 @@ void RequestLineValidator::parse()
 
 	if (!_isValidHttpVersion()
 		|| !_isValidUriLength()
-		|| !_isMethodAllowed()
-		|| !_isCGIPathValid()) {
+		|| !_isMethodAllowed()) {
 
 			return ;
 		}

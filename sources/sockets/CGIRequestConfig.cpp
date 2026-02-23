@@ -47,28 +47,26 @@ namespace
 			envp.insert({ "CONTENT_LENGTH", value });
 	}
 
-	std::string	scriptPathResolver( Request const & request )
+	std::string	scriptPathResolver( std::unordered_map<std::string, std::string> const & headers )
 	{
 		std::cout << "TARGET" << std::endl;
-		std::regex	reg_ex("(^/cgi-bin/\\w+.(?:js|py|php|cgi))");
-		std::string	target = request.get_header_value("request-target");
+		std::regex	reg_ex("(\\w+\\.(?:js|py|php|cgi))");
+		std::string	target = headers.at("request-target");
 		std::string filename = RegexMatcher::get_regex_value(target, reg_ex);
 		if (filename.empty())
 			return "";
 
 		std::cout << "filename: " << filename << std::endl;
 
-		// size_t	pos = filename.substr
-		return "";
+		return "tests/" + filename;
 	}
 
-	std::vector<std::string> buildEnvp( Request const & request )
+	std::vector<std::string> buildEnvp( std::unordered_map<std::string, std::string> const & headers )
 	{
 		std::vector <std::string> env_vars;
 		std::unordered_map<std::string, std::string> envp;
-		std::unordered_map<std::string, std::string> headers = request.get_headers();
 
-		std::string method = request.get_header_value("method");
+		std::string method = headers.at("method");
 
 		for (auto && header : headers)
 		{
@@ -114,11 +112,25 @@ bool	cgi::isCGITarget( std::string const & target )
 	return false;
 }
 
-CGIConfig cgi::buildConfig( Request const & request )
+CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers )
 {
-	std::string	executable = "/usr/local/bin/node";
-	std::string	scriptPath = scriptPathResolver(request);
-	std::vector<std::string> envVariables = buildEnvp(request);
+	std::string	executable;
+
+	std::regex	reg_ex("(\\.(?:js|py|php|cgi))");
+	std::string	target = headers.at("request-target");
+	std::string extension = RegexMatcher::get_regex_value(target, reg_ex);
+	if (extension.empty())
+		std::cout << "(cgi::buildConfig) extension.empty()" << std::endl;
+
+	if (extension == ".js")
+		executable = "/usr/local/bin/node";
+	else if (extension == ".py")
+		executable = "/opt/pyenv/shims/python";
+	else if (extension == ".php")
+		executable = "/usr/bin/php";
+
+	std::string	scriptPath = scriptPathResolver(headers);
+	std::vector<std::string> envVariables = buildEnvp(headers);
 
 	CGIConfig	config = {
 		executable,
