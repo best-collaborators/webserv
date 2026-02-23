@@ -28,6 +28,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMethod.cpp \
+	$(SRC_DIR)/http-request-parser/HttpMethodRegistry.cpp \
 	$(SRC_DIR)/http-request-parser/HttpRegexPatterns.cpp \
 	$(SRC_DIR)/http-request-parser/RegexMatcher.cpp \
 	$(SRC_DIR)/http-request-parser/Response.cpp \
