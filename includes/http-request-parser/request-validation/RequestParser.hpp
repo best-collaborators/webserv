@@ -3,6 +3,7 @@
 
 #include "HttpBodyParser.hpp"
 #include "HttpHeaderParser.hpp"
+#include "HttpMethodRegistry.hpp"
 
 class RequestParser
 {

@@ -12,7 +12,7 @@
 
 #include "HttpStatus.hpp"
 #include "HttpHeaders.hpp"
-#include "HttpMethod.hpp"
+#include "HttpMethodRegistry.hpp"
 #include "ParseContext.hpp"
 
 #include "IParser.hpp"
