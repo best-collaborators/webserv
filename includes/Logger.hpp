@@ -6,6 +6,10 @@
 #include <chrono>
 #include <iomanip>
 
+#ifndef DEBUG_FLAG
+	#define DEBUG_FLAG false
+#endif
+
 class Logger
 {
 public:
@@ -18,7 +22,7 @@ public:
 		CRITICAL,
 		NONE
 	};
-	void displayLog(e_log_level level, const std::string& message, const std::string& module = "http");
+	static void displayLog(e_log_level level, const std::string& message, const std::string& module = "http");
 	static constexpr e_log_level _max_log_lvl = e_log_level::DEBUG;
 
 private:
@@ -29,12 +33,12 @@ private:
 	~Logger() = delete;
 
 	// ANSI color codes for terminal
-	const std::string RESET  = "\033[0m";
-	const std::string RED    = "\033[31m";
-	const std::string YELLOW = "\033[33m";
-	const std::string BLUE   = "\033[34m";
-	const std::string CYAN   = "\033[36m";
-	const std::string MAGENTA= "\033[35m";
+	static const std::string RESET;
+	static const std::string RED;
+	static const std::string YELLOW;
+	static const std::string BLUE;
+	static const std::string CYAN;
+	static const std::string MAGENTA;
 };
 
 #endif /* LOGGER */

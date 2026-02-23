@@ -1,8 +1,16 @@
 #include "Logger.hpp"
 
+// ANSI color codes for terminal
+const std::string Logger::RESET  = "\033[0m";
+const std::string Logger::RED    = "\033[31m";
+const std::string Logger::YELLOW = "\033[33m";
+const std::string Logger::BLUE   = "\033[34m";
+const std::string Logger::CYAN   = "\033[36m";
+const std::string Logger::MAGENTA= "\033[35m";
+
 void Logger::displayLog(e_log_level level, const std::string& message, const std::string& module)
 {
-	if (level < _max_log_lvl) return;
+	if (!DEBUG_FLAG || level < _max_log_lvl) return;
 
 	std::string levelStr;
 	std::string color;
