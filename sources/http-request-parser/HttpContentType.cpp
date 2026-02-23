@@ -28,6 +28,8 @@ std::string_view HttpContentType::get_content_type_name(HttpContentType::e_code 
 			return "image/webp";
 		case HttpContentType::e_code::IMAGE_ICON:
 			return "image/icon";
+		case HttpContentType::e_code::APPLICATION_JSON:
+			return "application/json";
 		default:
 			return "application/octet-stream";
 	}
@@ -59,6 +61,8 @@ HttpContentType::e_code HttpContentType::get_content_type_code_by_extension(std:
 		return HttpContentType::e_code::IMAGE_WEBP;
 	if (extension == ".ico")
 		return HttpContentType::e_code::IMAGE_ICON;
+	if (extension == ".json")
+		return HttpContentType::e_code::APPLICATION_JSON;
 	return HttpContentType::e_code::APPLICATION_OCTET_STREAM;
 }
 
@@ -88,6 +92,8 @@ std::string HttpContentType::get_content_type_by_extension(std::string_view exte
 		return "image/webp";
 	if (extension == ".ico")
 		return "image/icon";
+	if (extension == ".json")
+		return "application/json";
 	return "application/octet-stream";
 }
 
@@ -117,5 +123,7 @@ std::string HttpContentType::get_extension_by_content_type(std::string_view cont
 		return ".webp";
 	if (content_type == "image/icon")
 		return ".ico";
+	if (content_type == "application/json")
+		return ".json";
 	return ".bin";
 }

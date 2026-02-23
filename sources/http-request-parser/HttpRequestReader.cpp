@@ -42,8 +42,8 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Incomplete;
 
 	_parseHeaders(read_buffer);
-	_consumeHeader(read_buffer);
 	if (HttpStatus::is_bad(_request.get_status_code())) {
+		_consumeHeader(read_buffer);
 		return HeaderState::Error;
 	}
 
