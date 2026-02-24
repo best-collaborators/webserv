@@ -6,7 +6,7 @@
 #include <sys/epoll.h>
 #include <sys/wait.h>
 
-#include "IoState.hpp"
+#include "IoResult.hpp"
 #include "Socket.hpp"
 
 #include <unordered_map>
@@ -45,15 +45,15 @@ private:
 	ssize_t		_sent_bytes;
 	ssize_t		_read_bytes;
 
-	IoState		_getSocketState() const noexcept;
-	IoState		_tryInitCGI() noexcept;
+	IoEvent		_getSocketState() const noexcept;
+	IoEvent		_tryInitCGI() noexcept;
 
-	IoState		_receiveData() noexcept;
-	IoState		_handleReceiveState( ssize_t read_bytes ) noexcept;
+	IoEvent		_receiveData() noexcept;
+	IoEvent		_handleReceiveState( ssize_t read_bytes ) noexcept;
 
-	IoState		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
+	IoEvent		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
 	void		_formResponse();
-	IoState		_sendData() noexcept;
+	IoEvent		_sendData() noexcept;
 
 public:
 	Connection() = default;

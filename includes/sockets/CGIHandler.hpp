@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PipeFD.hpp"
-#include "IoState.hpp"
+#include "IoResult.hpp"
 #include "CGIConfig.hpp"
 #include "CGIExecutor.hpp"
 #include "CGIExitStatus.hpp"
@@ -41,8 +41,8 @@ public:
 	void			closeWritePipe() noexcept;
 	void			closeReadPipe() noexcept;
 
-	IoState			writeToCGI( std::string const & buffer ) noexcept;
-	IoState			readFromCGI() noexcept;
+	IoEvent			writeToCGI( std::string const & buffer ) noexcept;
+	IoEvent			readFromCGI() noexcept;
 
 	std::string &	getBuffer() noexcept;
 

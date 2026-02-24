@@ -42,7 +42,7 @@ void CGIHandler::closeReadPipe() noexcept
 	_read_fd.reset();
 }
 
-IoState CGIHandler::writeToCGI( std::string const & buffer ) noexcept
+IoEvent CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 {
 	std::cout << "writeToCGI function" << std::endl;
 
@@ -50,17 +50,17 @@ IoState CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 	ssize_t	sent_bytes = write(_write_fd.get(), buffer.c_str(), buffer_len);
 
 	if (sent_bytes == buffer_len)
-		return IoState::Sent;
+		return IoEvent::Sent;
 	else if (sent_bytes == -1)
 	{
 		std::cerr << "[CGI] (CGIHandler::writeToCGI) write to CGI failed" << std::endl;
-		return IoState::Error;
+		return IoEvent::Error;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
-IoState CGIHandler::readFromCGI() noexcept
+IoEvent CGIHandler::readFromCGI() noexcept
 {
 	std::cout << "readFromCGI function" << std::endl;
 
@@ -77,10 +77,10 @@ IoState CGIHandler::readFromCGI() noexcept
 	else if (read_bytes == -1)
 	{
 		std::cerr << "[CGI] (CGIHandler::readFromCGI) read from CGI failed" << std::endl;
-		return IoState::Error;
+		return IoEvent::Error;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
 std::string & CGIHandler::getBuffer() noexcept

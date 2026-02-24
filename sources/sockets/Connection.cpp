@@ -8,26 +8,6 @@ int Connection::getFD() const noexcept
 	return _fd;
 }
 
-IoEvent toIoEvent(IoState state)
-{
-	switch (state)
-	{
-	case IoState::Pending:
-		return IoEvent::Pending;
-	case IoState::Closed:
-		return IoEvent::Closed;
-	case IoState::Error:
-		return IoEvent::Error;
-	case IoState::Sent:
-		return IoEvent::Sent;
-	case IoState::Received:
-		return IoEvent::Received;
-	case IoState::Init:
-		return IoEvent::Init;
-	}
-	return IoEvent::Error;
-}
-
 void	Connection::_formResponse()
 {
 	if (_response_formed)
@@ -75,12 +55,12 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 	if (events & EPOLLIN)
 	{
 		std::cout << "EPOLLIN" << std::endl;
-		IoState state = _receiveData();
+		IoEvent state = _receiveData();
 
-		if (state == IoState::Init)
+		if (state == IoEvent::Init)
 			return { IoSource::CGI, IoEvent::Init };
-		if (state != IoState::Pending)
-			return { IoSource::Connection, toIoEvent(state) };
+		if (state != IoEvent::Pending)
+			return { IoSource::Connection, state };
 	}
 
 	if (events & EPOLLOUT)
@@ -89,10 +69,10 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 
 		_formResponse();
 
-		IoState state = _sendData();
+		IoEvent state = _sendData();
 
-		if (state != IoState::Pending)
-			return { IoSource::Connection, toIoEvent(state) };
+		if (state != IoEvent::Pending)
+			return { IoSource::Connection, state };
 	}
 
 	return { IoSource::Connection, IoEvent::Pending };
@@ -109,10 +89,10 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 	if (events & EPOLLIN)
 	{
 		std::cout << "EPOLLIN" << std::endl;
-		IoState state = _cgi_handler->readFromCGI();
+		IoEvent state = _cgi_handler->readFromCGI();
 
-		if (state != IoState::Pending)
-			return { IoSource::CGI, toIoEvent(state) };
+		if (state != IoEvent::Pending)
+			return { IoSource::CGI, state };
 	}
 
 	if (events & EPOLLHUP)
@@ -124,16 +104,16 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 	if (events & EPOLLOUT)
 	{
 		std::cout << "EPOLLOUT" << std::endl;
-		IoState state = _cgi_handler->writeToCGI(_buffer_manager.getBuffer());
+		IoEvent state = _cgi_handler->writeToCGI(_buffer_manager.getBuffer());
 
-		if (state != IoState::Pending)
-			return { IoSource::CGI, toIoEvent(state) };
+		if (state != IoEvent::Pending)
+			return { IoSource::CGI, state };
 	}
 
 	return { IoSource::CGI, IoEvent::Pending };
 }
 
-IoState Connection::_receiveData() noexcept
+IoEvent Connection::_receiveData() noexcept
 {
 	std::cout << "\n[io] EPOLLIN triggered on fd " << _fd << std::endl;
 	std::cout << "[io] recv() starting..." << std::endl;
@@ -151,13 +131,13 @@ IoState Connection::_receiveData() noexcept
 	return _handleReceiveState(_read_bytes);
 }
 
-IoState Connection::_tryInitCGI() noexcept
+IoEvent Connection::_tryInitCGI() noexcept
 {
 	
 	auto headers = _request_reader.getHeaders();
 	
 	if (!cgi::isCGITarget(headers["request-target"]))
-	return IoState::Error; //! Handle correct return from invalid CGI
+	return IoEvent::Error; //! Handle correct return from invalid CGI
 
 	ssize_t content_length = _request_reader.getContentLength();
 	if (content_length < 0 || content_length == _request_reader.getStoredBodyBytes())
@@ -172,14 +152,14 @@ IoState Connection::_tryInitCGI() noexcept
 		{
 			std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
 			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
-			return IoState::Received; //! Return 500 error code and send response back
+			return IoEvent::Received; //! Return 500 error code and send response back
 		}
-		return IoState::Init;
+		return IoEvent::Init;
 	}
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
-IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
+IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 {
 	if (read_bytes < 0)
 	{
@@ -188,7 +168,7 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	else if (read_bytes == 0)
 	{
 		std::cout << "[io] Peer closed fd " << _fd << "." << std::endl;
-		return IoState::Closed;
+		return IoEvent::Closed;
 	}
 
 	_buffer_manager.append(_read_bytes);
@@ -202,17 +182,17 @@ IoState	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 
 	case AwaitingHeaders:
 	case AwaitingBody:
-		return IoState::Pending;
+		return IoEvent::Pending;
 
 	case Complete:
 	case Error:
-		return IoState::Received;
+		return IoEvent::Received;
 	
 	default:
 		break;
 	}
 
-	return IoState::Received;
+	return IoEvent::Received;
 }
 
 EventAction Connection::onChildProcessExited( ChildExitInfo const & info )
@@ -256,7 +236,7 @@ void Connection::closeCGIPipe( CGIOperation op )
 		_cgi_handler->closeWritePipe();
 }
 
-IoState	Connection::_sendData() noexcept
+IoEvent	Connection::_sendData() noexcept
 {
 	std::cout << "Connection::_sendData" << std::endl;
 	std::cout << "\n[io] EPOLLOUT triggered for fd " << _fd << std::endl;
@@ -279,7 +259,7 @@ IoState	Connection::_sendData() noexcept
 	return _handleSendState(_sent_bytes, total_msg_len);
 }
 
-IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept
+IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept
 {
 	if (sent_bytes < 0)
 	{
@@ -292,22 +272,22 @@ IoState	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 		_response_formed = false;
 		_sent_bytes = 0;
 		_request_reader.reset();
-		return IoState::Sent;
+		return IoEvent::Sent;
 	}
 	else if (sent_bytes < message_length) //! Implement partial send
 	{
 		std::cout << "[io] Response sent partially." << std::endl;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
-IoState	Connection::_getSocketState() const noexcept
+IoEvent	Connection::_getSocketState() const noexcept
 {
 	if (_socket.isHealthy() == false)
 	{
-		return IoState::Error;
+		return IoEvent::Error;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
