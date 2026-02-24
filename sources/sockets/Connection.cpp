@@ -106,12 +106,6 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 		return { IoSource::CGI, IoEvent::Error };
 	}
 
-	if (events & EPOLLHUP)
-	{
-		std::cout << "EPOLLHUP" << std::endl;
-		return { IoSource::CGI, IoEvent::Done };
-	}
-
 	if (events & EPOLLIN)
 	{
 		std::cout << "EPOLLIN" << std::endl;
@@ -119,6 +113,12 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 
 		if (state != IoState::Pending)
 			return { IoSource::CGI, toIoEvent(state) };
+	}
+
+	if (events & EPOLLHUP)
+	{
+		std::cout << "EPOLLHUP" << std::endl;
+		return { IoSource::CGI, IoEvent::Done };
 	}
 
 	if (events & EPOLLOUT)
