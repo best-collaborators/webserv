@@ -74,6 +74,10 @@ IoEvent CGIHandler::readFromCGI() noexcept
 		_recv_buffer.append(buffer_read, read_bytes);
 		std::cout << "buffer_read: " << buffer_read << std::endl;
 	}
+	else if (read_bytes == 0)
+	{
+		return IoEvent::Done;
+	}
 	else if (read_bytes == -1)
 	{
 		std::cerr << "[CGI] (CGIHandler::readFromCGI) read from CGI failed" << std::endl;
