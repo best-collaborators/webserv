@@ -181,12 +181,15 @@ void Server::_closeConnection(int fd) noexcept
 	if (connection) {
 		_unregisterConnectionCGI(*connection, CGIOperation::READ);
 		_unregisterConnectionCGI(*connection, CGIOperation::WRITE);
+
+		int pid = connection->getCGIPID();
+		if (pid > 0)
+			_pid_to_connection.erase(pid);
 	}
 	if (_poller.del(fd) == true)
 	{
 		_connections.erase(fd);
 		_fd_to_connection.erase(fd);
-		_pid_to_connection.erase(fd);
 
 		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
 	}
@@ -229,15 +232,11 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 		return;
 	}
 
-	if (_poller.del(fd) == true)
-	{
-		std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
-		_fd_to_connection.erase(fd);
-		_cgi_pipe_fds.erase(fd);
-		connection.closeCGIPipe(op);
-	}
-	else
-		std::cerr << "[CGI] fd " << fd << " failed to remove from EPOLL" << std::endl;
+	_poller.del(fd);
+	std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
+	_fd_to_connection.erase(fd);
+	_cgi_pipe_fds.erase(fd);
+	connection.closeCGIPipe(op);
 }
 
 void Server::_handleFinishedChildren()
