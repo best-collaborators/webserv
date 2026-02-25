@@ -1,5 +1,5 @@
-#ifndef CONFIGURATION_FILE_PARSER
-#define CONFIGURATION_FILE_PARSER
+#ifndef CONFIGURATION_FILE_DATA
+#define CONFIGURATION_FILE_DATA
 
 #include "ListenData.hpp"
 #include "ErrorPage.hpp"
@@ -8,9 +8,8 @@
 #include <vector>
 #include <optional>
 
-class ConfigurationFileData
+struct ConfigurationFileData
 {
-private:
 	std::string					_server_name;
 	ListenData					_listen_data;
 	std::vector<ErrorPage>		_error_pages;
@@ -19,11 +18,6 @@ private:
 	std::optional<std::string>	_index;
 	// ? std::optional<HttpMethod>	_default_allowed_methods;
 	std::optional<std::vector<Location>>	_locations;
-	
-
-public:
-	ConfigurationFileData(/* args */);
-	~ConfigurationFileData();
 };
 
-#endif /* CONFIGURATION_FILE_PARSER */
+#endif /* CONFIGURATION_FILE_DATA */

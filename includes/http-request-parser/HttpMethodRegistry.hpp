@@ -21,12 +21,12 @@ public:
 
 	HttpMethodRegistry & operator=( HttpMethodRegistry && ) noexcept = default;
 
-private:
-	HttpMethodRegistry(const HttpMethodRegistry && other) = delete;
-	HttpMethodRegistry(const HttpMethodRegistry & other) = delete;
 	HttpMethodRegistry() = default;
 	~HttpMethodRegistry() = default;
 
+private:
+	HttpMethodRegistry(const HttpMethodRegistry && other) = delete;
+	HttpMethodRegistry(const HttpMethodRegistry & other) = delete;
 	static uint _code_to_uint(HttpMethod::e_code method);
 };
 

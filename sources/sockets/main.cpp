@@ -2,14 +2,20 @@
 #include "../includes/sockets/Listener.hpp"
 #include "../includes/sockets/Server.hpp"
 
+#include "ConfigurationFileParser.hpp"
+
 void	sig_handler(int signum)
 {
 	if (signum == SIGINT)
 		g_running = false;
 }
 
-int	main( void )
+int	main( int argc, char *argv[] )
 {
+	if (argc < 2) return 1;
+	ConfigurationFileParser parser(argv[1]);
+	parser.parse();
+
 	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
 	signal(SIGINT, &sig_handler);
 

@@ -19,6 +19,7 @@ public:
 	// Encoding patterns
 	static const std::regex& PERCENT_ENCODING();
 	static const std::regex& HEX_VALUE();
+	static const std::regex& IP_ADDR_PORT();
 
 	// CGI patterns
 	static const std::regex& CGI_VALID_PATH();
@@ -36,6 +37,7 @@ private:
 	static const std::regex BOUNDARY_PATTERN;
 	static const std::regex HEX_VALUE_PATTERN;
 	static const std::regex CGI_VALID_PATH_PATTERN;
+	static const std::regex IP_ADDR_HOST_PATTERN;
 };
 
 #endif /* HTTP_REGEX_PATTERNS_HPP */

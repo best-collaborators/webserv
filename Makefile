@@ -4,6 +4,7 @@ INCL = \
 	-I$(INC_DIR)/http-request-parser \
 	-I$(INC_DIR)/http-request-parser/request \
 	-I$(INC_DIR)/http-request-parser/request-validation \
+	-I$(INC_DIR)/http-request-parser/configuration-file \
 	-I$(INC_DIR)/http-request-parser/response \
 	-I$(INC_DIR)/sockets
 
@@ -16,6 +17,7 @@ SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
+	$(SRC_DIR)/http-request-parser/configuration-file/ConfigurationFileParser.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/FileUploadHandler.cpp \

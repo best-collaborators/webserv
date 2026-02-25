@@ -15,6 +15,7 @@ private:
 
 public:
 	static std::string get_regex_value(std::string &line, std::regex regex_method);
+	static std::string get_regex_value(std::string &line, std::regex regex_method, size_t match_number);
 };
 
 #endif /* REGEX_MATCHER */
