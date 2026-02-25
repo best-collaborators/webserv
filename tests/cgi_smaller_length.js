@@ -55,7 +55,7 @@ console.error("CGI started:", METHOD, SCRIPT_NAME);
 // ============================
 
 function sendHeaders(type = "text/html") {
-    const fakeLength = 20; // intentionally too small
+    const fakeLength = 5; // intentionally too small
 
     process.stdout.write(`Content-Type: ${type}\r\n`);
     process.stdout.write(`Content-Length: ${fakeLength}\r\n`);
@@ -210,25 +210,25 @@ readStdin(() => {
 
     sendHeaders("text/html");
 
-    process.stdout.write("<html><body>");
-    process.stdout.write("<h1>Stateless Node CGI</h1>");
+    process.stdout.write("1234567890");
+    // process.stdout.write("<h1>Stateless Node CGI</h1>");
 
-    process.stdout.write("<h2>Environment</h2><pre>");
-    process.stdout.write(escapeHTML(JSON.stringify({
-        METHOD,
-        SCRIPT_NAME,
-        SERVER_NAME,
-        SERVER_PORT
-    }, null, 2)));
-    process.stdout.write("</pre>");
+    // process.stdout.write("<h2>Environment</h2><pre>");
+    // process.stdout.write(escapeHTML(JSON.stringify({
+    //     METHOD,
+    //     SCRIPT_NAME,
+    //     SERVER_NAME,
+    //     SERVER_PORT
+    // }, null, 2)));
+    // process.stdout.write("</pre>");
 
-    process.stdout.write("<h2>GET</h2><pre>");
-    process.stdout.write(escapeHTML(JSON.stringify(GET, null, 2)));
-    process.stdout.write("</pre>");
+    // process.stdout.write("<h2>GET</h2><pre>");
+    // process.stdout.write(escapeHTML(JSON.stringify(GET, null, 2)));
+    // process.stdout.write("</pre>");
 
-    process.stdout.write("<h2>POST</h2><pre>");
-    process.stdout.write(escapeHTML(JSON.stringify(POST, null, 2)));
-    process.stdout.write("</pre>");
+    // process.stdout.write("<h2>POST</h2><pre>");
+    // process.stdout.write(escapeHTML(JSON.stringify(POST, null, 2)));
+    // process.stdout.write("</pre>");
 
-    process.stdout.write("</body></html>");
+    // process.stdout.write("</body></html>");
 });
