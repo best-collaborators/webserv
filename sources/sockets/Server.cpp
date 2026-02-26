@@ -186,13 +186,11 @@ void Server::_closeConnection(int fd) noexcept
 		if (pid > 0)
 			_pid_to_connection.erase(pid);
 	}
-	if (_poller.del(fd) == true)
-	{
-		_connections.erase(fd);
-		_fd_to_connection.erase(fd);
+	_poller.del(fd);
+	_connections.erase(fd);
+	_fd_to_connection.erase(fd);
+	// std::cout << "[connection] Closed and removed fd " << fd << std::endl;
 
-		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
-	}
 }
 
 void Server::_registerConnectionCGI(Connection &connection, CGIOperation operation) noexcept
@@ -232,10 +230,12 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 		return;
 	}
 
-	_poller.del(fd);
-	std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
-	_fd_to_connection.erase(fd);
-	_cgi_pipe_fds.erase(fd);
+	if (_cgi_pipe_fds.erase(fd))
+	{
+		_poller.del(fd);
+		_fd_to_connection.erase(fd);
+		std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
+	}
 	connection.closeCGIPipe(op);
 }
 
