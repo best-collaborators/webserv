@@ -38,6 +38,7 @@ private:
 	bool _isValidHttpVersion();
 	bool _isValidUriLength();
 	bool _isMethodAllowed();
+	bool _isCGIPathValid();
 
 
 public:

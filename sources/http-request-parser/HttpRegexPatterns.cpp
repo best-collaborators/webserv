@@ -8,6 +8,7 @@ const std::regex HttpRegexPatterns::CONTENT_DISPOSITION_PATTERN("^[C,c]ontent-[D
 const std::regex HttpRegexPatterns::CONTENT_TYPE_PATTERN("^[C,c]ontent-[T,t]ype:\\s*(\\S{1,256}\\/\\S{1,256})\\s*");
 const std::regex HttpRegexPatterns::BOUNDARY_PATTERN("^multipart/form-data;\\s*boundary=([^;\\s]+$)");
 const std::regex HttpRegexPatterns::HEX_VALUE_PATTERN("^([0-9a-f]+)");
+const std::regex HttpRegexPatterns::CGI_VALID_PATH_PATTERN("(^/cgi-bin/\\w+\\.(?:js|py|php|cgi)(?:\\?(?:\\w+=\\w*(?:&\\w+=\\w*)*)?)?$)");
 
 // Request line patterns
 const std::regex& HttpRegexPatterns::METHOD()
@@ -51,3 +52,7 @@ const std::regex& HttpRegexPatterns::HEX_VALUE()
 	return HttpRegexPatterns::HEX_VALUE_PATTERN;
 }
 
+const std::regex &HttpRegexPatterns::CGI_VALID_PATH()
+{
+	return HttpRegexPatterns::CGI_VALID_PATH_PATTERN;
+}

@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <sys/epoll.h>
 
+#include "Logger.hpp"
 #include "Poller.hpp"
 #include "Listener.hpp"
 #include "Connection.hpp"

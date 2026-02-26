@@ -48,13 +48,26 @@ bool Request::isStatusCodeBad() const
 	return HttpStatus::is_bad(_status_code);
 }
 
+bool Request::isCGI()
+{
+	return _is_cgi;
+}
+
+void Request::setIsCGI(bool is_cgi)
+{
+	_is_cgi = is_cgi;
+}
+
+void Request::adjustHeaderForCGI()
+{
+	std::cout << "ADJUST HEADERS" << std::endl;
+	set_header_value(http::headers::CONTENT_LENGTH, std::to_string(_body.size()));
+	remove_header_key(http::headers::TRANSFER_ENCODING);
+}
+
 RequestType Request::getBodyStatus() const
 {
-	if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::REQUEST_TARGET) == "/cgi/test.js")
-	{
-		return RequestType::CGI;
-	}
-	else if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
+	if (_method == HttpMethod::e_code::POST && get_header_value(http::headers::TRANSFER_ENCODING).find("chunked") != std::string::npos)
 	{
 		return RequestType::CHUNKED;
 	}
@@ -78,6 +91,7 @@ void Request::reset()
 {
 	_status_code = HttpStatus::e_code::UNKNOWN;
 	_method = HttpMethod::e_code::INVALID;
+	_is_cgi = false;
 	_version.clear();
 	_uri.clear();
 	_chunk_handler.reset();

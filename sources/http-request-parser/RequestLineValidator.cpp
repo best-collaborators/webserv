@@ -59,6 +59,18 @@ bool RequestLineValidator::_isMethodAllowed()
 	return true;
 }
 
+bool RequestLineValidator::_isCGIPathValid()
+{
+	std::string	target = _parse_context.request.get_header_value(http::headers::REQUEST_TARGET);
+
+	std::string path = RegexMatcher::get_regex_value(target, HttpRegexPatterns::CGI_VALID_PATH());
+
+	if (path.empty())
+		return false;
+
+	return true;
+}
+
 void RequestLineValidator::parse()
 {
 	std::string buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);

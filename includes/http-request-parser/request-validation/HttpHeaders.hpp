@@ -9,6 +9,7 @@ namespace http::headers {
 	constexpr auto REQUEST_TARGET_DECODED = "request-target-decoded";
 	constexpr auto TRANSFER_ENCODING = "transfer-encoding";
 	constexpr auto METHOD = "method";
+	constexpr auto VERSION = "version";
 }
 
 #endif /* HTTP_HEADERS */

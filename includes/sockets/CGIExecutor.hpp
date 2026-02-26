@@ -5,7 +5,6 @@
 #include <sys/wait.h>
 
 #include "PipeFD.hpp"
-#include "IoState.hpp"
 #include "CGIConfig.hpp"
 
 class CGIExecutor

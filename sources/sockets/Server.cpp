@@ -177,13 +177,20 @@ void Server::_modifyEvent(int fd, uint32_t events) noexcept
 
 void Server::_closeConnection(int fd) noexcept
 {
-	if (_poller.del(fd) == true)
-	{
-		_connections.erase(fd);
-		_fd_to_connection.erase(fd);
+	Connection * connection = _getConnectionByFD(fd);
+	if (connection) {
+		_unregisterConnectionCGI(*connection, CGIOperation::READ);
+		_unregisterConnectionCGI(*connection, CGIOperation::WRITE);
 
-		std::cout << "[connection] Closed and removed fd " << fd << std::endl;
+		int pid = connection->getCGIPID();
+		if (pid > 0)
+			_pid_to_connection.erase(pid);
 	}
+	_poller.del(fd);
+	_connections.erase(fd);
+	_fd_to_connection.erase(fd);
+	// std::cout << "[connection] Closed and removed fd " << fd << std::endl;
+
 }
 
 void Server::_registerConnectionCGI(Connection &connection, CGIOperation operation) noexcept
@@ -218,19 +225,18 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 
 	if (fd == -1)
 	{
+		// Logger::displayLog(Logger::e_log_level::ERROR, "no valid fd", "[CGI] (Server::closeCGI)");
 		std::cerr << "[CGI] (Server::closeCGI) no valid fd " << std::endl;
 		return;
 	}
 
-	if (_poller.del(fd) == true)
+	if (_cgi_pipe_fds.erase(fd))
 	{
-		std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
+		_poller.del(fd);
 		_fd_to_connection.erase(fd);
-		_cgi_pipe_fds.erase(fd);
-		connection.closeCGIPipe(op);
+		std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
 	}
-	else
-		std::cerr << "[CGI] fd " << fd << " failed to remove from EPOLL" << std::endl;
+	connection.closeCGIPipe(op);
 }
 
 void Server::_handleFinishedChildren()

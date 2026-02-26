@@ -53,9 +53,14 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Error;
 	}
 
-	if (_request.getBodyStatus() == RequestType::CGI) {
-		return HeaderState::CGI;
+	std::string	target = _request.get_header_value(http::headers::REQUEST_TARGET);
+	std::string path = RegexMatcher::get_regex_value(target, HttpRegexPatterns::CGI_VALID_PATH());
+	
+	if (!path.empty()) {
+		_request.setIsCGI(true);
+		if (_request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
 	}
+
 
 	return _handleHeaderMethod(read_buffer);
 }
@@ -146,6 +151,9 @@ BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 
 		std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
+		if (_request.isCGI()) {
+			return BodyState::CGI;
+		}
 		return BodyState::Complete;
 	}
 
@@ -163,12 +171,26 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 			return ReaderState::AwaitingBody;
 
 		case BodyState::Complete:
+			if (_request.isCGI())
+			{
+				std::cout << "[request-reader] Request received (CGI)" << std::endl;
+				return ReaderState::CGI;
+			}
 			_handleCompleteBody(buffer);
+			std::cout << "[request-reader] Request received (complete buffer)." << std::endl;
 			return ReaderState::Complete;
 
 		case BodyState::Chunked:
 		{
 			BodyState chunked_body_state = _handleChunkedBody(buffer);
+			std::cout << "[request-reader] Request received (chunk buffer)." << std::endl;
+			if (chunked_body_state == BodyState::CGI)
+			{
+				std::cout << "[request-reader] Request received (CGI)" << std::endl;
+				_request.adjustHeaderForCGI();
+				buffer = _request.get_body();
+				return ReaderState::CGI;
+			}
 			if (chunked_body_state == BodyState::Complete)
 				return ReaderState::Complete;
 			return ReaderState::AwaitingBody;
@@ -184,6 +206,9 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 			std::cout << "[request-reader] Request received. Request is not suppose to have body." << std::endl;
 			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return ReaderState::Error;
+		
+		default: 
+			return ReaderState::Complete;
 	}
 	return ReaderState::Complete;
 }
@@ -226,7 +251,17 @@ HttpStatus::e_code HttpRequestReader::getStatusCode()
 	return _request.get_status_code();
 }
 
+std::unordered_map<std::string, std::string> HttpRequestReader::getHeaders()
+{
+	return _request.get_headers();
+}
+
 std::unordered_map<std::string, std::string> HttpRequestReader::moveHeaders()
 {
 	return _request.copy_headers();
+}
+
+void HttpRequestReader::printHeaders()
+{
+	_request.print_http_request_values();
 }

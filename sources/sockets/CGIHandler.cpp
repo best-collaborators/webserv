@@ -1,6 +1,6 @@
 #include "CGIHandler.hpp"
 
-CGIHandler::CGIHandler( CGIConfig & config )
+CGIHandler::CGIHandler( CGIConfig & config ) : _content_length(-1)
 {
 	CGIExecutor	executor(config);
 
@@ -42,7 +42,7 @@ void CGIHandler::closeReadPipe() noexcept
 	_read_fd.reset();
 }
 
-IoState CGIHandler::writeToCGI( std::string const & buffer ) noexcept
+IoEvent CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 {
 	std::cout << "writeToCGI function" << std::endl;
 
@@ -50,17 +50,17 @@ IoState CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 	ssize_t	sent_bytes = write(_write_fd.get(), buffer.c_str(), buffer_len);
 
 	if (sent_bytes == buffer_len)
-		return IoState::Sent;
+		return IoEvent::Sent;
 	else if (sent_bytes == -1)
 	{
 		std::cerr << "[CGI] (CGIHandler::writeToCGI) write to CGI failed" << std::endl;
-		return IoState::Error;
+		return IoEvent::Error;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
-IoState CGIHandler::readFromCGI() noexcept
+IoEvent CGIHandler::readFromCGI() noexcept
 {
 	std::cout << "readFromCGI function" << std::endl;
 
@@ -72,15 +72,59 @@ IoState CGIHandler::readFromCGI() noexcept
 	{
 		buffer_read[read_bytes] = '\0';
 		_recv_buffer.append(buffer_read, read_bytes);
-		std::cout << "buffer_read: " << buffer_read << std::endl;
+
+		size_t pos = _recv_buffer.find("\r\n\r\n");
+
+		if (pos != std::string::npos)
+		{
+			std::string copy = _recv_buffer;
+
+			Request _request;
+			ParseContext parse_data = { .request = _request, .raw_bits = _recv_buffer };
+			HttpHeaderParser parser(parse_data);
+			parser.parse();
+
+			_content_length = parse_data.request.get_content_length();
+
+			if (_content_length == 0)
+				return IoEvent::Done;
+		}
+		else
+		{
+			/* 
+				! If on N iteration pos not found -> invalid structure of responses, headers is required in return of CGI
+
+				Treat it as invalid CGI output
+				Return 500 Internal Server Error
+
+				At least should be present:
+
+				Content-Type: text/html
+
+				<html>...</html>
+			*/
+		}
+
+		if (_content_length != -1)
+		{
+			if (static_cast<ssize_t>(_recv_buffer.length()) >= _content_length)
+			{
+				_recv_buffer = _recv_buffer.substr(0, _content_length);
+				return IoEvent::Done;
+			}
+		}
+	}
+	else if (read_bytes == 0)
+	{
+		return IoEvent::Done;
 	}
 	else if (read_bytes == -1)
 	{
 		std::cerr << "[CGI] (CGIHandler::readFromCGI) read from CGI failed" << std::endl;
-		return IoState::Error;
+		return IoEvent::Error;
 	}
 
-	return IoState::Pending;
+	return IoEvent::Pending;
 }
 
 std::string & CGIHandler::getBuffer() noexcept
