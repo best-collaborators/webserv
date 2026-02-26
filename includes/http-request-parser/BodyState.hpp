@@ -6,5 +6,6 @@ enum class BodyState
 	Complete,
 	Overflow,
 	Chunked,
+	CGI,
 	Invalid
 };

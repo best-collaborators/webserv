@@ -44,6 +44,11 @@ void HttpMessage::set_header_value(std::string key, std::string new_value)
 	_headers[key] = new_value;
 }
 
+void HttpMessage::remove_header_key(std::string key)
+{
+	_headers.erase(key);
+}
+
 void HttpMessage::append_header_value(std::string key, std::string additional_value)
 {
 	std::string lowercase_name = key;

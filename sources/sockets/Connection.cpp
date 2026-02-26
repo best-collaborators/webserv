@@ -133,30 +133,24 @@ IoEvent Connection::_receiveData() noexcept
 
 IoEvent Connection::_tryInitCGI() noexcept
 {
-	
 	auto headers = _request_reader.getHeaders();
-	
+
 	if (!cgi::isCGITarget(headers["request-target"]))
 	return IoEvent::Error; //! Handle correct return from invalid CGI
 
-	ssize_t content_length = _request_reader.getContentLength();
-	if (content_length < 0 || content_length == _request_reader.getStoredBodyBytes())
+	_request_reader.printHeaders();
+	try
 	{
-		try
-		{
-			CGIConfig	config = cgi::buildConfig(headers);
-
-			_cgi_handler.emplace(config);
-		}
-		catch(const std::exception& e)
-		{
-			std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
-			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
-			return IoEvent::Received; //! Return 500 error code and send response back
-		}
-		return IoEvent::Init;
+		CGIConfig	config = cgi::buildConfig(headers);
+		_cgi_handler.emplace(config);
 	}
-	return IoEvent::Pending;
+	catch(const std::exception& e)
+	{
+		std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
+		_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
+		return IoEvent::Received; //! Return 500 error code and send response back
+	}
+	return IoEvent::Init;
 }
 
 IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept

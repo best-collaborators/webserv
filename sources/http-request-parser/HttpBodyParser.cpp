@@ -20,6 +20,8 @@ void HttpBodyParser::_handleChunked()
 	// std::cout << std::boolalpha << _parse_context.request.chunkHandler().isReceived() << std::endl;
 	if (!_parse_context.request.chunkHandler().isReceived()) return ;
 
+	if (_parse_context.request.isCGI()) return ;
+
 	file_uploader.write_into_file(_parse_context.request.get_body());
 	return ;
 }

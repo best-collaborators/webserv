@@ -227,5 +227,9 @@ readStdin(() => {
     process.stdout.write(escapeHTML(JSON.stringify(POST, null, 2)));
     process.stdout.write("</pre>");
 
+    process.stdout.write("<h2>BODY</h2><pre>");
+    process.stdout.write(escapeHTML(body));
+    process.stdout.write("</pre>");
+
     process.stdout.write("</body></html>");
 });

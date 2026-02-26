@@ -53,6 +53,8 @@ public:
 
 	std::unordered_map<std::string, std::string> getHeaders();
 	std::unordered_map<std::string, std::string> moveHeaders();
+
+	void printHeaders();
 };
 
 #endif /* HTTP_REQUEST_HANDLER */

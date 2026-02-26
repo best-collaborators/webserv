@@ -22,6 +22,7 @@ private:
 
 	HttpStatus::e_code	_status_code;
 	ChunkHandler		_chunk_handler;
+	bool				_is_cgi;
 
 public:
 	Request();
@@ -45,7 +46,12 @@ public:
 	ChunkHandler&		 chunkHandler();
 	void				 reset();
 
-	bool isStatusCodeBad() const;
+	bool				isStatusCodeBad() const;
+
+	bool				isCGI();
+	void				setIsCGI(bool is_cgi);
+
+	void				adjustHeaderForCGI();
 
 	RequestType getBodyStatus() const;
 };
