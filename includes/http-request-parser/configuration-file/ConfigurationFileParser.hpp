@@ -1,5 +1,5 @@
-#ifndef CONFIGURATION_FILE_PARSER
-#define CONFIGURATION_FILE_PARSER
+#ifndef CONFIGURATION_FILE_PARSER_HPP
+#define CONFIGURATION_FILE_PARSER_HPP
 
 #include <iostream>
 #include <fstream>
@@ -38,10 +38,11 @@ private:
 	e_parse_result			_parseRoot(std::string &line);
 	e_parse_result			_parseIndex(std::string &line);
 	e_parse_result			_parseLocations(std::ifstream &ifs, std::string &line);
+	e_parse_result			_parseCGI(std::ifstream &ifs, std::string &line);
 	bool					_isStreamGood(std::ifstream &ifs);
 	bool					_isStreamFinished(std::ifstream &ifs);
 	bool					_validateAndConsumeIndent(std::string &line, size_t intend_level, char c, bool show_msg = true);
-
+	void					_updateAllowedMethods(std::string &method_str, HttpMethodRegistry &methods_registry);
 };
 
-#endif /* CONFIGURATION_FILE_PARSER */
+#endif /* CONFIGURATION_FILE_PARSER_HPP */

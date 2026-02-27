@@ -1,7 +1,5 @@
 #include "HttpMethodRegistry.hpp"
 
-std::bitset<8> HttpMethodRegistry::_allowed_methods;
-
 void HttpMethodRegistry::initAllowedMethods()
 {
 	_allowed_methods.set();
@@ -25,6 +23,7 @@ bool HttpMethodRegistry::isAllowed(std::string method)
 
 void HttpMethodRegistry::setAllowedMethod(HttpMethod::e_code method)
 {
+	if (method == HttpMethod::e_code::INVALID) return ;
 	_allowed_methods.set(_code_to_uint(method), 1);
 }
 
@@ -33,7 +32,7 @@ void HttpMethodRegistry::disableAllowedMethod(HttpMethod::e_code method)
 	_allowed_methods.set(_code_to_uint(method), 0);
 }
 
-void HttpMethodRegistry::printAllowedMethods()
+void HttpMethodRegistry::printAllowedMethods() const
 {
 	std::string result;
 
@@ -49,5 +48,5 @@ void HttpMethodRegistry::printAllowedMethods()
 	if (!result.empty())
 		result.erase(result.size() - 2);
 
-	std::cout << result << std::endl;
+	Logger::displayLog(Logger::e_log_level::INFO, "List of allowed methods: " + result, "method-registry");
 }

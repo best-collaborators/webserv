@@ -78,7 +78,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseServerNam
 {
 	std::string server_name;
 	try {
-		server_name = line.substr(12);
+		server_name = line.substr(11);
+		Trimmer::trim(server_name);
+		server_name.erase(0, 1);
+		Trimmer::trim(server_name);
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Server name is invalid: " + line, "config");
@@ -102,7 +105,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseErrorPage
 	std::string status_code = RegexMatcher::get_regex_value(copy, HttpRegexPatterns::GET_ERROR_PAGE(), 1);
 	std::string er_page_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::GET_ERROR_PAGE(), 2);
 
-	ErrorPage error_page;
+	HttpPage error_page;
 	try {
 		error_page.path = er_page_str;
 		error_page.status_code = std::stoi(status_code);
@@ -133,15 +136,28 @@ bool isValidHeaderFormat(const std::string& line,
 	return std::regex_match(line, reg);
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations(std::ifstream &ifs, std::string &line)
+void ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, HttpMethodRegistry &methods_registry)
 {
-	std::cout << line << std::endl;
+	Trimmer::trim(methods_str, '"');
+	std::stringstream ss;
+	ss << methods_str;
+	std::string temp;
+	while (getline(ss, temp, '|')) {
+		Trimmer::trim(temp);
+		methods_registry.setAllowedMethod(HttpMethod::fromString(temp));
+	}
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::ifstream &ifs, std::string &line)
+{
 	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
 		return ERROR;
 	}
 
+	CGIPath cgi;
+	cgi.path = path;
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
@@ -149,35 +165,157 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
 
+		Logger::displayLog(Logger::e_log_level::CRITICAL, line, "config");
 		if (isValidHeaderFormat(line, "allowed_methods", true))
 		{
-			std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS());
+			line.erase(0, 15);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+			Trimmer::trim(line);
+
+			std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
 			if (methods_str.empty()) {
 				Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
 				return ERROR;
 			}
-		}
-		else if (isValidHeaderFormat(line, "allowed_methods", true))
-		{
 
+			std::cout << methods_str << std::endl; 
+			if (!cgi.methods_registry.has_value())
+				cgi.methods_registry.emplace();
+			_updateAllowedMethods(methods_str, cgi.methods_registry.value());
 		}
-		else if (isValidHeaderFormat(line, "default", true))
+		else if (isValidHeaderFormat(line, "extension", true))
 		{
-			
+			line.erase(0, 9);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+			Trimmer::trim(line);
+
+			if (line != ".py" && line != ".js" && line != ".php") {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Extension is unsuported: " + line, "config");
+				return ERROR;
+			}
+
+			cgi.extension = line;
 		}
-		else if (isValidHeaderFormat(line, "root", true))
+		else if (isValidHeaderFormat(line, "pass_to", true))
 		{
-			
+			line.erase(0, 7);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+			Trimmer::trim(line);
+
+			cgi.pass_to = line;
 		}
-		else if (isValidHeaderFormat(line, "autoindex", true))
-		{
-			
-		}
+		else return ERROR;
+	}
+
+	if (!_data._cgi.has_value())
+		_data._cgi.emplace();
+
+	_data._cgi->push_back(cgi);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations(std::ifstream &ifs, std::string &line)
+{
+	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
+	if (path.empty()) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
+		return ERROR;
 	}
 
 	Location location;
 	location.path = path;
-	Logger::displayLog(Logger::e_log_level::INFO, "Location path: " + path, "config");
+	while (getline(ifs, line))
+	{
+		
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
+		if (isEmptyLine(line)) continue;
+		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
+
+		if (isValidHeaderFormat(line, "allowed_methods", true))
+		{
+			line.erase(0, 15);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+			Trimmer::trim(line);
+
+			std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
+			if (methods_str.empty()) {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
+				return ERROR;
+			}
+
+			if (!location.methods_registry.has_value())
+				location.methods_registry.emplace();
+			_updateAllowedMethods(methods_str, location.methods_registry.value());
+		}
+		else if (isValidHeaderFormat(line, "index", true))
+		{
+			line.erase(0, 5);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+			Trimmer::trim(line);
+
+			location.default_file = line;
+		}
+		else if (isValidHeaderFormat(line, "root", true))
+		{
+			try {
+				line.erase(0, 4);
+				Trimmer::trim(line);
+				line.erase(0, 1);
+				Trimmer::trim(line);
+
+				//! Verify root after server root is known
+				// if (!std::filesystem::is_directory(line)) throw std::logic_error("Location root is invalid");
+			}
+			catch(const std::exception& e) {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid: " + line, "config");
+				return ERROR;
+			}
+			location.root = line;
+		}
+		else if (isValidHeaderFormat(line, "return", true))
+		{
+			line.erase(0, 5);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+
+			std::string copy = line;
+			std::regex reg("(3[0-9][0-9]) *( *\\S*) *$");
+			std::string status_code = RegexMatcher::get_regex_value(copy, reg, 1);
+			std::string path = RegexMatcher::get_regex_value(line, reg, 2);
+
+			HttpPage page;
+			try {
+				page.path = path;
+				page.status_code = std::stoi(status_code);
+			}
+			catch(const std::exception& e) {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + status_code, "config");
+				return ERROR;
+			}
+			location.return_page = page;
+		}
+		else if (isValidHeaderFormat(line, "autoindex", true))
+		{
+			line.erase(0, 9);
+			Trimmer::trim(line);
+			line.erase(0, 1);
+
+			Trimmer::trim(line);
+			if (line != "on" && line != "off") {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Autoindex is invalid: " + line, "config");
+				return ERROR;
+			}
+
+			location.autoindex = line == "on" ? true : false;
+		}
+		else return ERROR;
+	}
 
 	if (!_data._locations.has_value())
 		_data._locations.emplace();
@@ -223,7 +361,7 @@ bool ConfigurationFileParser::_isStreamGood(std::ifstream &ifs)
 
 bool ConfigurationFileParser::_isStreamFinished(std::ifstream &ifs)
 {
-	return (ifs.bad() && ifs.eof());
+	return (ifs.eof());
 }
 
 bool ConfigurationFileParser::_validateAndConsumeIndent(std::string &line, size_t intend_level, char c, bool show_msg)
@@ -257,8 +395,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 
 		if (line == "server:")
 		{
-			while (getline(ifs, line))
+			bool extra_line = false;
+			while (true)
 			{
+				if (!extra_line) {
+					getline(ifs, line);
+				}
+
 				if (!_isStreamGood(ifs)) return ERROR;
 				if (_isStreamFinished(ifs)) break;
 
@@ -278,6 +421,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 					if (_isStreamFinished(ifs)) break;
 					if (!_validateAndConsumeIndent(line, 2, '\t')) return ERROR;
 					if (_parseListen(line) == ERROR) return ERROR;
+					extra_line = false;
 					_assigned_fields.set(0);
 				}
 				else if (isValidHeaderFormat(line, "server_name", true))
@@ -287,6 +431,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 						return ERROR;
 					}
 					if (_parseServerName(line) == ERROR) return ERROR;
+					extra_line = false;
 					_assigned_fields.set(1);
 				}
 				else if (isValidHeaderFormat(line, "error_pages", false))
@@ -301,19 +446,24 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 						if (!_isStreamGood(ifs)) return ERROR;
 						if (_isStreamFinished(ifs)) break;
 						if (isEmptyLine(line)) continue;
-						if (!_validateAndConsumeIndent(line, 2, '\t', false)) break;
+						if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
+							extra_line = true;
+							break;
+						}
 						if (_parseErrorPages(line) == ERROR) return ERROR;
 					}
 					_assigned_fields.set(2);
 				}
 				else if (isValidHeaderFormat(line, "max_body_size", true))
 				{
+
 					if (_assigned_fields.test(3)) {
 						Logger::displayLog(Logger::e_log_level::ERROR, "Double field format max_body_size", "config");
 						return ERROR;
 					}
 
 					if (_parseMaxBodySize(line) == ERROR) return ERROR;
+					extra_line = false;
 					_assigned_fields.set(3);
 				}
 				else if (isValidHeaderFormat(line, "root", true))
@@ -323,6 +473,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 						return ERROR;
 					}
 					if (_parseRoot(line) == ERROR) return ERROR;
+					extra_line = false;
 					_assigned_fields.set(4);
 				}
 				else if (isValidHeaderFormat(line, "index", true))
@@ -332,6 +483,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 						return ERROR;
 					}
 					if (_parseIndex(line) == ERROR) return ERROR;
+					extra_line = false;
 					_assigned_fields.set(5);
 				}
 				else if (isValidHeaderFormat(line, "locations", false))
@@ -341,19 +493,58 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 						return ERROR;
 					}
 
-					while (getline(ifs, line))
+					getline(ifs, line);
+					while (true)
 					{
 						if (!_isStreamGood(ifs)) return ERROR;
 						if (_isStreamFinished(ifs)) break;
-						if (isEmptyLine(line)) continue;
-						if (!_validateAndConsumeIndent(line, 2, '\t', false)) break;
+						if (isEmptyLine(line)) {
+							getline(ifs, line);
+							continue;
+						}
+						if (!_validateAndConsumeIndent(line, 2, '\t', false)){
+							extra_line = true;
+							break;
+						}
 						if (_parseLocations(ifs, line) == ERROR) return ERROR;
+					}
+
+					for (size_t i = 0; i < _data._locations->size(); i++)
+					{
+						std::cout << _data._locations->at(i);
+						std::cout << std::endl;
 					}
 					_assigned_fields.set(6);
 				}
 				else if (isValidHeaderFormat(line, "cgi", false))
 				{
-					
+					if (_assigned_fields.test(7)) {
+						Logger::displayLog(Logger::e_log_level::ERROR, "Double field format cgi", "config");
+						return ERROR;
+					}
+
+					getline(ifs, line);
+					while (true)
+					{
+						if (!_isStreamGood(ifs)) return ERROR;
+						if (_isStreamFinished(ifs)) break;
+						if (isEmptyLine(line)) {
+							getline(ifs, line);
+							continue;
+						}
+						if (!_validateAndConsumeIndent(line, 2, '\t', false)){
+							extra_line = true;
+							break;
+						}
+						if (_parseCGI(ifs, line) == ERROR) return ERROR;
+					}
+
+					for (size_t i = 0; i < _data._cgi->size(); i++)
+					{
+						std::cout << _data._cgi->at(i);
+						std::cout << std::endl;
+					}
+					_assigned_fields.set(7);
 				}
 				else
 				{
@@ -369,17 +560,17 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 		}
 
 		// TODO create a separate function for file permissions:
-		for (auto er : _data._error_pages)
-		{
-			// ! TO DO CHECK ONLY WHEN ROOT IS KNOWN
-			std::ifstream ifs(_data._root + er.path);
-			if (!ifs) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Impossible to read: " + _data._root + er.path, "config");
-				return ERROR;
-			}
-			Logger::displayLog(Logger::e_log_level::INFO, "Open " + _data._root + er.path, "config");
-			ifs.close();
-		}
+		// for (auto er : _data._error_pages)
+		// {
+		// 	// ! TO DO CHECK ONLY WHEN ROOT IS KNOWN
+		// 	std::ifstream ifs(_data._root + er.path);
+		// 	if (!ifs) {
+		// 		Logger::displayLog(Logger::e_log_level::ERROR, "Impossible to read: " + _data._root + er.path, "config");
+		// 		return ERROR;
+		// 	}
+		// 	Logger::displayLog(Logger::e_log_level::INFO, "Open " + _data._root + er.path, "config");
+		// 	ifs.close();
+		// }
 	}
 	return OK;
 }

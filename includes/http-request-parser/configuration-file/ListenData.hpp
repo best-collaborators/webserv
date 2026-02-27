@@ -1,5 +1,5 @@
-#ifndef LISTEN_DATA
-#define LISTEN_DATA
+#ifndef LISTEN_DATA_HPP
+#define LISTEN_DATA_HPP
 
 #include <string>
 
@@ -9,4 +9,4 @@ struct ListenData
 	std::string	ip_address;
 };
 
-#endif /* LISTEN_DATA */
+#endif /* LISTEN_DATA_HPP */

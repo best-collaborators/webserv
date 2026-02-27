@@ -11,7 +11,7 @@ INCL = \
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes $(INCL)
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -DDEBUG_FLAG -Iincludes $(INCL)
 
 SRC_DIR = sources
 OBJ_DIR = build

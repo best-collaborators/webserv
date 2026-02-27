@@ -50,12 +50,12 @@ bool RequestLineValidator::_isValidUriLength()
 bool RequestLineValidator::_isMethodAllowed()
 {
 	std::cout << _parse_context.request.get_header_value(http::headers::METHOD) << std::endl;
-	std::cout << HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD)) << std::endl;
-	if (!HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD))) {
-		_parse_context.request.set_status_code(HttpStatus::e_code::METHOD_NOT_ALLOWED);
-		std::cerr << _parse_context.request.get_status_code() << std::endl;
-		return false;
-	}
+	// std::cout << HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD)) << std::endl;
+	// if (!HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD))) {
+	// 	_parse_context.request.set_status_code(HttpStatus::e_code::METHOD_NOT_ALLOWED);
+	// 	std::cerr << _parse_context.request.get_status_code() << std::endl;
+	// 	return false;
+	// }
 	return true;
 }
 

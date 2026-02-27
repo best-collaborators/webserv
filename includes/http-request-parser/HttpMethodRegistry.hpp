@@ -4,20 +4,21 @@
 #include <iostream>
 #include <bitset>
 #include "HttpMethod.hpp"
+#include "Logger.hpp"
 
 class HttpMethodRegistry {
 public:
 	
-	static std::bitset<8> _allowed_methods;
+	std::bitset<8> _allowed_methods;
 
-	static void			 initAllowedMethods();
+	void			 initAllowedMethods();
 
-	static bool			 isAllowed(HttpMethod::e_code request);
-	static bool			 isAllowed(std::string method);
-	static void			 setAllowedMethod(HttpMethod::e_code request);
-	static void			 disableAllowedMethod(HttpMethod::e_code method);
+	bool			 isAllowed(HttpMethod::e_code request);
+	bool			 isAllowed(std::string method);
+	void			 setAllowedMethod(HttpMethod::e_code request);
+	void			 disableAllowedMethod(HttpMethod::e_code method);
 
-	static void			 printAllowedMethods();
+	void			 printAllowedMethods() const;
 
 	HttpMethodRegistry & operator=( HttpMethodRegistry && ) noexcept = default;
 
@@ -27,7 +28,7 @@ public:
 
 private:
 	HttpMethodRegistry(const HttpMethodRegistry && other) = delete;
-	static uint _code_to_uint(HttpMethod::e_code method);
+	uint _code_to_uint(HttpMethod::e_code method);
 };
 
 #endif /* HTTP_METHOD_REGISTRY_HPP */
