@@ -41,4 +41,18 @@ private:
 	static const std::string MAGENTA;
 };
 
+template<Logger::e_log_level Level>
+static inline void log(const std::string& msg, const std::string& mod = "http")
+{
+	Logger::displayLog(Level, msg, mod);
+}
+
+namespace Log {
+	inline void debug   (const std::string& msg, const std::string& mod = "http") { Logger::displayLog(Logger::e_log_level::DEBUG,    msg, mod); }
+	inline void info    (const std::string& msg, const std::string& mod = "http") { Logger::displayLog(Logger::e_log_level::INFO,     msg, mod); }
+	inline void warning (const std::string& msg, const std::string& mod = "http") { Logger::displayLog(Logger::e_log_level::WARNING,  msg, mod); }
+	inline void error   (const std::string& msg, const std::string& mod = "http") { Logger::displayLog(Logger::e_log_level::ERROR,    msg, mod); }
+	inline void critical(const std::string& msg, const std::string& mod = "http") { Logger::displayLog(Logger::e_log_level::CRITICAL, msg, mod); }
+}
+
 #endif /* LOGGER */
