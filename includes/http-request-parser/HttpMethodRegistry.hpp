@@ -23,10 +23,10 @@ public:
 
 	HttpMethodRegistry() = default;
 	~HttpMethodRegistry() = default;
+	HttpMethodRegistry(const HttpMethodRegistry & other) = default;
 
 private:
 	HttpMethodRegistry(const HttpMethodRegistry && other) = delete;
-	HttpMethodRegistry(const HttpMethodRegistry & other) = delete;
 	static uint _code_to_uint(HttpMethod::e_code method);
 };
 

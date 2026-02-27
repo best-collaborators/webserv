@@ -14,7 +14,9 @@ int	main( int argc, char *argv[] )
 {
 	if (argc < 2) return 1;
 	ConfigurationFileParser parser(argv[1]);
-	parser.parse();
+	if (parser.parse() == ConfigurationFileParser::e_parse_result::ERROR) {
+		return 1;
+	}
 
 	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
 	signal(SIGINT, &sig_handler);
