@@ -15,7 +15,7 @@ struct ConfigurationFileData
 	ListenData								_listen_data;
 	std::vector<HttpPage>					_error_pages;
 	int 									_max_body_size;
-	std::string								_root;
+	std::filesystem::path					_root;
 	std::optional<std::string>				_index;
 	std::optional<std::vector<Location>>	_locations;
 	std::optional<std::vector<CGIPath>>			_cgi;
