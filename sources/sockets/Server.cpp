@@ -13,7 +13,7 @@ static std::string eventsToString( uint32_t events )
 	return "UNKNOWN";
 }
 
-Server::Server(std::string const &port) : _poller(), _listener(port)
+Server::Server(std::string const &port) : _connection_timeout(30), _poller(), _listener(port)
 {
 	if (_poller.add(_listener.getFD(), EPOLLIN) == false)
 	{
@@ -34,6 +34,8 @@ void Server::run()
 
 	while (g_running)
 	{
+		_closeIdleConnections();
+
 		int event_count = _poller.wait();
 
 		for (int i = 0; i < event_count; ++i)
@@ -274,4 +276,39 @@ Connection * Server::_getConnectionByPID(pid_t pid)
 		return nullptr;
 
 	return it->second;
+}
+
+void Server::_closeIdleConnections() noexcept
+{
+	if (!_connections.empty())
+	{
+		Log::debug("connections size: " + std::to_string(_connections.size()), "timeout");
+		for (auto it = _connections.begin(); it != _connections.end(); )
+		{
+			auto	now = std::chrono::steady_clock::now();
+			auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.getLastActivity());
+
+			int	fd = it->first;
+
+			if (duration >= _connection_timeout)
+			{
+				Log::debug("Close! fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+				if (_poller.del(fd) == true)
+				{
+					it = _connections.erase(it);
+
+					Log::debug("Closed and removed fd " + std::to_string(fd), "timeout");
+				}
+				else
+				{
+					Log::debug("Failed to close and remove fd " + std::to_string(fd), "timeout");
+				}
+			}
+			else
+			{
+				++it;
+				Log::debug("fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+			}
+		}
+	}
 }

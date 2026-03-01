@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <iostream>
 #include <optional>
 #include <sys/socket.h>
@@ -31,6 +32,8 @@ class Connection
 {
 private:
 	using opt_cgi = std::optional<CGIHandler>;
+
+	std::chrono::time_point<std::chrono::steady_clock>	_last_activity;
 
 	int			_fd;
 	
@@ -76,8 +79,9 @@ public:
 	int			getCGIPID() const noexcept;
 	int			getCGIPipe( CGIOperation op );
 	void		closeCGIPipe( CGIOperation op );
+	void		resetLastActivity() noexcept;
 
 	EventAction	onCGIOutputReady();
 	EventAction	onChildProcessExited( ChildExitInfo const & info );
-	
+	std::chrono::time_point<std::chrono::steady_clock>	getLastActivity() const noexcept;
 };
