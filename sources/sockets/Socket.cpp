@@ -39,7 +39,7 @@ void	Socket::create( addrinfo const * address )
 
 	_setNonBlocking();
 
-	std::cout << "[socket] Socket created." << std::endl;
+	Log::info("Socket created", "socket");
 }
 
 void	Socket::setAddressReuse()
@@ -64,7 +64,7 @@ void	Socket::bind( addrinfo const * address )
 
 	_checkStatus(status, "[socket] bind() failed");
 
-	std::cout << "[socket] Socket bound." << std::endl;
+	Log::info("Socket bound", "socket");
 }
 
 void	Socket::listen()
@@ -80,11 +80,11 @@ Socket	Socket::accept()
 	socklen_t			connection_address_size {};
 
 	int	fd = ::accept(_fd, reinterpret_cast<sockaddr *>(&connection_address), &connection_address_size);
-	std::cout << "[accept] accept() returned." << std::endl;
+	Log::info("accept() returned", "accept");
 
 	if (fd == - 1)
 	{
-		std::cerr << "[accept] Failed (" << errno << "): " << strerror(errno) << std::endl;
+		Log::error("[accept] Failed (" + std::to_string(errno) + "): " + strerror(errno), "accept");
 		return Socket();
 	}
 

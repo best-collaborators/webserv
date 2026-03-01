@@ -25,7 +25,7 @@ Listener::Listener( std::string const & port ) : _port(port)
 
 	_socket.listen();
 
-	std::cout << "[listen] Listening on port " << _port << "..." << std::endl;
+	Log::info("Listening on port " + _port + "...", "listent");
 }
 
 Listener::AddrInfoPtr	Listener::getAddresses() const
