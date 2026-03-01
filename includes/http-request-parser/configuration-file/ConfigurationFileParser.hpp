@@ -43,6 +43,15 @@ private:
 	bool					_validateAndConsumeIndent(std::string &line, size_t intend_level, char c, bool show_msg = true);
 	void					_updateAllowedMethods(std::string &method_str, HttpMethodRegistry &methods_registry);
 	void					_clearServerBlock();
+
+	e_parse_result			_parseServerBlock();
+	e_parse_result			_parseListenDirective();
+
+	e_parse_result			_validateServerBlocks();
+	e_parse_result			_validateRequiredFields(const ServerBlock &s_block);
+	e_parse_result			_validateIndexPath(const ServerBlock &s_block);
+	e_parse_result			_validateErrorPages(ServerBlock &s_block);
+	e_parse_result			_validateLocations(ServerBlock &s_block);
 };
 
 #endif /* CONFIGURATION_FILE_PARSER_HPP */

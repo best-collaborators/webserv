@@ -426,6 +426,77 @@ bool ConfigurationFileParser::_validateAndConsumeIndent(std::string &line, size_
 	return true;
 }
 
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServerBlocks()
+{
+    for (auto &s_block : _server_blocks)
+    {
+        if (_validateRequiredFields(s_block) == ERROR) return ERROR;
+        if (_validateIndexPath(s_block) == ERROR) return ERROR;
+        if (_validateErrorPages(s_block) == ERROR) return ERROR;
+        if (_validateLocations(s_block) == ERROR) return ERROR;
+    }
+    return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequiredFields(const ServerBlock &s_block)
+{
+	// bits 0=listen, 1=server_name, 3=max_body_size, 4=root are required
+	static const std::vector<size_t> required = {0, 1, 3, 4};
+	for (size_t i : required) {
+		if (!s_block._assigned_fields.test(i)) {
+			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field", "config");
+			return ERROR;
+		}
+	}
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexPath(const ServerBlock &s_block)
+{
+    std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
+    full_index_path = std::filesystem::weakly_canonical(full_index_path);
+    if (full_index_path.string().find(s_block._root) == std::string::npos) {
+        Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+        return ERROR;
+    }
+    return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateErrorPages(ServerBlock &s_block)
+{
+    for (auto &err_page : s_block._error_pages) {
+        err_page.second = s_block._root.string() + "/" + err_page.second;
+        std::filesystem::path full = std::filesystem::weakly_canonical(err_page.second);
+        if (full.string().find(s_block._root) == std::string::npos) {
+            Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+            return ERROR;
+        }
+    }
+    return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocations(ServerBlock &s_block)
+{
+    if (!s_block._locations.has_value()) return OK;
+
+    for (auto &l : s_block._locations.value()) {
+        if (l.root.empty()) l.root = s_block._root.string();
+        else l.root = s_block._root.string() + l.root.string();
+
+        if (!std::filesystem::is_directory(l.root)) {
+            Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.root.string(), "config");
+            return ERROR;
+        }
+
+        std::filesystem::path full = std::filesystem::weakly_canonical(l.root.string() + "/" + l.default_file);
+        if (full.string().find(l.root) == std::string::npos) {
+            Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+            return ERROR;
+        }
+    }
+    return OK;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 {
 	std::ifstream ifs(_filename);
@@ -625,51 +696,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 		}
 	}
 
-	for (auto &s_block : _server_blocks) 
-	{
-		for (size_t i = 0; i < s_block._assigned_fields.size(); i++)
-		{
-			if (!s_block._assigned_fields.test(i) && (i == 0 || i == 1 || i == 3 || i == 4) ) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Missing field", "config");
-				return ERROR;
-			}
-		}
-
-		std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
-		full_index_path = std::filesystem::weakly_canonical(full_index_path);
-		if (full_index_path.string().find(s_block._root) == std::string::npos) {
-			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-			return ERROR;
-		}
-
-		for (auto &err_page : s_block._error_pages)
-		{
-			err_page.second = s_block._root.string() + "/" + err_page.second;
-			std::filesystem::path full = err_page.second;
-			full = std::filesystem::weakly_canonical(full);
-			if (full.string().find(s_block._root) == std::string::npos) {
-				Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-				return ERROR;
-			}
-		}
-
-		for (auto &l : s_block._locations.value())
-		{
-			if (l.root.empty()) l.root = s_block._root.string();
-			else l.root = s_block._root.string() + l.root.string();
-
-			if (!std::filesystem::is_directory(l.root)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.root.string(), "config");
-				return ERROR;
-			}
-
-			std::filesystem::path full = l.root.string() + "/" + l.default_file;
-			full = std::filesystem::weakly_canonical(full);
-			if (full.string().find(l.root) == std::string::npos) {
-				Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-				return ERROR;
-			}
-		}
-	}
+	_validateServerBlocks();
 	return OK;
 }

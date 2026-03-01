@@ -3,6 +3,7 @@
 #include "../includes/sockets/Server.hpp"
 
 #include "ConfigurationFileParser.hpp"
+#include <unordered_map>
 
 void	sig_handler(int signum)
 {
