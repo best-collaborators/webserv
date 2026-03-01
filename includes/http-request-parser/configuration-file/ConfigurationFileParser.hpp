@@ -6,7 +6,7 @@
 #include "Logger.hpp"
 #include "RegexMatcher.hpp"
 #include "HttpRegexPatterns.hpp"
-#include "ConfigurationFileData.hpp"
+#include "ServerBlock.hpp"
 #include "Trimmer.hpp"
 
 class ConfigurationFileParser
@@ -18,19 +18,18 @@ public:
 		ERROR
 	};
 
-	ConfigurationFileParser(std::string filename);
+	ConfigurationFileParser(std::string filename, std::vector<ServerBlock> &server_blocks);
 	ConfigurationFileParser() = delete;
 	~ConfigurationFileParser() = default;
 
 	e_parse_result parse();
-	const ConfigurationFileData& getData() const;
+	const ServerBlock& getData() const;
 
 private:
-	std::bitset<8>			_assigned_fields;
-
-	ConfigurationFileData	_data;
 	std::string				_filename;
-	
+	std::vector<ServerBlock> &_server_blocks;
+	ServerBlock				_current_server_block;
+
 	e_parse_result			_parseListen(std::string &line);
 	e_parse_result			_parseServerName(std::string &line);
 	e_parse_result			_parseErrorPages(std::string &line);
@@ -43,6 +42,7 @@ private:
 	bool					_isStreamFinished(std::ifstream &ifs);
 	bool					_validateAndConsumeIndent(std::string &line, size_t intend_level, char c, bool show_msg = true);
 	void					_updateAllowedMethods(std::string &method_str, HttpMethodRegistry &methods_registry);
+	void					_clearServerBlock();
 };
 
 #endif /* CONFIGURATION_FILE_PARSER_HPP */

@@ -30,6 +30,7 @@ public:
 	static const std::regex& WHITESPACE();
 	static const std::regex& LOCATION_PATH();
 	static const std::regex& ALLOWED_METHODS();
+	static const std::regex& INDEX();
 
 private:
 	HttpRegexPatterns() = delete;
@@ -50,6 +51,7 @@ private:
 	static const std::regex WHITESPACE_PATTERN;
 	static const std::regex LOCATION_PATH_PATTERN;
 	static const std::regex ALLOWED_METHODS_PATTERN;
+	static const std::regex INDEX_PATTERN;
 };
 
 
