@@ -46,6 +46,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/BufferManager.cpp \
 	$(SRC_DIR)/http-request-parser/ServerBlock.cpp \
 	$(SRC_DIR)/http-request-parser/Location.cpp \
+	$(SRC_DIR)/http-request-parser/ListingGenerator.cpp \
 	$(SRC_DIR)/Logger.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \
