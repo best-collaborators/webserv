@@ -25,12 +25,12 @@ Server::Server(std::string const &port) : _poller(), _listener(port)
 	if (!_poller.add(childHandleFD, EPOLLIN))
 		throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD childHandleFD failed");
 
-	std::cout << "[epoll] Added listen_fd " << _listener.getFD() << " (EPOLLIN)." << std::endl;
+	Log::info("Added listen_fd " + std::to_string(_listener.getFD()) + " (EPOLLIN)", "epoll");
 }
 
 void Server::run()
 {
-	std::cout << "\n[accept] Waiting for connection..." << std::endl;
+	Log::info("Waiting for connection...", "accept");
 
 	while (g_running)
 	{
@@ -59,7 +59,7 @@ void Server::_acceptConnection()
 	if (client_fd == -1)
 		return;
 
-	std::cout << "[accept] New connection fd " << client_fd << std::endl;
+	Log::info("New connection fd " + std::to_string(client_fd), "accept");
 
 	if (!_poller.add(client_fd, EPOLLIN))
 		return;
@@ -68,7 +68,7 @@ void Server::_acceptConnection()
 	Connection &connection = _connections.at(client_fd);
 	_fd_to_connection[client_fd] = &connection;
 
-	std::cout << "[epoll] Register new connection " << client_fd << " (EPOLLIN)." << std::endl;
+	Log::info("Register new connection " + std::to_string(client_fd) + " (EPOLLIN)", "epoll");
 }
 
 void Server::_handleEvent(epoll_event const &event)
@@ -100,24 +100,24 @@ void Server::_handleConnectionEvent( IoEvent event, int fd )
 	switch (event)
 	{
 		case IoEvent::Error:
-			std::cout << "Connection - IoEvent::Error" << std::endl;
-			std::cerr << "[io] EPOLLERR on connection fd " << fd << std::endl;
+			Log::warning("IoEvent::Error", "Connection");
+			Log::warning("EPOLLERR on connection fd " + std::to_string(fd), "Connection");
 			_closeConnection(fd);
 			break;
 
 		case IoEvent::Closed:
-			std::cout << "Connection - IoEvent::Closed" << std::endl;
-			std::cout << "[io] EPOLLHUP on connection fd " << fd << std::endl;
+			Log::warning("IoEvent::Closed", "Connection");
+			Log::warning("EPOLLHUP on connection fd " + std::to_string(fd), "Connection");
 			_closeConnection(fd);
 			break;
 
 		case IoEvent::Received:
-			std::cout << "IoEvent::Received" << std::endl;
+			Log::debug("IoEvent::Received", "Connection");
 			_modifyEvent(fd, EPOLLIN | EPOLLOUT);
 			break;
 
 		case IoEvent::Sent:
-			std::cout << "IoEvent::Sent" << std::endl;
+			Log::debug("IoEvent::Sent", "Connection");
 			_modifyEvent(fd, EPOLLIN);
 			break;
 
@@ -131,25 +131,25 @@ void Server::_handleCGIEvent( IoEvent event, Connection & connection )
 	switch (event)
 	{
 		case IoEvent::Error:
-			std::cout << "CGI - IoEvent::Error" << std::endl;
+			Log::warning("IoEvent::Error", "CGI");
 			_unregisterConnectionCGI(connection, CGIOperation::WRITE);
 			_unregisterConnectionCGI(connection, CGIOperation::READ);
 			break;
 
 		case IoEvent::Sent:
-			std::cout << "CGI - IoEvent::Sent" << std::endl;
+			Log::debug("IoEvent::Sent", "CGI");
 			_unregisterConnectionCGI(connection, CGIOperation::WRITE);
 			_registerConnectionCGI(connection, CGIOperation::READ);
 			break;
 
 		case IoEvent::Init:
-			std::cout << "CGI - IoEvent::Init" << std::endl;
+			Log::debug("IoEvent::Init", "CGI");
 			_registerConnectionCGI(connection, CGIOperation::WRITE);
 			_pid_to_connection[connection.getCGIPID()] = &connection;
 			break;
 
 		case IoEvent::Done:
-			std::cout << "CGI - IoEvent::Done" << std::endl;
+			Log::debug("IoEvent::Done", "CGI");
 			_unregisterConnectionCGI(connection, CGIOperation::READ);
 			{
 				EventAction	action = connection.onCGIOutputReady();
@@ -163,16 +163,15 @@ void Server::_handleCGIEvent( IoEvent event, Connection & connection )
 	}
 }
 
-
 void Server::_modifyEvent(int fd, uint32_t events) noexcept
 {
 	if (_poller.mod(fd, events) == false)
 	{
-		std::cout << "_modifyEvent event wasn't modified" << std::endl;
+		Log::warning("Event wasn't modified", "Server");
 		_closeConnection(fd);
 	}
 	else
-		std::cout << "[epoll] Updated fd " << fd << " to " << eventsToString(events) << "." << std::endl;
+		Log::debug("Updated fd " + std::to_string(fd) + " to " + eventsToString(events), "epoll");
 }
 
 void Server::_closeConnection(int fd) noexcept
@@ -189,8 +188,7 @@ void Server::_closeConnection(int fd) noexcept
 	_poller.del(fd);
 	_connections.erase(fd);
 	_fd_to_connection.erase(fd);
-	// std::cout << "[connection] Closed and removed fd " << fd << std::endl;
-
+	Log::debug("Closed and removed fd " + std::to_string(fd), "Connection");
 }
 
 void Server::_registerConnectionCGI(Connection &connection, CGIOperation operation) noexcept
@@ -199,7 +197,7 @@ void Server::_registerConnectionCGI(Connection &connection, CGIOperation operati
 
 	if (fd == -1)
 	{
-		std::cerr << "[CGI] (Server::_registerConnectionCGI) no valid fd " << std::endl;
+		Log::warning("getCGIpipe returned already closed fd", "CGI");
 		return;
 	}
 
@@ -216,7 +214,7 @@ void Server::_registerConnectionCGI(Connection &connection, CGIOperation operati
 		_cgi_pipe_fds.insert(fd);
 	}
 	else
-		std::cerr << "[CGI] Failed to register fd " << fd << " with epoll" << std::endl;
+		Log::warning("Failed to register fd " + std::to_string(fd) + " with epoll", "CGI");
 }
 
 void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) noexcept
@@ -225,8 +223,7 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 
 	if (fd == -1)
 	{
-		// Logger::displayLog(Logger::e_log_level::ERROR, "no valid fd", "[CGI] (Server::closeCGI)");
-		std::cerr << "[CGI] (Server::closeCGI) no valid fd " << std::endl;
+		Log::warning("getCGIpipe returned already closed fd", "CGI");
 		return;
 	}
 
@@ -234,7 +231,7 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 	{
 		_poller.del(fd);
 		_fd_to_connection.erase(fd);
-		std::cout << "[CGI] fd " << fd << " removed from EPOLL" << std::endl;
+		Log::debug("fd " + std::to_string(fd) + " removed from EPOLL", "CGI");
 	}
 	connection.closeCGIPipe(op);
 }

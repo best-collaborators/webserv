@@ -20,7 +20,7 @@ void	Connection::_formResponse()
 
 		CGIExitStatus	status = _cgi_handler->getExitStatus();
 
-		std::cout << "CGI exit status: " << (status == CGIExitStatus::SUCCESS ? "Success" : "Error") << std::endl;
+		Log::debug("CGI exit status: " + *(status == CGIExitStatus::SUCCESS ? "Success" : "Error"), "CGI");
 		if (status == CGIExitStatus::ERROR)
 			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), status, _cgi_handler->getBuffer());
@@ -28,7 +28,6 @@ void	Connection::_formResponse()
 	}
 	else
 	{
-		std::cout << "Status code before response: " << _request_reader.getStatusCode() << std::endl;
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders());
 	}
 
@@ -42,19 +41,19 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 {
 	if (events & EPOLLERR)
 	{
-		std::cout << "EPOLLERR" << std::endl;
+		Log::debug("EPOLLERR", "Connection");
 		return { IoSource::Connection, IoEvent::Error };
 	}
 
 	if (events & EPOLLHUP)
 	{
-		std::cout << "EPOLLHUP" << std::endl;
+		Log::debug("EPOLLHUP", "Connection");
 		return { IoSource::Connection, IoEvent::Closed };
 	}
 
 	if (events & EPOLLIN)
 	{
-		std::cout << "EPOLLIN" << std::endl;
+		Log::debug("EPOLLIN", "Connection");
 		IoEvent state = _receiveData();
 
 		if (state == IoEvent::Init)
@@ -65,7 +64,7 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 
 	if (events & EPOLLOUT)
 	{
-		std::cout << "EPOLLOUT" << std::endl;
+		Log::debug("EPOLLOUT", "Connection");
 
 		_formResponse();
 
@@ -82,13 +81,13 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 {
 	if (events & EPOLLERR)
 	{
-		std::cout << "EPOLLERR" << std::endl;
+		Log::debug("EPOLLERR", "CGI");
 		return { IoSource::CGI, IoEvent::Error };
 	}
 
 	if (events & EPOLLIN)
 	{
-		std::cout << "EPOLLIN" << std::endl;
+		Log::debug("EPOLLIN", "CGI");
 		IoEvent state = _cgi_handler->readFromCGI();
 
 		if (state != IoEvent::Pending)
@@ -97,13 +96,13 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 
 	if (events & EPOLLHUP)
 	{
-		std::cout << "EPOLLHUP" << std::endl;
+		Log::debug("EPOLLHUP", "CGI");
 		return { IoSource::CGI, IoEvent::Done };
 	}
 
 	if (events & EPOLLOUT)
 	{
-		std::cout << "EPOLLOUT" << std::endl;
+		Log::debug("EPOLLOUT", "CGI");
 		IoEvent state = _cgi_handler->writeToCGI(_buffer_manager.getBuffer());
 
 		if (state != IoEvent::Pending)
@@ -115,8 +114,8 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 
 IoEvent Connection::_receiveData() noexcept
 {
-	std::cout << "\n[io] EPOLLIN triggered on fd " << _fd << std::endl;
-	std::cout << "[io] recv() starting..." << std::endl;
+	Log::debug("[io] EPOLLIN triggered on fd " + std::to_string(_fd), "Connection");
+	Log::debug("recv() starting", "Connection");
 
 	_read_bytes = recv(
 		_fd,
@@ -125,8 +124,7 @@ IoEvent Connection::_receiveData() noexcept
 		0
 	);
 
-	std::cout << "[io] recv() " << _read_bytes << std::endl;
-	std::cout << "[io] recv() completed." << std::endl;
+	Log::debug("recv() completed", "Connection");
 
 	return _handleReceiveState(_read_bytes);
 }
@@ -146,7 +144,7 @@ IoEvent Connection::_tryInitCGI() noexcept
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << "CGI EXECUTOR ERROR: " << e.what() << '\n';
+		Log::error("CGI executor error " + *(e.what()), "CGI");
 		_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 		return IoEvent::Received; //! Return 500 error code and send response back
 	}
@@ -155,18 +153,17 @@ IoEvent Connection::_tryInitCGI() noexcept
 
 IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 {
+	Log::info("Peer closed fd " + std::to_string(_fd), "Connection");
 	if (read_bytes < 0)
 	{
 		return _getSocketState();
 	}
 	else if (read_bytes == 0)
 	{
-		std::cout << "[io] Peer closed fd " << _fd << "." << std::endl;
 		return IoEvent::Closed;
 	}
 
 	_buffer_manager.append(_read_bytes);
-	// std::cout << "buffer \n" << _buffer_manager.getBuffer() << std::endl;
 	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
 	switch (reader_state)
@@ -232,9 +229,8 @@ void Connection::closeCGIPipe( CGIOperation op )
 
 IoEvent	Connection::_sendData() noexcept
 {
-	std::cout << "Connection::_sendData" << std::endl;
-	std::cout << "\n[io] EPOLLOUT triggered for fd " << _fd << std::endl;
-	std::cout << "[io] send() starting..." << std::endl;
+	Log::debug("EPOLLOUT triggered for fd " + std::to_string(_fd), "Connection");
+	Log::debug("Start sending data...", "Connection");
 
 	_response_writer.write();
 
@@ -257,12 +253,12 @@ IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 {
 	if (sent_bytes < 0)
 	{
-		std::cout << "[io] Send failed" << std::endl;
+		Log::error("Send failed", "Connection");
 		return _getSocketState();
 	}
 	else if (sent_bytes == message_length)
 	{
-		std::cout << "[io] Response sent (complete)." << std::endl;
+		Log::debug("Response sent (complete)", "Connection");
 		_response_formed = false;
 		_sent_bytes = 0;
 		_request_reader.reset();
@@ -270,7 +266,7 @@ IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 	}
 	else if (sent_bytes < message_length) //! Implement partial send
 	{
-		std::cout << "[io] Response sent partially." << std::endl;
+		Log::debug("Response sent partially", "Connection");
 	}
 
 	return IoEvent::Pending;

@@ -11,6 +11,7 @@
 
 #include <unordered_map>
 
+#include "Logger.hpp"
 #include "Response.hpp"
 #include "RequestParser.hpp"
 #include "BodyState.hpp"
