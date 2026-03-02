@@ -8,6 +8,13 @@ int Connection::getFD() const noexcept
 	return _fd;
 }
 
+void Connection::abortCGI() noexcept
+{
+	_request_reader.setStatusCode(HttpStatus::e_code::GATEWAY_TIMEOUT);
+	_cgi_handler.reset();
+	_cgi_start_time.reset();
+}
+
 void	Connection::_formResponse()
 {
 	if (_response_formed)
@@ -25,6 +32,7 @@ void	Connection::_formResponse()
 			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), status, _cgi_handler->getBuffer());
 		_cgi_handler.reset();
+		_cgi_start_time.reset();
 	}
 	else
 	{
@@ -57,7 +65,11 @@ IoResult	Connection::processConnectionEvents( uint32_t const events )
 		IoEvent state = _receiveData();
 
 		if (state == IoEvent::Init)
+		{
+			_cgi_start_time = std::chrono::steady_clock::now();
+			Log::debug("CGI process started", "CGI");
 			return { IoSource::CGI, IoEvent::Init };
+		}
 		if (state != IoEvent::Pending)
 			return { IoSource::Connection, state };
 	}
@@ -87,6 +99,11 @@ std::chrono::time_point<std::chrono::steady_clock> Connection::getLastActivity()
 	return _last_activity;
 }
 
+std::optional<std::chrono::time_point<std::chrono::steady_clock>> Connection::getCGIStartTime() const noexcept
+{
+	return _cgi_start_time;
+}
+
 IoResult Connection::processCGIEvents( uint32_t const events )
 {
 	if (events & EPOLLERR)
@@ -106,7 +123,8 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 
 	if (events & EPOLLHUP)
 	{
-		Log::debug("EPOLLHUP", "CGI");
+		Log::debug("CGI process finished", "CGI");
+		_cgi_start_time.reset();
 		return { IoSource::CGI, IoEvent::Done };
 	}
 

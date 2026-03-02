@@ -13,7 +13,7 @@ static std::string eventsToString( uint32_t events )
 	return "UNKNOWN";
 }
 
-Server::Server(std::string const &port) : _connection_timeout(CONNECTION_TIMEOUT), _poller(), _listener(port)
+Server::Server(std::string const &port) : _connection_timeout(CONNECTION_TIMEOUT), _cgi_timeout(CGI_TIMEOUT), _poller(), _listener(port)
 {
 	if (_poller.add(_listener.getFD(), EPOLLIN) == false)
 	{
@@ -285,8 +285,33 @@ void Server::_closeIdleConnections() noexcept
 	auto	now = std::chrono::steady_clock::now();
 	std::vector<int>	to_close;
 
-	for (auto const & [fd, connection] : _connections)
+	for (auto & [fd, connection] : _connections)
 	{
+		auto cgi_start = connection.getCGIStartTime();
+		if (cgi_start.has_value())
+		{
+			auto cgi_duration = std::chrono::duration_cast<std::chrono::seconds>(now - *cgi_start);
+			if (cgi_duration >= _cgi_timeout)
+			{
+				Log::warning("CGI timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+				pid_t pid = connection.getCGIPID();
+				if (pid > 0)
+					kill(pid, SIGKILL);
+				_unregisterConnectionCGI(connection, CGIOperation::WRITE);
+				_unregisterConnectionCGI(connection, CGIOperation::READ);
+				if (pid > 0)
+					_pid_to_connection.erase(pid);
+				connection.abortCGI();
+				_modifyEvent(fd, EPOLLIN | EPOLLOUT);
+			}
+			else
+			{
+				Log::debug("CGI active on fd: " + std::to_string(fd) + ", cgi duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+				connection.resetLastActivity();
+			}
+			continue;
+		}
+
 		auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - connection.getLastActivity());
 
 		if (duration >= _connection_timeout)

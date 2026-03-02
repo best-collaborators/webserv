@@ -123,7 +123,7 @@ CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const &
 	if (extension == ".js")
 		executable = "/usr/local/bin/node";
 	else if (extension == ".py")
-		executable = "/opt/pyenv/shims/python";
+		executable = "/usr/local/bin/python";
 	else if (extension == ".php")
 		executable = "/usr/bin/php";
 

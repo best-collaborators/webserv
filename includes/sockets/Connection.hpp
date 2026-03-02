@@ -34,6 +34,7 @@ private:
 	using opt_cgi = std::optional<CGIHandler>;
 
 	std::chrono::time_point<std::chrono::steady_clock>	_last_activity;
+	std::optional<std::chrono::time_point<std::chrono::steady_clock>>	_cgi_start_time;
 
 	int			_fd;
 	
@@ -72,6 +73,7 @@ public:
 	~Connection() = default;
 
 	int			getFD() const noexcept;
+	void		abortCGI() noexcept;
 
 	IoResult	processConnectionEvents( uint32_t const events );
 	IoResult	processCGIEvents( uint32_t const events );
@@ -84,4 +86,5 @@ public:
 	EventAction	onCGIOutputReady();
 	EventAction	onChildProcessExited( ChildExitInfo const & info );
 	std::chrono::time_point<std::chrono::steady_clock>	getLastActivity() const noexcept;
+	std::optional<std::chrono::time_point<std::chrono::steady_clock>>	getCGIStartTime() const noexcept;
 };

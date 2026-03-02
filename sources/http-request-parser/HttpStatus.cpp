@@ -14,6 +14,7 @@ std::string HttpStatus::get_status_code_name(e_code s)
 		case e_code::CONTENT_TOO_LARGE: 		  return "Content Too Large";
 		case e_code::URI_TOO_LONG: 				  return "Uri Too Long";
 		case e_code::HTTP_VERSION_NOT_SUPPORTED:  return "Http Version Not Supported";
+		case e_code::GATEWAY_TIMEOUT: 			  return "Gateway Timeout";
 		case e_code::SERVICE_UNAVAILABLE: 		  return "Service Unavailable";
 		case e_code::INTERNAL_SERVER_ERROR: 	  return "Internal Server Error";
 		default:

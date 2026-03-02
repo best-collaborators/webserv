@@ -120,7 +120,7 @@ IoEvent CGIHandler::readFromCGI() noexcept
 	}
 	else if (read_bytes == -1)
 	{
-		std::cerr << "[CGI] (CGIHandler::readFromCGI) read from CGI failed" << std::endl;
+		Log::warning("Read from CGI failed", "CGI");
 		return IoEvent::Error;
 	}
 

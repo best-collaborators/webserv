@@ -22,7 +22,8 @@ extern volatile sig_atomic_t	g_running;
 class Server
 {
 private:
-	static constexpr int		CONNECTION_TIMEOUT = 10;
+	static constexpr int		CONNECTION_TIMEOUT = 5;
+	static constexpr int		CGI_TIMEOUT = 10;
 
 	using connections_map = std::map<int, Connection>;
 	using cgi_pipe_fds_set = std::unordered_set<int>;
@@ -30,6 +31,7 @@ private:
 	using pid_to_connection_map = std::unordered_map<pid_t, Connection *>;
 
 	std::chrono::seconds	_connection_timeout;
+	std::chrono::seconds	_cgi_timeout;
 
 	Poller					_poller;
 	Listener				_listener;
