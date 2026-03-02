@@ -27,7 +27,7 @@ void	Connection::_formResponse()
 
 		CGIExitStatus	status = _cgi_handler->getExitStatus();
 
-		Log::debug(std::string("CGI exit status: ") + *(status == CGIExitStatus::SUCCESS ? "Success" : "Error"), "CGI");
+		Log::debug("CGI exit status: " + std::to_string(*(status == CGIExitStatus::SUCCESS ? "Success" : "Error")), "CGI");
 		if (status == CGIExitStatus::ERROR)
 			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), status, _cgi_handler->getBuffer());
@@ -172,7 +172,7 @@ IoEvent Connection::_tryInitCGI() noexcept
 	}
 	catch(const std::exception& e)
 	{
-		Log::error(std::string("CGI executor error ") + *(e.what()), "CGI");
+		Log::error("CGI executor error " + std::to_string(*(e.what())), "CGI");
 		_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
 		return IoEvent::Received; //! Return 500 error code and send response back
 	}
