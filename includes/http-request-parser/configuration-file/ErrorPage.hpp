@@ -2,12 +2,13 @@
 #define ERROR_PAGE_HPP
 
 #include <string>
+#include <filesystem>
 #include "HttpStatus.hpp"
 
 struct HttpPage
 {
-	std::string			path;
-	HttpStatus::e_code	status_code;
+	std::filesystem::path path;
+	HttpStatus::e_code		status_code;
 };
 
 #endif /* ERROR_PAGE_HPP */

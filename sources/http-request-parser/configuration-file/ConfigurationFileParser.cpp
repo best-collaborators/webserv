@@ -12,15 +12,23 @@ bool isEmptyLine(std::string line)
 	return std::regex_match(line, reg);
 }
 
+std::string ConfigurationFileParser::_extractDirectiveValue(std::string &line, size_t keyword_length)
+{
+	line.erase(0, keyword_length);
+	Trimmer::trim(line);
+	line.erase(0, 1); // remove ':'
+	Trimmer::trim(line);
+	return line;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseMaxBodySize(std::string &line)
 {
-	std::string body_size_str;
 	size_t max_body_size = 0;
 	try {
-		body_size_str = line.substr(14);
+		_extractDirectiveValue(line, 13);
 		size_t pos = 0;
-		max_body_size = std::stoll(body_size_str, &pos, 10);
-		if (pos != body_size_str.size()) throw std::logic_error("Body size has wrong format");
+		max_body_size = std::stoll(line, &pos, 10);
+		if (pos != line.size()) throw std::logic_error("Body size has wrong format");
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Body size is invalid: " + line, "config");
@@ -28,38 +36,34 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseMaxBodySi
 	}
 
 	_current_server_block._max_body_size = max_body_size;
-	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + body_size_str, "config");
+	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + line, "config");
 	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseRoot(std::string &line)
 {
-	std::string root_str;
 	std::filesystem::path validated_path;
 	try {
-		root_str = line.substr(5);
-		Trimmer::trim(root_str);
-		validated_path = std::filesystem::weakly_canonical(root_str);
+		_extractDirectiveValue(line, 4);
+		validated_path = std::filesystem::weakly_canonical(line);
 		if (!std::filesystem::is_directory(validated_path)) throw std::logic_error("Root is invalid");
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid: " + root_str, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid: " + line, "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Root: " + root_str, "config");
-	_current_server_block._root = std::filesystem::weakly_canonical(root_str);
+	Logger::displayLog(Logger::e_log_level::INFO, "Root: " + line, "config");
+	_current_server_block._root = std::filesystem::weakly_canonical(line);
 	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseIndex(std::string &line)
 {
-	std::string index_str;
 	try {
-		index_str = line.substr(6);
-		Trimmer::trim(index_str);
-		index_str = RegexMatcher::get_regex_value(index_str, HttpRegexPatterns::INDEX(), 0);
-		if (index_str.empty()) {
+		_extractDirectiveValue(line, 5);
+		line = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
+		if (line.empty()) {
 			throw std::logic_error("Index path is invalid");
 		}
 	}
@@ -68,26 +72,15 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseIndex(std
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + index_str, "config");
-	_current_server_block._index = index_str;
+	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + line, "config");
+	_current_server_block._index = line;
 	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseServerName(std::string &line)
 {
-	std::string server_name;
-	try {
-		server_name = line.substr(11);
-		Trimmer::trim(server_name);
-		server_name.erase(0, 1);
-		Trimmer::trim(server_name);
-	}
-	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Server name is invalid: " + line, "config");
-		return ERROR;
-	}
-
-	std::string server_name_validated = RegexMatcher::get_regex_value(server_name, HttpRegexPatterns::NON_WHITESPACE(), 1);
+	_extractDirectiveValue(line, 11);
+	std::string server_name_validated = RegexMatcher::get_regex_value(line, HttpRegexPatterns::NON_WHITESPACE(), 1);
 
 	if (server_name_validated.empty()) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Invalid server name", "config");
@@ -154,18 +147,83 @@ void ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, Ht
 	}
 }
 
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMethods(std::string &line, std::optional<HttpMethodRegistry> &registry, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(0, "allowed_methods", fields) == ERROR) return ERROR;
+
+	_extractDirectiveValue(line, 15);
+
+	std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
+	if (methods_str.empty()) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
+		return ERROR;
+
+	}
+
+	if (!registry.has_value())
+		registry.emplace();
+	_updateAllowedMethods(methods_str, registry.value());
+	fields.set(0);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIExtension(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(1, "extension", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 9);
+
+	if (line != ".py" && line != ".js" && line != ".php") {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Extension is unsuported: " + line, "config");
+		return ERROR;
+	}
+
+	cgi.extension = line;
+	fields.set(1);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPassTo(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(2, "pass_to", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 7);
+
+	if (access(line.c_str(), X_OK)){
+		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: |" + line + "|", "config");
+		return ERROR;
+	}
+
+	cgi.pass_to = line;
+	fields.set(2);
+	return OK;
+}
+
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDirective(
+	std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+{
+	if (isValidHeaderFormat(line, "allowed_methods", true))
+		return _parseAllowedMethods(line, cgi.methods_registry, fields);
+	if (isValidHeaderFormat(line, "extension", true))
+		return _parseCGIExtension(line, cgi, fields);
+	if (isValidHeaderFormat(line, "pass_to", true))
+		return _parseCGIPassTo(line, cgi, fields);
+
+	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
+	return ERROR;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::ifstream &ifs, std::string &line)
 {
 	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
 		return ERROR;
 	}
 
 	std::bitset<8> cgi_assigned_fields;
-
 	CGIPath cgi;
-	cgi.path = path;
+	cgi.path = std::filesystem::weakly_canonical(path);
+
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
@@ -173,62 +231,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
 
-		if (isValidHeaderFormat(line, "allowed_methods", true))
-		{
-			if (cgi_assigned_fields.test(0)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field allowed_methods", "config");
-				return ERROR;
-			}
-			line.erase(0, 15);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
-			if (methods_str.empty()) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
-				return ERROR;
-			}
-
-			if (!cgi.methods_registry.has_value())
-				cgi.methods_registry.emplace();
-			_updateAllowedMethods(methods_str, cgi.methods_registry.value());
-			cgi_assigned_fields.set(0);
-		}
-		else if (isValidHeaderFormat(line, "extension", true))
-		{
-			if (cgi_assigned_fields.test(1)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field extension", "config");
-				return ERROR;
-			}
-			line.erase(0, 9);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			if (line != ".py" && line != ".js" && line != ".php") {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Extension is unsuported: " + line, "config");
-				return ERROR;
-			}
-
-			cgi.extension = line;
-			cgi_assigned_fields.set(1);
-		}
-		else if (isValidHeaderFormat(line, "pass_to", true))
-		{
-			if (cgi_assigned_fields.test(2)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			line.erase(0, 7);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			cgi.pass_to = line;
-			cgi_assigned_fields.set(2);
-		}
-		else return ERROR;
+		if (_dispatchCGIDirective(line, cgi, cgi_assigned_fields) == ERROR)
+			return ERROR;
 	}
 
 	if (!_current_server_block._cgi.has_value())
@@ -236,6 +240,95 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 
 	_current_server_block._cgi->push_back(cgi);
 	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationIndex(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(1, "index", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 5);
+
+	std::string index_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
+	try
+	{
+		if (index_str.empty()) {
+			throw std::logic_error("Index path is invalid");
+		}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+	
+	location.default_file = line;
+	fields.set(1);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationRoot(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(2, "root", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 4);
+
+	location.root = std::filesystem::weakly_canonical(line);
+	fields.set(2);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationRedirect(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(3, "redirect", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 6);
+
+	std::string copy = line;
+	HttpPage page;
+	try {
+		page.path = std::filesystem::weakly_canonical(line);;
+		page.status_code = HttpStatus::e_code(std::stoi(line.substr(3)));
+	}
+	catch(const std::exception& e) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + line, "config");
+		return ERROR;
+	}
+	location.return_page = page;
+	fields.set(3);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationAutoindex(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(4, "autoindex", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 9);
+
+	if (line != "on" && line != "off") {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Autoindex is invalid: " + line, "config");
+		return ERROR;
+	}
+
+	location.autoindex = line == "on" ? true : false;
+	fields.set(4);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocationDirective(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (isValidHeaderFormat(line, "allowed_methods", true))
+		return _parseAllowedMethods(line, location.methods_registry, fields);
+	if (isValidHeaderFormat(line, "index", true))
+		return _parseLocationIndex(line, location, fields);
+	if (isValidHeaderFormat(line, "root", true))
+		return _parseLocationRoot(line, location, fields);
+	if (isValidHeaderFormat(line, "redirect", true))
+		return _parseLocationRedirect(line, location, fields);
+	if (isValidHeaderFormat(line, "autoindex", true))
+		return _parseLocationAutoindex(line, location, fields);
+
+	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
+	return ERROR;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations(std::ifstream &ifs, std::string &line)
@@ -247,9 +340,9 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 	}
 
 	std::bitset<8> location_assigned_fields;
-
 	Location location;
 	location.path = std::filesystem::weakly_canonical(path);
+
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
@@ -257,114 +350,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
 
-		if (isValidHeaderFormat(line, "allowed_methods", true))
-		{
-			if (location_assigned_fields.test(0)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			line.erase(0, 15);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
-			if (methods_str.empty()) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
-				return ERROR;
-			}
-
-			if (!location.methods_registry.has_value())
-				location.methods_registry.emplace();
-			_updateAllowedMethods(methods_str, location.methods_registry.value());
-			location_assigned_fields.set(0);
-		}
-		else if (isValidHeaderFormat(line, "index", true))
-		{
-			if (location_assigned_fields.test(1)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			line.erase(0, 5);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			location.default_file = line;
-			location_assigned_fields.set(1);
-		}
-		else if (isValidHeaderFormat(line, "root", true))
-		{
-			if (location_assigned_fields.test(2)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			try {
-				line.erase(0, 4);
-				Trimmer::trim(line);
-				line.erase(0, 1);
-				Trimmer::trim(line);
-
-			}
-			catch(const std::exception& e) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid: " + line, "config");
-				return ERROR;
-			}
-			location.root = std::filesystem::weakly_canonical(line);
-			location_assigned_fields.set(2);
-		}
-		else if (isValidHeaderFormat(line, "return", true))
-		{
-			if (location_assigned_fields.test(3)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			line.erase(0, 5);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-			Trimmer::trim(line);
-
-			std::string copy = line;
-			std::regex reg("(3[0-9][0-9]) *( *\\S*) *$");
-			std::string status_code = RegexMatcher::get_regex_value(copy, reg, 1);
-			std::string path = RegexMatcher::get_regex_value(line, reg, 2);
-
-			HttpPage page;
-			try {
-				page.path = path;
-				page.status_code = HttpStatus::e_code(std::stoi(status_code));
-			}
-			catch(const std::exception& e) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + status_code, "config");
-				return ERROR;
-			}
-			location.return_page = page;
-			location_assigned_fields.set(3);
-		}
-		else if (isValidHeaderFormat(line, "autoindex", true))
-		{
-			if (location_assigned_fields.test(4)) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Double field pass_to", "config");
-				return ERROR;
-			}
-			line.erase(0, 9);
-			Trimmer::trim(line);
-			line.erase(0, 1);
-
-			Trimmer::trim(line);
-			if (line != "on" && line != "off") {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Autoindex is invalid: " + line, "config");
-				return ERROR;
-			}
-
-			location.autoindex = line == "on" ? true : false;
-			location_assigned_fields.set(4);
-		}
-		else
-		{
-			Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
+		if (_dispatchLocationDirective(line, location, location_assigned_fields) == ERROR)
 			return ERROR;
-		}
 	}
 
 	if (!_current_server_block._locations.has_value())
@@ -428,14 +415,14 @@ bool ConfigurationFileParser::_validateAndConsumeIndent(std::string &line, size_
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServerBlocks()
 {
-    for (auto &s_block : _server_blocks)
-    {
-        if (_validateRequiredFields(s_block) == ERROR) return ERROR;
-        if (_validateIndexPath(s_block) == ERROR) return ERROR;
-        if (_validateErrorPages(s_block) == ERROR) return ERROR;
-        if (_validateLocations(s_block) == ERROR) return ERROR;
-    }
-    return OK;
+	for (auto &s_block : _server_blocks)
+	{
+		if (_validateRequiredFields(s_block) == ERROR) return ERROR;
+		if (_validateIndexPath(s_block) == ERROR) return ERROR;
+		if (_validateErrorPages(s_block) == ERROR) return ERROR;
+		if (_validateLocations(s_block) == ERROR) return ERROR;
+	}
+	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequiredFields(const ServerBlock &s_block)
@@ -444,7 +431,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequir
 	static const std::vector<size_t> required = {0, 1, 3, 4};
 	for (size_t i : required) {
 		if (!s_block._assigned_fields.test(i)) {
-			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field", "config");
+			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field " + std::to_string(i), "config");
 			return ERROR;
 		}
 	}
@@ -453,65 +440,251 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequir
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexPath(const ServerBlock &s_block)
 {
-    std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
-    full_index_path = std::filesystem::weakly_canonical(full_index_path);
-    if (full_index_path.string().find(s_block._root) == std::string::npos) {
-        Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-        return ERROR;
-    }
-    return OK;
+	std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
+	full_index_path = std::filesystem::weakly_canonical(full_index_path);
+	if (full_index_path.string().find(s_block._root) == std::string::npos) {
+		Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+		return ERROR;
+	}
+	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateErrorPages(ServerBlock &s_block)
 {
-    for (auto &err_page : s_block._error_pages) {
-        err_page.second = s_block._root.string() + "/" + err_page.second;
-        std::filesystem::path full = std::filesystem::weakly_canonical(err_page.second);
-        if (full.string().find(s_block._root) == std::string::npos) {
-            Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-            return ERROR;
-        }
-    }
-    return OK;
+	for (auto &err_page : s_block._error_pages) {
+		err_page.second = s_block._root.string() + "/" + err_page.second;
+		std::filesystem::path full = std::filesystem::weakly_canonical(err_page.second);
+		if (full.string().find(s_block._root) == std::string::npos) {
+			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+			return ERROR;
+		}
+	}
+	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocations(ServerBlock &s_block)
 {
-    if (!s_block._locations.has_value()) return OK;
+	if (!s_block._locations.has_value()) return OK;
 
-    for (auto &l : s_block._locations.value()) {
-        if (l.root.empty()) l.root = s_block._root.string();
-        else l.root = s_block._root.string() + l.root.string();
+	for (auto &l : s_block._locations.value()) {
+		if (l.root.empty()) l.root = s_block._root.string();
+		else l.root = s_block._root.string() + l.root.string();
 
-        if (!std::filesystem::is_directory(l.root)) {
-            Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.root.string(), "config");
-            return ERROR;
-        }
+		if (!std::filesystem::is_directory(l.root)) {
+			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.root.string(), "config");
+			return ERROR;
+		}
 
-        std::filesystem::path full = std::filesystem::weakly_canonical(l.root.string() + "/" + l.default_file);
-        if (full.string().find(l.root) == std::string::npos) {
-            Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
-            return ERROR;
-        }
-    }
-    return OK;
+		std::filesystem::path full = std::filesystem::weakly_canonical(l.root.string() + "/" + l.default_file);
+		if (full.string().find(l.root) == std::string::npos) {
+			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+			return ERROR;
+		}
+	}
+	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_checkDuplicateField(
+	size_t bit_index, const std::string &field_name, std::bitset<8UL> &assigned_fields)
 {
-	std::ifstream ifs(_filename);
-	if (ifs.bad()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Cannot access " + _filename, "config");
-		return e_parse_result::ERROR;
+	if (assigned_fields.test(bit_index)) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Double field " + field_name, "config");
+		return ERROR;
 	}
+	return OK;
+}
 
-	std::string line;
-	bool extra_line = false;
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleListenDirective(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(0, "listen", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	getline(ifs, line);
+	if (!_isStreamGood(ifs)) return ERROR;
+	if (_isStreamFinished(ifs)) return OK; // will be caught by validation
+	if (!_validateAndConsumeIndent(line, 2, '\t')) return ERROR;
+	if (_parseListen(line) == ERROR) return ERROR;
+
+	extra_line = false;
+	_current_server_block._assigned_fields.set(0);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleServerNameDirective(std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(1, "server_name", _current_server_block._assigned_fields) == ERROR) return ERROR;
+	if (_parseServerName(line) == ERROR) return ERROR;
+
+	extra_line = false;
+	_current_server_block._assigned_fields.set(1);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleErrorPagesDirective(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(2, "error_pages", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	while (getline(ifs, line))
+	{
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
+		if (isEmptyLine(line)) continue;
+		if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
+			extra_line = true;
+			break;
+		}
+		if (_parseErrorPages(line) == ERROR) return ERROR;
+	}
+	_current_server_block._assigned_fields.set(2);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleMaxBodySizeDirective(std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(3, "max_body_size", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	if (_parseMaxBodySize(line) == ERROR) return ERROR;
+	extra_line = false;
+	_current_server_block._assigned_fields.set(3);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleRootDirective(std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(4, "root", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	if (_parseRoot(line) == ERROR) return ERROR;
+	extra_line = false;
+	_current_server_block._assigned_fields.set(4);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleIndexDirective(std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(5, "index", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	if (_parseIndex(line) == ERROR) return ERROR;
+	extra_line = false;
+	_current_server_block._assigned_fields.set(5);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleLocationsDirective(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(6, "locations", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	getline(ifs, line);
 	while (true)
 	{
-		if (!extra_line) {
-			getline(ifs, line);
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
+		if (isEmptyLine(line)) { getline(ifs, line); continue; }
+		if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
+			extra_line = true;
+			break;
 		}
+		if (_parseLocations(ifs, line) == ERROR) return ERROR;
+	}
+
+	if (_current_server_block._locations.has_value()) {
+		for (auto &l : _current_server_block._locations.value()) {
+			std::cout << l << std::endl;
+		}
+	}
+	_current_server_block._assigned_fields.set(6);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleCGIDirective(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	if (_checkDuplicateField(7, "cgi", _current_server_block._assigned_fields) == ERROR) return ERROR;
+
+	getline(ifs, line);
+	while (true)
+	{
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
+		if (isEmptyLine(line)) { getline(ifs, line); continue; }
+		if (!_validateAndConsumeIndent(line, 2, '\t', false)){
+			extra_line = true;
+			break;
+		}
+		if (_parseCGI(ifs, line) == ERROR) return ERROR;
+	}
+
+	if (_current_server_block._cgi.has_value()) {
+		for (auto &cgi : _current_server_block._cgi.value()) {
+			std::cout << cgi << std::endl;
+		}
+	}
+	_current_server_block._assigned_fields.set(7);
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchServerDirective(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	if (isValidHeaderFormat(line, "listen", false))
+		return _handleListenDirective(ifs, line, extra_line);
+
+	if (isValidHeaderFormat(line, "server_name", true))
+		return _handleServerNameDirective(line, extra_line);
+
+	if (isValidHeaderFormat(line, "error_pages", false))
+		return _handleErrorPagesDirective(ifs, line, extra_line);
+
+	if (isValidHeaderFormat(line, "max_body_size", true))
+		return _handleMaxBodySizeDirective(line, extra_line);
+
+	if (isValidHeaderFormat(line, "root", true))
+		return _handleRootDirective(line, extra_line);
+
+	if (isValidHeaderFormat(line, "index", true))
+		return _handleIndexDirective(line, extra_line);
+
+	if (isValidHeaderFormat(line, "locations", false))
+		return _handleLocationsDirective(ifs, line, extra_line);
+
+	if (isValidHeaderFormat(line, "cgi", false))
+		return _handleCGIDirective(ifs, line, extra_line);
+
+	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field name: " + line, "config");
+	return ERROR;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseSingleServerBlock(std::ifstream &ifs, std::string &line, bool &extra_line)
+{
+	extra_line = false;
+
+	while (true)
+	{
+		if (!extra_line)
+			getline(ifs, line);
+
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
+		if (isEmptyLine(line)) continue;
+		if (!_validateAndConsumeIndent(line, 1, '\t', false)) {
+			extra_line = true;
+			break;
+		}
+
+		Logger::displayLog(Logger::e_log_level::DEBUG, line, "config");
+
+		e_parse_result result = _dispatchServerDirective(ifs, line, extra_line);
+		if (result == ERROR)
+			return ERROR;
+	}
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServerBlocks(std::ifstream &ifs)
+{
+	std::string line;
+	bool extra_line = false;
+
+	while (true)
+	{
+		if (!extra_line)
+			getline(ifs, line);
 
 		Logger::displayLog(Logger::e_log_level::DEBUG, "Current field: " + line, "config");
 		if (!_isStreamGood(ifs)) return ERROR;
@@ -521,172 +694,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 
 		if (isValidHeaderFormat(line, "server", false))
 		{
-			extra_line = false;
 			_current_server_block = ServerBlock();
-			while (true)
-			{
-				if (!extra_line) {
-					getline(ifs, line);
-				}
-				if (!_isStreamGood(ifs)) return ERROR;
-				if (_isStreamFinished(ifs)) break;
-
-				if (isEmptyLine(line)) continue;
-				if (!_validateAndConsumeIndent(line, 1, '\t', false)){
-					extra_line = true;
-					break;
-				}
-
-				Logger::displayLog(Logger::e_log_level::DEBUG, line, "config");
-				if (isValidHeaderFormat(line, "listen", false)) 
-				{
-					if (_current_server_block._assigned_fields.test(0)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field listen", "config");
-						return ERROR;
-					}
-
-					getline(ifs, line);
-					if (!_isStreamGood(ifs)) return ERROR;
-					if (_isStreamFinished(ifs)) break;
-					if (!_validateAndConsumeIndent(line, 2, '\t')) return ERROR;
-					if (_parseListen(line) == ERROR) return ERROR;
-					extra_line = false;
-					_current_server_block._assigned_fields.set(0);
-				}
-				else if (isValidHeaderFormat(line, "server_name", true))
-				{
-					if (_current_server_block._assigned_fields.test(1)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field server_name", "config");
-						return ERROR;
-					}
-					if (_parseServerName(line) == ERROR) return ERROR;
-					extra_line = false;
-					_current_server_block._assigned_fields.set(1);
-				}
-				else if (isValidHeaderFormat(line, "error_pages", false))
-				{
-					if (_current_server_block._assigned_fields.test(2)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field error_pages", "config");
-						return ERROR;
-					}
-
-					while (getline(ifs, line))
-					{
-						if (!_isStreamGood(ifs)) return ERROR;
-						if (_isStreamFinished(ifs)) break;
-						if (isEmptyLine(line)) continue;
-						if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
-							extra_line = true;
-							break;
-						}
-						if (_parseErrorPages(line) == ERROR) return ERROR;
-					}
-					_current_server_block._assigned_fields.set(2);
-				}
-				else if (isValidHeaderFormat(line, "max_body_size", true))
-				{
-
-					if (_current_server_block._assigned_fields.test(3)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field max_body_size", "config");
-						return ERROR;
-					}
-
-					if (_parseMaxBodySize(line) == ERROR) return ERROR;
-					extra_line = false;
-					_current_server_block._assigned_fields.set(3);
-				}
-				else if (isValidHeaderFormat(line, "root", true))
-				{
-					if (_current_server_block._assigned_fields.test(4)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field root", "config");
-						return ERROR;
-					}
-					if (_parseRoot(line) == ERROR) return ERROR;
-					extra_line = false;
-					_current_server_block._assigned_fields.set(4);
-				}
-				else if (isValidHeaderFormat(line, "index", true))
-				{
-					if (_current_server_block._assigned_fields.test(5)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field index", "config");
-						return ERROR;
-					}
-					if (_parseIndex(line) == ERROR) return ERROR;
-					extra_line = false;
-					_current_server_block._assigned_fields.set(5);
-				}
-				else if (isValidHeaderFormat(line, "locations", false))
-				{
-					if (_current_server_block._assigned_fields.test(6)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field locations", "config");
-						return ERROR;
-					}
-
-					getline(ifs, line);
-					while (true)
-					{
-						if (!_isStreamGood(ifs)) return ERROR;
-						if (_isStreamFinished(ifs)) break;
-						if (isEmptyLine(line)) {
-							getline(ifs, line);
-							continue;
-						}
-						if (!_validateAndConsumeIndent(line, 2, '\t', false)){
-							extra_line = true;
-							break;
-						}
-						if (_parseLocations(ifs, line) == ERROR) return ERROR;
-					}
-
-					if (_current_server_block._locations.has_value())
-					{
-						for (auto &l : _current_server_block._locations.value())
-						{
-							std::cout << l;
-							std::cout << std::endl;
-						}
-					}
-					_current_server_block._assigned_fields.set(6);
-				}
-				else if (isValidHeaderFormat(line, "cgi", false))
-				{
-					if (_current_server_block._assigned_fields.test(7)) {
-						Logger::displayLog(Logger::e_log_level::ERROR, "Double field cgi", "config");
-						return ERROR;
-					}
-
-					getline(ifs, line);
-					while (true)
-					{
-						if (!_isStreamGood(ifs)) return ERROR;
-						if (_isStreamFinished(ifs)) break;
-						if (isEmptyLine(line)) {
-							getline(ifs, line);
-							continue;
-						}
-						if (!_validateAndConsumeIndent(line, 2, '\t', false)){
-							extra_line = true;
-							break;
-						}
-						if (_parseCGI(ifs, line) == ERROR) return ERROR;
-					}
-
-					if (_current_server_block._cgi.has_value())
-					{
-						for (auto &cgi : _current_server_block._cgi.value())
-						{
-							std::cout << cgi;
-							std::cout << std::endl;
-						}
-					}
-					_current_server_block._assigned_fields.set(7);
-				}
-				else
-				{
-					Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field name: " + line, "config");
-					return ERROR;
-				}
-			}
+			e_parse_result result = _parseSingleServerBlock(ifs, line, extra_line);
+			if (result == ERROR)
+				return ERROR;
 			_server_blocks.push_back(_current_server_block);
 		}
 		else
@@ -695,7 +706,20 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 			return ERROR;
 		}
 	}
-
-	_validateServerBlocks();
 	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
+{
+	std::ifstream ifs(_filename);
+	if (ifs.bad()) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Cannot access " + _filename, "config");
+		return ERROR;
+	}
+
+	e_parse_result result = _parseAllServerBlocks(ifs);
+	if (result == ERROR)
+		return ERROR;
+
+	return _validateServerBlocks();
 }
