@@ -1,0 +1,26 @@
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] Current field: server:
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] listen:
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Ip address: 127.0.0.1
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Port: 8000
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] server_name: [example.com]
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Server name: [example.com]
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] error_pages:
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Status code: 400
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Error page: /index/400.html
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Status code: 500
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Error page: /html_errors/500ErrorPage.html
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Status code: 404
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Error page: /BadRequestPage.html
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] root: ./data
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Root: ./data
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] index: index.html
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Index: index.html
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] locations:
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] 			allowed_methods:     " GET|POST|DELETE"             
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] 			index: index.html
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] 	
+[2026-02-27 15:28:00] [34m[DEBUG][0m [config] 		- path: /some/random/dir2
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Location path: /some/random/dir
+[2026-02-27 15:28:00] [36m[INFO][0m [method-registry] List of allowed methods: GET, POST, DELETE
+[2026-02-27 15:28:00] [36m[INFO][0m [config] Index: : index.html
+[2026-02-27 15:28:00] [31m[ERROR][0m [config] Location path is invalid: 	allowed_methods: "GET|POST|DELETE"

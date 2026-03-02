@@ -2,14 +2,25 @@
 #include "../includes/sockets/Listener.hpp"
 #include "../includes/sockets/Server.hpp"
 
+#include "ConfigurationFileParser.hpp"
+#include <unordered_map>
+
 void	sig_handler(int signum)
 {
 	if (signum == SIGINT)
 		g_running = false;
 }
 
-int	main( void )
+int	main( int argc, char *argv[] )
 {
+	if (argc < 2) return 1;
+
+	std::unordered_map<ListenData, ServerBlock, ListenDataHash> server_blocks;
+	ConfigurationFileParser parser(argv[1], server_blocks);
+	if (parser.parse() == ConfigurationFileParser::e_parse_result::ERROR) {
+		return 1;
+	}
+
 	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
 	signal(SIGINT, &sig_handler);
 

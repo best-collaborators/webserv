@@ -4,18 +4,20 @@ INCL = \
 	-I$(INC_DIR)/http-request-parser \
 	-I$(INC_DIR)/http-request-parser/request \
 	-I$(INC_DIR)/http-request-parser/request-validation \
+	-I$(INC_DIR)/http-request-parser/configuration-file \
 	-I$(INC_DIR)/http-request-parser/response \
 	-I$(INC_DIR)/sockets
 
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -Iincludes $(INCL)
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -std=c++17 -DDEBUG_FLAG -Iincludes $(INCL)
 
 SRC_DIR = sources
 OBJ_DIR = build
 
 SRCS = \
+	$(SRC_DIR)/http-request-parser/configuration-file/ConfigurationFileParser.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/FileUploadHandler.cpp \
@@ -28,6 +30,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMethod.cpp \
+	$(SRC_DIR)/http-request-parser/HttpMethodRegistry.cpp \
 	$(SRC_DIR)/http-request-parser/HttpRegexPatterns.cpp \
 	$(SRC_DIR)/http-request-parser/RegexMatcher.cpp \
 	$(SRC_DIR)/http-request-parser/Response.cpp \

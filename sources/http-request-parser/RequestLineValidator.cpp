@@ -23,7 +23,7 @@ bool RequestLineValidator::_isValidRequestLine(std::string &buffer)
 	if (buffer.empty() || buffer.length() > http::limits::max_header_value_length) return false;
 
 	return (_addValueToMap(HttpRegexPatterns::METHOD(), buffer, ERROR_HTTP_METHOD, http::headers::METHOD)
-	&& _addValueToMap(HttpRegexPatterns::REQUEST_TARGET(), buffer, ERROR_HTTP_REQUEST_TARGET, http::headers::REQUEST_TARGET)
+	&& _addValueToMap(HttpRegexPatterns::FILEPATH(), buffer, ERROR_HTTP_REQUEST_TARGET, http::headers::REQUEST_TARGET)
 	&& _addValueToMap(HttpRegexPatterns::VERSION(), buffer, ERROR_HTTP_VESRION, "version"));
 }
 
@@ -50,12 +50,12 @@ bool RequestLineValidator::_isValidUriLength()
 bool RequestLineValidator::_isMethodAllowed()
 {
 	std::cout << _parse_context.request.get_header_value(http::headers::METHOD) << std::endl;
-	std::cout << HttpMethod::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD)) << std::endl;
-	if (!HttpMethod::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD))) {
-		_parse_context.request.set_status_code(HttpStatus::e_code::METHOD_NOT_ALLOWED);
-		std::cerr << _parse_context.request.get_status_code() << std::endl;
-		return false;
-	}
+	// std::cout << HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD)) << std::endl;
+	// if (!HttpMethodRegistry::isAllowed(_parse_context.request.get_header_value(http::headers::METHOD))) {
+	// 	_parse_context.request.set_status_code(HttpStatus::e_code::METHOD_NOT_ALLOWED);
+	// 	std::cerr << _parse_context.request.get_status_code() << std::endl;
+	// 	return false;
+	// }
 	return true;
 }
 

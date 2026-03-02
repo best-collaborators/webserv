@@ -11,8 +11,6 @@ void RequestParser::parse_body()
 
 void RequestParser::parse_headers()
 {
-	HttpMethod::initAllowedMethods();
-
 	RequestLineValidator line_validator(_parse_context);
 	line_validator.parse();
 
