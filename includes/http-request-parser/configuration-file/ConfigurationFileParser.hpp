@@ -13,13 +13,15 @@
 class ConfigurationFileParser
 {
 public:
+	using server_block_map = std::unordered_map<ListenData, ServerBlock, ListenDataHash>;
+
 	enum e_parse_result 
 	{
 		OK,
 		ERROR
 	};
 
-	ConfigurationFileParser(std::string filename, std::vector<ServerBlock> &server_blocks);
+	ConfigurationFileParser(std::string filename, server_block_map &server_blocks);
 	ConfigurationFileParser() = delete;
 	~ConfigurationFileParser() = default;
 
@@ -28,8 +30,8 @@ public:
 
 private:
 	std::string				_filename;
-	std::vector<ServerBlock> &_server_blocks;
 	ServerBlock				_current_server_block;
+	server_block_map		&_server_blocks;
 
 	e_parse_result			_parseListen(std::string &line);
 	e_parse_result			_parseServerName(std::string &line);
@@ -70,7 +72,6 @@ private:
     e_parse_result _validateIndexPath(const ServerBlock &s_block);
     e_parse_result _validateErrorPages(ServerBlock &s_block);
     e_parse_result _validateLocations(ServerBlock &s_block);
-
 
 	std::string _extractDirectiveValue(std::string &line, size_t keyword_length);
 

@@ -1,6 +1,6 @@
 #include "ConfigurationFileParser.hpp"
 
-ConfigurationFileParser::ConfigurationFileParser(std::string filename, std::vector<ServerBlock> &server_blocks) : _filename(filename), _server_blocks(server_blocks)
+ConfigurationFileParser::ConfigurationFileParser(std::string filename, server_block_map &server_blocks) : _filename(filename), _server_blocks(server_blocks)
 {
 	_current_server_block._assigned_fields.reset();
 }
@@ -417,10 +417,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 {
 	for (auto &s_block : _server_blocks)
 	{
-		if (_validateRequiredFields(s_block) == ERROR) return ERROR;
-		if (_validateIndexPath(s_block) == ERROR) return ERROR;
-		if (_validateErrorPages(s_block) == ERROR) return ERROR;
-		if (_validateLocations(s_block) == ERROR) return ERROR;
+		if (_validateRequiredFields(s_block.second) == ERROR) return ERROR;
+		if (_validateIndexPath(s_block.second) == ERROR) return ERROR;
+		if (_validateErrorPages(s_block.second) == ERROR) return ERROR;
+		if (_validateLocations(s_block.second) == ERROR) return ERROR;
 	}
 	return OK;
 }
@@ -698,7 +698,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 			e_parse_result result = _parseSingleServerBlock(ifs, line, extra_line);
 			if (result == ERROR)
 				return ERROR;
-			_server_blocks.push_back(_current_server_block);
+			
+			auto [it, inserted] = _server_blocks.emplace(_current_server_block._listen_data, _current_server_block);
+
+			if (!inserted) {
+				Logger::displayLog(Logger::e_log_level::ERROR, "Duplicate (port,id) detected!", "config");
+				return ERROR;
+			}
 		}
 		else
 		{
