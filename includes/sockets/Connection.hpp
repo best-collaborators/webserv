@@ -92,7 +92,7 @@ public:
 	void		resetLastActivity() noexcept;
 
 	EventAction	onCGIOutputReady();
-	EventAction	onChildProcessExited( ChildExitInfo const & info );
+	EventAction	onChildProcessExited();
 	std::chrono::time_point<std::chrono::steady_clock>	getLastActivity() const noexcept;
 	std::optional<std::chrono::time_point<std::chrono::steady_clock>>	getCGIStartTime() const noexcept;
 };

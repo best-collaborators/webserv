@@ -137,7 +137,7 @@ bool CGIHandler::isResponseReady() const noexcept
 	return _is_output_ready && _is_child_dead;
 }
 
-EventAction CGIHandler::onChildProcessExited( ChildExitInfo const & info )
+EventAction CGIHandler::onChildProcessExited()
 {
 	_is_child_dead = true;
 

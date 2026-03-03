@@ -249,18 +249,18 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 
 void Server::_handleFinishedChildren()
 {
-	auto children = _childHandler.handleFinishedChildren();
+	auto finished_pids = _childHandler.handleFinishedChildren();
 
-	for (auto const & child : children)
+	for (auto const & pid : finished_pids)
 	{
-		Connection * connection = _getConnectionByPID(child.pid);
+		Connection * connection = _getConnectionByPID(pid);
 
 		if (!connection)
 			continue;
 
-		EventAction action = connection->onChildProcessExited(child);
+		EventAction action = connection->onChildProcessExited();
 
-		_pid_to_connection.erase(child.pid);
+		_pid_to_connection.erase(pid);
 
 		if (action == EventAction::EnableOutput)
 			_modifyEvent(connection->getFD(), EPOLLIN | EPOLLOUT);

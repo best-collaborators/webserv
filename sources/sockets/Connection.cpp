@@ -253,10 +253,10 @@ IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	return IoEvent::Received;
 }
 
-EventAction Connection::onChildProcessExited( ChildExitInfo const & info )
+EventAction Connection::onChildProcessExited()
 {
 	if (_cgi_handler)
-		return _cgi_handler->onChildProcessExited(info);
+		return _cgi_handler->onChildProcessExited();
 
 	return EventAction::NoAction;
 }
