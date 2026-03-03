@@ -26,7 +26,7 @@ int	main( int argc, char *argv[] )
 
 	try
 	{
-		Server	server(PORT);
+		Server	server(server_blocks);
 
 		server.run();
 	}
