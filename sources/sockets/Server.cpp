@@ -13,7 +13,7 @@ static std::string eventsToString( uint32_t events )
 	return "UNKNOWN";
 }
 
-Server::Server(std::string const &port) : _connection_timeout(30), _poller(), _listener(port)
+Server::Server(std::string const &port) : _connection_timeout(CONNECTION_TIMEOUT), _cgi_timeout(CGI_TIMEOUT), _poller(), _listener(port)
 {
 	if (_poller.add(_listener.getFD(), EPOLLIN) == false)
 	{
@@ -224,10 +224,7 @@ void Server::_unregisterConnectionCGI(Connection &connection, CGIOperation op) n
 	int fd = connection.getCGIPipe(op);
 
 	if (fd == -1)
-	{
-		Log::warning("getCGIpipe returned already closed fd", "CGI");
 		return;
-	}
 
 	if (_cgi_pipe_fds.erase(fd))
 	{
@@ -280,35 +277,54 @@ Connection * Server::_getConnectionByPID(pid_t pid)
 
 void Server::_closeIdleConnections() noexcept
 {
-	if (!_connections.empty())
+	if (_connections.empty())
+		return;
+
+	Log::debug("connections size: " + std::to_string(_connections.size()), "timeout");
+
+	auto	now = std::chrono::steady_clock::now();
+	std::vector<int>	to_close;
+
+	for (auto & [fd, connection] : _connections)
 	{
-		Log::debug("connections size: " + std::to_string(_connections.size()), "timeout");
-		for (auto it = _connections.begin(); it != _connections.end(); )
+		auto cgi_start = connection.getCGIStartTime();
+		if (cgi_start.has_value())
 		{
-			auto	now = std::chrono::steady_clock::now();
-			auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.getLastActivity());
-
-			int	fd = it->first;
-
-			if (duration >= _connection_timeout)
+			auto cgi_duration = std::chrono::duration_cast<std::chrono::seconds>(now - *cgi_start);
+			if (cgi_duration >= _cgi_timeout)
 			{
-				Log::debug("Close! fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
-				if (_poller.del(fd) == true)
-				{
-					it = _connections.erase(it);
-
-					Log::debug("Closed and removed fd " + std::to_string(fd), "timeout");
-				}
-				else
-				{
-					Log::debug("Failed to close and remove fd " + std::to_string(fd), "timeout");
-				}
+				Log::warning("CGI timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+				pid_t pid = connection.getCGIPID();
+				if (pid > 0)
+					kill(pid, SIGKILL);
+				_unregisterConnectionCGI(connection, CGIOperation::WRITE);
+				_unregisterConnectionCGI(connection, CGIOperation::READ);
+				if (pid > 0)
+					_pid_to_connection.erase(pid);
+				connection.abortCGI();
+				_modifyEvent(fd, EPOLLIN | EPOLLOUT);
 			}
 			else
 			{
-				++it;
-				Log::debug("fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+				Log::debug("CGI active on fd: " + std::to_string(fd) + ", cgi duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+				connection.resetLastActivity();
 			}
+			continue;
+		}
+
+		auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - connection.getLastActivity());
+
+		if (duration >= _connection_timeout)
+		{
+			Log::debug("Timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+			to_close.push_back(fd);
+		}
+		else
+		{
+			Log::debug("fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
 		}
 	}
+
+	for (int fd : to_close)
+		_closeConnection(fd);
 }
