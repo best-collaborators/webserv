@@ -25,7 +25,7 @@ Listener::Listener( std::string const & ip, std::string const & port ) : _ip(ip)
 
 	_socket.listen();
 
-	Log::info("Listening on port " + _port + "...", "listent");
+	Log::info("Listening on " + _ip + ":" + _port + "...", "listen");
 }
 
 Listener::Listener( Listener && other ) noexcept
