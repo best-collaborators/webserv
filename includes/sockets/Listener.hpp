@@ -12,21 +12,22 @@ class Listener
 private:
 	using	AddrInfoPtr = std::unique_ptr<addrinfo, void(*)(addrinfo *)>;
 
-	Socket				_socket;
-	std::string const	_port;
+	Socket		_socket;
+	std::string	_ip;
+	std::string	_port;
 
 	AddrInfoPtr			getAddresses() const;
 	void				setupSocket( addrinfo const * address );
 
 public:
 	Listener() = delete;
-	Listener( std::string const & port );
+	Listener( std::string const & ip, std::string const & port );
 
 	Listener( Listener const & ) = delete;
 	Listener & operator=( Listener const & ) = delete;
 
-	Listener( Listener && ) noexcept = delete;
-	Listener & operator=( Listener && ) noexcept = delete;
+	Listener( Listener && other ) noexcept;
+	Listener & operator=( Listener && other ) noexcept;
 
 	~Listener() = default;
 

@@ -28,6 +28,8 @@
 #include "ConnectionState.hpp"
 #include "CGIRequestConfig.hpp"
 
+#include "ServerBlock.hpp"
+
 class Connection
 {
 private:
@@ -40,6 +42,7 @@ private:
 	
 	Socket		_socket;
 	opt_cgi		_cgi_handler;
+	ServerBlock const * _server_block;
 
 	BufferManager _buffer_manager;
 	HttpRequestReader _request_reader;
@@ -62,7 +65,7 @@ private:
 
 public:
 	Connection() = default;
-	Connection( Socket && socket );
+	Connection( ServerBlock const * server_block, Socket && socket );
 
 	Connection( Connection const & ) = delete;
 	Connection & operator=( Connection const & ) = delete;

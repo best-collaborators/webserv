@@ -13,19 +13,27 @@ static std::string eventsToString( uint32_t events )
 	return "UNKNOWN";
 }
 
-Server::Server(std::string const &port) : _connection_timeout(CONNECTION_TIMEOUT), _cgi_timeout(CGI_TIMEOUT), _poller(), _listener(port)
+Server::Server( ConfigurationFileParser::server_block_map server_blocks )
+	: _connection_timeout(CONNECTION_TIMEOUT), _cgi_timeout(CGI_TIMEOUT), _server_blocks(std::move(server_blocks)), _poller()
 {
-	if (_poller.add(_listener.getFD(), EPOLLIN) == false)
+	for (auto const & [listen, block] : _server_blocks)
 	{
-		throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
+		Listener listener(listen.ip_address, std::to_string(listen.port));
+
+		int listener_fd = listener.getFD();
+
+		_listeners.try_emplace(listener_fd, ListenerEntry(std::move(listener), &block));
+
+		if (_poller.add(listener_fd, EPOLLIN) == false)
+			throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
+
+		Log::info("Added listen_fd " + std::to_string(listener_fd) + " (EPOLLIN)", "epoll");
 	}
 
 	int childHandleFD = _childHandler.getFD();
 
 	if (!_poller.add(childHandleFD, EPOLLIN))
 		throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD childHandleFD failed");
-
-	Log::info("Added listen_fd " + std::to_string(_listener.getFD()) + " (EPOLLIN)", "epoll");
 }
 
 void Server::run()
@@ -43,8 +51,8 @@ void Server::run()
 			epoll_event const &event = _poller.getEvent(i);
 			int fd = event.data.fd;
 
-			if (fd == _listener.getFD())
-				_acceptConnection();
+			if (_listeners.count(fd))
+				_acceptConnection(fd);
 			else if (fd == _childHandler.getFD())
 				_handleFinishedChildren();
 			else
@@ -53,9 +61,11 @@ void Server::run()
 	}
 }
 
-void Server::_acceptConnection()
+void Server::_acceptConnection( int listener_fd )
 {
-	Socket client = _listener.accept();
+	auto & [listener, server_block] = _listeners.at(listener_fd);
+
+	Socket client = listener.accept();
 	int client_fd = client.getFD();
 
 	if (client_fd == -1)
@@ -66,7 +76,7 @@ void Server::_acceptConnection()
 	if (!_poller.add(client_fd, EPOLLIN))
 		return;
 
-	_connections.emplace(client_fd, std::move(client));
+	_connections.try_emplace(client_fd, server_block, std::move(client));
 	Connection &connection = _connections.at(client_fd);
 	_fd_to_connection[client_fd] = &connection;
 

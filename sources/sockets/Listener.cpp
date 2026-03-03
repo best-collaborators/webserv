@@ -1,7 +1,7 @@
 #include "Listener.hpp"
 #include "Socket.hpp"
 
-Listener::Listener( std::string const & port ) : _port(port)
+Listener::Listener( std::string const & ip, std::string const & port ) : _ip(ip), _port(port)
 {
 	addrinfo *	address = nullptr;
 	AddrInfoPtr	addresses_guard = getAddresses();
@@ -28,6 +28,21 @@ Listener::Listener( std::string const & port ) : _port(port)
 	Log::info("Listening on port " + _port + "...", "listent");
 }
 
+Listener::Listener( Listener && other ) noexcept
+	: _socket(std::move(other._socket)), _ip(std::move(other._ip)), _port(std::move(other._port))
+{}
+
+Listener &Listener::operator=( Listener && other ) noexcept
+{
+	if (this != &other)
+	{
+		_socket = std::move(other._socket);
+		_ip = std::move(other._ip);
+		_port = std::move(other._port);
+	}
+	return *this;
+}
+
 Listener::AddrInfoPtr	Listener::getAddresses() const
 {
 	addrinfo	hints {};
@@ -37,7 +52,7 @@ Listener::AddrInfoPtr	Listener::getAddresses() const
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	int	status = getaddrinfo(nullptr, _port.c_str(), &hints, &addresses);
+	int	status = getaddrinfo(_ip.empty() ? nullptr : _ip.c_str(), _port.c_str(), &hints, &addresses);
 
 	if (status != 0)
 	{
