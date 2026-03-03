@@ -33,10 +33,19 @@ size_t HttpMessage::amount_of_headers() const
 
 ssize_t HttpMessage::get_content_length() const
 {
-	auto it = _headers.find(http::headers::CONTENT_LENGTH);
-	if (it == _headers.end())
-		return -1;
-	return std::stoll(it->second);
+	try
+	{
+		auto it = _headers.find(http::headers::CONTENT_LENGTH);
+		if (it == _headers.end())
+			return -1;
+		ssize_t content_length = std::stoll(it->second);
+		return content_length;
+	}
+	catch(const std::exception& e)
+	{
+		Log::error("Invalid content length header");
+	}
+	return -1;
 }
 
 void HttpMessage::set_header_value(std::string key, std::string new_value)
