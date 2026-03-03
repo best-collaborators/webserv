@@ -8,6 +8,7 @@
 #include "HttpContentType.hpp"
 #include "HttpHeaders.hpp"
 #include "Trimmer.hpp"
+#include "Logger.hpp"
 
 class  HttpMessage
 {
