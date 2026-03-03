@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 #include <unistd.h>
 #include "Logger.hpp"
 #include "RegexMatcher.hpp"
