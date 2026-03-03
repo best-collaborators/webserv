@@ -42,6 +42,25 @@ std::string Response::serve_html_webserv_page(std::string msg)
            "</html>\n";
 }
 
+bool Response::deleteFile(std::string filename)
+{
+	std::error_code ec;
+
+    bool deleted = std::filesystem::remove(filename, ec);
+
+    if (ec) {
+        std::cout << "Error: " << ec.message() << "\n";
+		_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
+		return false;
+    } else if (deleted) {
+        std::cout << "File deleted\n";
+		return true;
+	}
+	_status_code = HttpStatus::e_code::NOT_FOUND;
+	std::cout << "File not found\n";
+	return false;
+}
+
 void Response::is_set_default_page()
 {
 	std::string method = get_header_value(http::headers::METHOD);
@@ -51,6 +70,14 @@ void Response::is_set_default_page()
 	}
 	else if (HttpStatus::is_bad(_status_code)) {
 		_body = serve_html_webserv_page("Error happened.");
+	}
+	else if (method == "DELETE") {
+		if (!deleteFile( _root + get_header_value(http::headers::REQUEST_TARGET_DECODED))) {
+			_body = serve_html_webserv_page("Error happened.");
+		}
+		else {
+			_body = serve_html_webserv_page("Successful delete.");
+		}
 	}
 	else if (method == "POST") {
 		_body = serve_html_webserv_page("Successful post.");
@@ -216,8 +243,8 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 		<< _status_code << "\r\n"
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
-		<< "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-  		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
+		<< "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
+  		<< "Access-Control-Allow-Headers: Content-Type, X-Filename, Authorization\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
 	if (!_body.empty()) {
@@ -242,7 +269,7 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	_response_length = _header_str.size() + _content_length;
 	// std::cout << "content length" << _content_length << std::endl;
-	// std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
+	std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
 	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
 	// std::cout << "size:                  ==> " << _body.size() << std::endl;
 

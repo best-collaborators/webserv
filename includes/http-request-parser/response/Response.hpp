@@ -40,6 +40,7 @@ private:
 	std::streampos			get_file_size();
 	std::streampos			get_file_read_position();
 
+	bool					deleteFile(std::string filename);
 public:
 	Response() = default;
 	Response(const Response &other) = default;

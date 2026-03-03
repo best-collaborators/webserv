@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
+#include <unordered_map>
 #include "Logger.hpp"
 #include "RegexMatcher.hpp"
 #include "HttpRegexPatterns.hpp"
