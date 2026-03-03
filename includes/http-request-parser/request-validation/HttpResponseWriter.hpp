@@ -1,9 +1,10 @@
 #ifndef HTTP_RESPONSE_WRITER_HPP
 #define HTTP_RESPONSE_WRITER_HPP
 
+#include <optional>
+
 #include "Response.hpp"
 #include "Request.hpp"
-#include "CGIExitStatus.hpp"
 
 class HttpResponseWriter
 {
@@ -20,8 +21,7 @@ public:
 	HttpResponseWriter( HttpResponseWriter && ) noexcept = default;
 	HttpResponseWriter & operator=( HttpResponseWriter && ) noexcept = default;
 	
-	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers, CGIExitStatus status, std::string &buffer);
-	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers);
+	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers, const std::optional<std::string> & buffer = std::nullopt);
 
 	void		write();
 	size_t		totalLength() const noexcept;

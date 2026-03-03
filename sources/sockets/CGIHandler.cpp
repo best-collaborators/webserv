@@ -1,6 +1,6 @@
 #include "CGIHandler.hpp"
 
-CGIHandler::CGIHandler( CGIConfig & config ) : _content_length(-1)
+CGIHandler::CGIHandler( CGIConfig & config )
 {
 	CGIExecutor	executor(config);
 
@@ -27,11 +27,6 @@ int CGIHandler::getReadFD() const noexcept
 	return _read_fd.get();
 }
 
-CGIExitStatus CGIHandler::getExitStatus() const noexcept
-{
-	return _exit_status;
-}
-
 void CGIHandler::closeWritePipe() noexcept
 {
 	_write_fd.reset();
@@ -44,17 +39,28 @@ void CGIHandler::closeReadPipe() noexcept
 
 IoEvent CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 {
-	std::cout << "writeToCGI function" << std::endl;
+	ssize_t	remaining = buffer.length() - _write_offset;
 
-	ssize_t	buffer_len = buffer.length();
-	ssize_t	sent_bytes = write(_write_fd.get(), buffer.c_str(), buffer_len);
-
-	if (sent_bytes == buffer_len)
-		return IoEvent::Sent;
-	else if (sent_bytes == -1)
+	if (remaining <= 0)
 	{
-		std::cerr << "[CGI] (CGIHandler::writeToCGI) write to CGI failed" << std::endl;
+		_write_offset = 0;
+		return IoEvent::Sent;
+	}
+
+	ssize_t	sent_bytes = write(_write_fd.get(), buffer.c_str() + _write_offset, remaining);
+
+	if (sent_bytes == -1)
+	{
+		Log::warning("Write to CGI failed", "CGI");
 		return IoEvent::Error;
+	}
+
+	_write_offset += sent_bytes;
+
+	if (_write_offset >= buffer.length())
+	{
+		_write_offset = 0;
+		return IoEvent::Sent;
 	}
 
 	return IoEvent::Pending;
@@ -62,68 +68,62 @@ IoEvent CGIHandler::writeToCGI( std::string const & buffer ) noexcept
 
 IoEvent CGIHandler::readFromCGI() noexcept
 {
-	std::cout << "readFromCGI function" << std::endl;
+	char	buffer_read[PIPE_BUFFER_SIZE];
 
-	char	buffer_read[65537];
+	ssize_t read_bytes = read(_read_fd.get(), buffer_read, sizeof(buffer_read) - 1);
 
-	ssize_t read_bytes = 0;
-	read_bytes = read(_read_fd.get(), buffer_read, sizeof(buffer_read));
-	if (read_bytes > 0)
+	if (read_bytes == 0)
 	{
-		buffer_read[read_bytes] = '\0';
-		_recv_buffer.append(buffer_read, read_bytes);
+		Log::debug("CGI EOF reached", "CGI");
+		return IoEvent::Done;
+	}
 
+	if (read_bytes == -1)
+	{
+		Log::warning("Read from CGI failed", "CGI");
+		return IoEvent::Error;
+	}
+
+	_recv_buffer.append(buffer_read, read_bytes);
+
+	if (!_headers_parsed)
+	{
 		size_t pos = _recv_buffer.find("\r\n\r\n");
 
 		if (pos != std::string::npos)
 		{
-			std::string copy = _recv_buffer;
+			_header_end_offset = pos + 4;
+			_headers_parsed = true;
+			std::string buffer_copy = _recv_buffer;
 
 			Request _request;
-			ParseContext parse_data = { .request = _request, .raw_bits = _recv_buffer };
+			ParseContext parse_data = { .request = _request, .raw_bits = buffer_copy };
 			HttpHeaderParser parser(parse_data);
 			parser.parse();
 
 			_content_length = parse_data.request.get_content_length();
 
 			if (_content_length == 0)
-				return IoEvent::Done;
-		}
-		else
-		{
-			/* 
-				! If on N iteration pos not found -> invalid structure of responses, headers is required in return of CGI
-
-				Treat it as invalid CGI output
-				Return 500 Internal Server Error
-
-				At least should be present:
-
-				Content-Type: text/html
-
-				<html>...</html>
-			*/
-		}
-
-		if (_content_length != -1)
-		{
-			if (static_cast<ssize_t>(_recv_buffer.length()) >= _content_length)
 			{
-				_recv_buffer = _recv_buffer.substr(0, _content_length);
+				Log::debug("CGI content-length is 0, done", "CGI");
 				return IoEvent::Done;
 			}
 		}
 	}
-	else if (read_bytes == 0)
+
+	if (_headers_parsed && _content_length > 0)
 	{
-		return IoEvent::Done;
-	}
-	else if (read_bytes == -1)
-	{
-		Log::warning("Read from CGI failed", "CGI");
-		return IoEvent::Error;
+		size_t body_received = _recv_buffer.length() - _header_end_offset;
+
+		if (body_received >= static_cast<size_t>(_content_length))
+		{
+			_recv_buffer = _recv_buffer.substr(0, _header_end_offset + _content_length);
+			Log::debug("CGI body complete (content-length satisfied)", "CGI");
+			return IoEvent::Done;
+		}
 	}
 
+	// If no Content-Length header (_content_length == -1), rely on EOF (read == 0) above
 	return IoEvent::Pending;
 }
 
@@ -134,19 +134,11 @@ std::string & CGIHandler::getBuffer() noexcept
 
 bool CGIHandler::isResponseReady() const noexcept
 {
-	if (_is_output_ready && _is_child_dead && _exit_status != CGIExitStatus::EMPTY)
-		return true;
-
-	return false;
+	return _is_output_ready && _is_child_dead;
 }
 
 EventAction CGIHandler::onChildProcessExited( ChildExitInfo const & info )
 {
-	if (info.success())
-		_exit_status = CGIExitStatus::SUCCESS;
-	else
-		_exit_status = CGIExitStatus::ERROR;
-
 	_is_child_dead = true;
 
 	if (_is_output_ready)

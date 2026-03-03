@@ -42,7 +42,7 @@ void Server::run()
 
 	while (g_running)
 	{
-		_closeIdleConnections();
+		_handleTimeouts();
 
 		int event_count = _poller.wait();
 
@@ -146,6 +146,8 @@ void Server::_handleCGIEvent( IoEvent event, Connection & connection )
 			Log::warning("IoEvent::Error", "CGI");
 			_unregisterConnectionCGI(connection, CGIOperation::WRITE);
 			_unregisterConnectionCGI(connection, CGIOperation::READ);
+			connection.abortCGIWithError();
+			_modifyEvent(connection.getFD(), EPOLLIN | EPOLLOUT);
 			break;
 
 		case IoEvent::Sent:
@@ -285,7 +287,7 @@ Connection * Server::_getConnectionByPID(pid_t pid)
 	return it->second;
 }
 
-void Server::_closeIdleConnections() noexcept
+void Server::_handleTimeouts() noexcept
 {
 	if (_connections.empty())
 		return;
@@ -295,46 +297,72 @@ void Server::_closeIdleConnections() noexcept
 	auto	now = std::chrono::steady_clock::now();
 	std::vector<int>	to_close;
 
-	for (auto & [fd, connection] : _connections)
+	for (auto & [_, connection] : _connections)
 	{
-		auto cgi_start = connection.getCGIStartTime();
-		if (cgi_start.has_value())
+		if (connection.getCGIStartTime().has_value())
 		{
-			auto cgi_duration = std::chrono::duration_cast<std::chrono::seconds>(now - *cgi_start);
-			if (cgi_duration >= _cgi_timeout)
-			{
-				Log::warning("CGI timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
-				pid_t pid = connection.getCGIPID();
-				if (pid > 0)
-					kill(pid, SIGKILL);
-				_unregisterConnectionCGI(connection, CGIOperation::WRITE);
-				_unregisterConnectionCGI(connection, CGIOperation::READ);
-				if (pid > 0)
-					_pid_to_connection.erase(pid);
-				connection.abortCGI();
-				_modifyEvent(fd, EPOLLIN | EPOLLOUT);
-			}
-			else
-			{
-				Log::debug("CGI active on fd: " + std::to_string(fd) + ", cgi duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
-				connection.resetLastActivity();
-			}
+			_handleCGITimeout(connection, to_close, now);
 			continue;
 		}
 
-		auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - connection.getLastActivity());
-
-		if (duration >= _connection_timeout)
-		{
-			Log::debug("Timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
-			to_close.push_back(fd);
-		}
-		else
-		{
-			Log::debug("fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
-		}
+		_handleConnectionTimeout(connection, to_close, now);
 	}
 
 	for (int fd : to_close)
 		_closeConnection(fd);
+}
+
+void Server::_handleConnectionTimeout( Connection & connection, std::vector<int> & to_close, std::chrono::_V2::steady_clock::time_point now ) noexcept
+{
+	int fd = connection.getFD();
+	auto	duration = std::chrono::duration_cast<std::chrono::seconds>(now - connection.getLastActivity());
+
+	if (duration >= _connection_timeout)
+	{
+		Log::debug("Timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+		to_close.push_back(fd);
+	}
+	else
+	{
+		Log::debug("fd: " + std::to_string(fd) + ", duration: " + std::to_string(duration.count()), "timeout");
+	}
+}
+
+void Server::_handleCGITimeout( Connection & connection, std::vector<int> & to_close, std::chrono::_V2::steady_clock::time_point now ) noexcept
+{
+	int fd = connection.getFD();
+
+	auto cgi_duration = std::chrono::duration_cast<std::chrono::seconds>(now - connection.getCGIStartTime().value());
+
+	if (cgi_duration >= _cgi_timeout)
+	{
+		Log::warning("CGI timeout! fd: " + std::to_string(fd) + ", duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+
+		pid_t pid = connection.getCGIPID();
+
+		if (pid > 0)
+			kill(pid, SIGKILL);
+
+		_unregisterConnectionCGI(connection, CGIOperation::WRITE);
+		_unregisterConnectionCGI(connection, CGIOperation::READ);
+
+		if (pid > 0)
+			_pid_to_connection.erase(pid);
+
+		if (connection.headersSentToClient())
+		{
+			Log::warning("CGI timeout after headers sent, closing connection fd: " + std::to_string(fd), "timeout");
+			to_close.push_back(fd);
+		}
+		else
+		{
+			connection.abortCGI();
+			_modifyEvent(fd, EPOLLIN | EPOLLOUT);
+		}
+	}
+	else
+	{
+		Log::debug("CGI active on fd: " + std::to_string(fd) + ", cgi duration: " + std::to_string(cgi_duration.count()) + "s", "timeout");
+		connection.resetLastActivity();
+	}
 }

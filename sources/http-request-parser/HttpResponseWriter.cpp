@@ -3,20 +3,9 @@
 void HttpResponseWriter::formResponse(
 	HttpStatus::e_code status_code,
 	std::unordered_map<std::string, std::string> &&_headers,
-	CGIExitStatus status, std::string &buffer)
+	const std::optional<std::string> & buffer)
 {
-	if (status == CGIExitStatus::SUCCESS)
-		_response.form_response(status_code, std::move(_headers), buffer);
-	else
-		_response.form_response(status_code, std::move(_headers));
-}
-
-void HttpResponseWriter::formResponse(
-	HttpStatus::e_code status_code,
-	std::unordered_map<std::string, std::string> &&_headers
-)
-{
-	_response.form_response(status_code, std::move(_headers));
+	_response.form_response(status_code, std::move(_headers), buffer.value());
 }
 
 void	HttpResponseWriter::write()
