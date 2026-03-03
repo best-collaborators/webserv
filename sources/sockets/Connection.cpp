@@ -1,4 +1,6 @@
 #include "Connection.hpp"
+#include <sstream>
+#include <cctype>
 
 Connection::Connection( ServerBlock const * server_block, Socket && socket ) : _last_activity(std::chrono::steady_clock::now()), _fd(socket.getFD()), _socket(std::move(socket)), _server_block(server_block), _sent_bytes(0), _read_bytes(0)
 {
@@ -17,34 +19,55 @@ void Connection::abortCGI() noexcept
 	_cgi_start_time.reset();
 }
 
+void Connection::abortCGIWithError() noexcept
+{
+	_request_reader.setStatusCode(HttpStatus::e_code::INTERNAL_SERVER_ERROR);
+	_cgi_handler.reset();
+	_cgi_start_time.reset();
+}
+
+bool Connection::headersSentToClient() const noexcept
+{
+	return _headers_sent_to_client;
+}
+
 void	Connection::_formResponse()
 {
 	if (_response_formed)
 		return;
 
 	if (_cgi_handler)
-	{
-		if (!_cgi_handler->isResponseReady())
-			return;
-
-		CGIExitStatus	status = _cgi_handler->getExitStatus();
-
-		Log::debug("CGI exit status: " + std::to_string(*(status == CGIExitStatus::SUCCESS ? "Success" : "Error")), "CGI");
-		if (status == CGIExitStatus::ERROR)
-			_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), status, _cgi_handler->getBuffer());
-		_cgi_handler.reset();
-		_cgi_start_time.reset();
-	}
+		_formCGIResponse();
 	else
-	{
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders());
-	}
 
 	size_t content_length = _request_reader.getContentLength();
 	if (content_length > 0)
 		_buffer_manager.consume(content_length);
 	_response_formed = true;
+}
+
+void	Connection::_formCGIResponse()
+{
+	if (!_cgi_handler->isResponseReady())
+		return;
+
+	std::string & cgi_buffer = _cgi_handler->getBuffer();
+	// HttpStatus::e_code cgi_status = _validateCGIOutput(cgi_buffer);
+	HttpStatus::e_code cgi_status = HttpStatus::e_code::OK;
+
+	if (cgi_status != HttpStatus::e_code::OK)
+	{
+		_request_reader.setStatusCode(cgi_status);
+		_response_writer.formResponse(cgi_status, _request_reader.moveHeaders());
+	}
+	else
+	{
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), cgi_buffer);
+	}
+
+	_cgi_handler.reset();
+	_cgi_start_time.reset();
 }
 
 IoResult	Connection::processConnectionEvents( uint32_t const events )
@@ -119,15 +142,27 @@ IoResult Connection::processCGIEvents( uint32_t const events )
 		Log::debug("EPOLLIN", "CGI");
 		IoEvent state = _cgi_handler->readFromCGI();
 
-		if (state != IoEvent::Pending)
+		if (state == IoEvent::Done || state == IoEvent::Error)
 			return { IoSource::CGI, state };
 	}
 
 	if (events & EPOLLHUP)
 	{
-		Log::debug("CGI process finished", "CGI");
-		_cgi_start_time.reset();
-		return { IoSource::CGI, IoEvent::Done };
+		Log::debug("EPOLLHUP on CGI pipe", "CGI");
+
+		IoEvent state = _cgi_handler->readFromCGI();
+
+		if (state == IoEvent::Error)
+		{
+			_cgi_start_time.reset();
+			return { IoSource::CGI, IoEvent::Error };
+		}
+		if (state == IoEvent::Done)
+		{
+			_cgi_start_time.reset();
+			return { IoSource::CGI, IoEvent::Done };
+		}
+		return { IoSource::CGI, IoEvent::Pending };
 	}
 
 	if (events & EPOLLOUT)
@@ -274,6 +309,7 @@ IoEvent	Connection::_sendData() noexcept
 
 	if (curr_sent_bytes > 0)
 	{
+		_headers_sent_to_client = true;
 		_response_writer.consume(curr_sent_bytes);
 		_sent_bytes += curr_sent_bytes;
 	}
@@ -295,6 +331,7 @@ IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 	{
 		Log::debug("Response sent (complete)", "Connection");
 		_response_formed = false;
+		_headers_sent_to_client = false;
 		_sent_bytes = 0;
 		_request_reader.reset();
 		return IoEvent::Sent;

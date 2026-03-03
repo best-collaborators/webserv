@@ -20,7 +20,6 @@
 #include "CGIOperation.hpp"
 #include "CGIConfig.hpp"
 #include "CGIHandler.hpp"
-#include "CGIExitStatus.hpp"
 #include "EventAction.hpp"
 
 #include "HttpRequestReader.hpp"
@@ -49,6 +48,7 @@ private:
 	HttpResponseWriter _response_writer;
 
 	bool _response_formed = false;
+	bool _headers_sent_to_client = false;
 
 	ssize_t		_sent_bytes;
 	ssize_t		_read_bytes;
@@ -56,11 +56,14 @@ private:
 	IoEvent		_getSocketState() const noexcept;
 	IoEvent		_tryInitCGI() noexcept;
 
+	HttpStatus::e_code	_validateCGIOutput( std::string & cgi_buffer ) noexcept;
+
 	IoEvent		_receiveData() noexcept;
 	IoEvent		_handleReceiveState( ssize_t read_bytes ) noexcept;
 
 	IoEvent		_handleSendState( ssize_t sent_bytes, ssize_t message_length ) noexcept;
 	void		_formResponse();
+	void		_formCGIResponse();
 	IoEvent		_sendData() noexcept;
 
 public:
@@ -77,6 +80,8 @@ public:
 
 	int			getFD() const noexcept;
 	void		abortCGI() noexcept;
+	void		abortCGIWithError() noexcept;
+	bool		headersSentToClient() const noexcept;
 
 	IoResult	processConnectionEvents( uint32_t const events );
 	IoResult	processCGIEvents( uint32_t const events );

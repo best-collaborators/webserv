@@ -14,7 +14,6 @@
 #include "Connection.hpp"
 #include "CGIOperation.hpp"
 #include "ChildExitInfo.hpp"
-#include "CGIExitStatus.hpp"
 #include "ChildSignalHandler.hpp"
 #include "ConfigurationFileParser.hpp"
 
@@ -60,7 +59,9 @@ private:
 	void					_handleEvent( epoll_event const & event );
 	void					_modifyEvent( int fd, uint32_t events ) noexcept;
 	void					_closeConnection( int fd ) noexcept;
-	void					_closeIdleConnections() noexcept;
+	void					_handleTimeouts() noexcept;
+	void					_handleConnectionTimeout( Connection & connection, std::vector<int> & to_close, std::chrono::_V2::steady_clock::time_point now ) noexcept;
+	void					_handleCGITimeout( Connection & connection, std::vector<int> & to_close, std::chrono::_V2::steady_clock::time_point now ) noexcept;
 
 	void					_registerConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
 	void					_unregisterConnectionCGI( Connection & connection, CGIOperation operation ) noexcept;
