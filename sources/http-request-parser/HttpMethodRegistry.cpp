@@ -50,3 +50,22 @@ void HttpMethodRegistry::printAllowedMethods() const
 
 	Logger::displayLog(Logger::e_log_level::INFO, "List of allowed methods: " + result, "method-registry");
 }
+
+std::string HttpMethodRegistry::to_string() const
+{
+	std::string result;
+
+	for (std::size_t i = 0; i < _allowed_methods.size(); ++i)
+	{
+		if (_allowed_methods.test(i))
+		{
+			result += HttpMethod::toString(static_cast<HttpMethod::e_code>(i));
+			result += ", ";
+		}
+	}
+
+	if (!result.empty())
+		result.erase(result.size() - 2);
+
+	return result;
+}

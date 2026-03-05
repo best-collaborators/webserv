@@ -167,44 +167,40 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIExtension(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPassTo(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
 {
-	if (_checkDuplicateField(1, "extension", fields) == ERROR) return ERROR;
-	_extractDirectiveValue(line, 9);
+	_extractDirectiveValue(line, 7);
 
-	if (line != ".py" && line != ".js" && line != ".php") {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Extension is unsuported: " + line, "config");
+	Trimmer::trim(line);
+	auto pos = line.find(' ');
+	if (pos == std::string::npos) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to has invalid format: " + line, "config");
 		return ERROR;
 	}
 
-	cgi.extension = line;
+	std::string extension = line.substr(0, pos);
+	line.erase(0, pos);
+	Trimmer::trim(line);
+
+	if (access(line.c_str(), X_OK) || std::filesystem::is_directory(line)){
+		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + line, "config");
+		return ERROR;
+	}
+
+	if (cgi.pass_to.count(extension)) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Pass to extension " + extension + " is duplicate", "config");
+		return ERROR;
+	}
+	cgi.pass_to[extension] = line;
 	fields.set(1);
 	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPassTo(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
-{
-	if (_checkDuplicateField(2, "pass_to", fields) == ERROR) return ERROR;
-	_extractDirectiveValue(line, 7);
-
-	if (access(line.c_str(), X_OK)){
-		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: |" + line + "|", "config");
-		return ERROR;
-	}
-
-	cgi.pass_to = line;
-	fields.set(2);
-	return OK;
-}
-
-
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDirective(
-	std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+	std::string &line, CGIPath &	cgi, std::bitset<8> &fields)
 {
 	if (isValidHeaderFormat(line, "allowed_methods", true))
 		return _parseAllowedMethods(line, cgi.methods_registry, fields);
-	if (isValidHeaderFormat(line, "extension", true))
-		return _parseCGIExtension(line, cgi, fields);
 	if (isValidHeaderFormat(line, "pass_to", true))
 		return _parseCGIPassTo(line, cgi, fields);
 
@@ -227,12 +223,18 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
-		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
 
 		if (_dispatchCGIDirective(line, cgi, cgi_assigned_fields) == ERROR)
 			return ERROR;
+
+		if (_isStreamFinished(ifs)) break;
+	}
+
+	if (!cgi_assigned_fields.test(1)) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Missing pass_to for CGI", "config");
+		return ERROR;
 	}
 
 	if (!_current_server_block._cgi.has_value())
@@ -421,6 +423,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 		if (_validateIndexPath(s_block.second) == ERROR) return ERROR;
 		if (_validateErrorPages(s_block.second) == ERROR) return ERROR;
 		if (_validateLocations(s_block.second) == ERROR) return ERROR;
+
+		std::cout << s_block.second << std::endl;
 	}
 	return OK;
 }
@@ -526,13 +530,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleErrorPag
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
-		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
 			extra_line = true;
 			break;
 		}
 		if (_parseErrorPages(line) == ERROR) return ERROR;
+		if (_isStreamFinished(ifs)) break;
 	}
 	_current_server_block._assigned_fields.set(2);
 	return OK;
@@ -576,13 +580,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleLocation
 	while (true)
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
-		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) { getline(ifs, line); continue; }
 		if (!_validateAndConsumeIndent(line, 2, '\t', false)) {
 			extra_line = true;
 			break;
 		}
 		if (_parseLocations(ifs, line) == ERROR) return ERROR;
+		if (_isStreamFinished(ifs)) break;
 	}
 
 	if (_current_server_block._locations.has_value()) {
@@ -660,18 +664,16 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseSingleSer
 			getline(ifs, line);
 
 		if (!_isStreamGood(ifs)) return ERROR;
-		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 1, '\t', false)) {
 			extra_line = true;
 			break;
 		}
 
-		Logger::displayLog(Logger::e_log_level::DEBUG, line, "config");
-
 		e_parse_result result = _dispatchServerDirective(ifs, line, extra_line);
 		if (result == ERROR)
 			return ERROR;
+		Logger::displayLog(Logger::e_log_level::CRITICAL, line, "config");
 	}
 	return OK;
 }

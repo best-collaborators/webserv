@@ -25,6 +25,8 @@ public:
 	HttpMethodRegistry() = default;
 	~HttpMethodRegistry() = default;
 	HttpMethodRegistry(const HttpMethodRegistry & other) = default;
+	
+	std::string to_string() const;
 
 private:
 	HttpMethodRegistry(const HttpMethodRegistry && other) = delete;

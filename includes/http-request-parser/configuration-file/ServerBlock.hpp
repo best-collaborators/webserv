@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <optional>
+#include <string>
 
 struct ServerBlock
 {
@@ -24,5 +25,7 @@ struct ServerBlock
 	std::bitset<8>								_assigned_fields;
 	// std::optional<HttpMethodRegistry>	_default_allowed_methods;
 };
+
+std::ostream& operator<<(std::ostream& os, const ServerBlock& block);
 
 #endif /* SERVER_BLOCK_HPP */
