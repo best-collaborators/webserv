@@ -8,8 +8,6 @@
 #include <vector>
 #include <iostream>
 
-#include "ChildExitInfo.hpp"
-
 class ChildSignalHandler
 {
 private:
@@ -22,6 +20,6 @@ public:
 	~ChildSignalHandler();
 
 	int		getFD() const noexcept;
-	std::vector<ChildExitInfo>	handleFinishedChildren() noexcept;
+	std::vector<pid_t>	handleFinishedChildren() noexcept;
 };
 

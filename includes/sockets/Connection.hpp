@@ -20,6 +20,7 @@
 #include "CGIOperation.hpp"
 #include "CGIConfig.hpp"
 #include "CGIHandler.hpp"
+#include "CGIValidator.hpp"
 #include "EventAction.hpp"
 
 #include "HttpRequestReader.hpp"
@@ -56,8 +57,6 @@ private:
 	IoEvent		_getSocketState() const noexcept;
 	IoEvent		_tryInitCGI() noexcept;
 
-	HttpStatus::e_code	_validateCGIOutput( std::string & cgi_buffer ) noexcept;
-
 	IoEvent		_receiveData() noexcept;
 	IoEvent		_handleReceiveState( ssize_t read_bytes ) noexcept;
 
@@ -92,7 +91,7 @@ public:
 	void		resetLastActivity() noexcept;
 
 	EventAction	onCGIOutputReady();
-	EventAction	onChildProcessExited( ChildExitInfo const & info );
+	EventAction	onChildProcessExited();
 	std::chrono::time_point<std::chrono::steady_clock>	getLastActivity() const noexcept;
 	std::optional<std::chrono::time_point<std::chrono::steady_clock>>	getCGIStartTime() const noexcept;
 };

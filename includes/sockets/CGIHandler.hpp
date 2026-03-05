@@ -5,7 +5,6 @@
 #include "IoResult.hpp"
 #include "CGIConfig.hpp"
 #include "CGIExecutor.hpp"
-#include "ChildExitInfo.hpp"
 #include "EventAction.hpp"
 #include "ParseContext.hpp"
 #include "HttpHeaderParser.hpp"
@@ -56,5 +55,5 @@ public:
 	bool			isResponseReady() const noexcept;
 
 	EventAction		onCGIOutputReady();
-	EventAction		onChildProcessExited( ChildExitInfo const & info );
+	EventAction		onChildProcessExited();
 };

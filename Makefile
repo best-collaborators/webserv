@@ -54,6 +54,7 @@ SRCS = \
 	$(SRC_DIR)/sockets/ChildSignalHandler.cpp \
 	$(SRC_DIR)/sockets/CGIRequestConfig.cpp \
 	$(SRC_DIR)/sockets/CGIHandler.cpp \
+	$(SRC_DIR)/sockets/CGIValidator.cpp \
 	$(SRC_DIR)/sockets/CGIExecutor.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

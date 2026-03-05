@@ -38,21 +38,20 @@ int ChildSignalHandler::getFD() const noexcept
 	return _sig_fd;
 }
 
-std::vector<ChildExitInfo> ChildSignalHandler::handleFinishedChildren() noexcept
+std::vector<pid_t> ChildSignalHandler::handleFinishedChildren() noexcept
 {
 	pid_t	pid;
 	int		status;
 
-	std::vector<ChildExitInfo>	finished;
+	std::vector<pid_t>	finished;
 
 	_readSignalFD();
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 	{
-		ChildExitInfo	child = { pid, status };
-		finished.push_back(child);
-		std::cout << "pid: " << child.pid << std::endl;
-		std::cout << "status: " << child.status << std::endl;
+		finished.push_back(pid);
+		std::cout << "pid: " << pid << std::endl;
+		std::cout << "status: " << status << std::endl;
 	}
 	return finished;
 }

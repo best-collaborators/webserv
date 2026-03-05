@@ -72,6 +72,11 @@ void HttpMessage::append_header_value(std::string key, std::string additional_va
 
 std::unordered_map<std::string, std::string> HttpMessage::copy_headers()
 {
+	return _headers;
+}
+
+std::unordered_map<std::string, std::string> HttpMessage::move_headers()
+{
 	return std::move(_headers);
 }
 

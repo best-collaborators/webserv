@@ -13,7 +13,6 @@
 #include "Listener.hpp"
 #include "Connection.hpp"
 #include "CGIOperation.hpp"
-#include "ChildExitInfo.hpp"
 #include "ChildSignalHandler.hpp"
 #include "ConfigurationFileParser.hpp"
 

@@ -5,7 +5,10 @@ void HttpResponseWriter::formResponse(
 	std::unordered_map<std::string, std::string> &&_headers,
 	const std::optional<std::string> & buffer)
 {
-	_response.form_response(status_code, std::move(_headers), buffer.value());
+	if (buffer.has_value())
+		_response.form_response(status_code, std::move(_headers), buffer.value());
+	else
+		_response.form_response(status_code, std::move(_headers), "");
 }
 
 void	HttpResponseWriter::write()

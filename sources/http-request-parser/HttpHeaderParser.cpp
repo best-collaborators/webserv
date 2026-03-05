@@ -19,7 +19,10 @@ bool HttpHeaderParser::_isValidHeader(std::string &buffer)
 		return false;
 
 	if (_parse_context.request.get_header_count(name)) {
-		if (name == http::headers::HOST || name == http::headers::CONTENT_LENGTH) {
+		if (name == http::headers::HOST
+			|| name == http::headers::CONTENT_LENGTH
+			|| name == http::headers::CONTENT_TYPE) {
+
 			std::cerr << "ERR: HEADER DUPLICATION: " << name << std::endl;
 			return false;
 		}

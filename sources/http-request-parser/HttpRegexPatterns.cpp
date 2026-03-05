@@ -12,7 +12,7 @@ const std::regex HttpRegexPatterns::CGI_VALID_PATH_PATTERN("(^/cgi-bin/\\w+\\.(?
 const std::regex HttpRegexPatterns::IP_ADDR_HOST_PATTERN(
 	"(^((?:25[0-5]|2[0-4]\\d|[01]?\\d?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d?\\d)){3})\\s*:\\s*((?:1000|[1-9]\\d{3}|[1-5]\\d{4}|6[0-4]\\d{3}|65[0-4]\\d{2}|655[0-2]\\d|6553[0-5]))\\s*$)"
 );
-const std::regex HttpRegexPatterns::ERROR_PAGE_PATTERN("^([1-5][0-9][0-9]):(\\s*\\S*)\\s*$");
+const std::regex HttpRegexPatterns::ERROR_PAGE_PATTERN("^([1-5][0-9][0-9]) *: *(\\s*\\S*)\\s*$");
 const std::regex HttpRegexPatterns::NON_WHITESPACE_PATTERN("^ *(\\S+) *$");
 const std::regex HttpRegexPatterns::WHITESPACE_PATTERN("^\\s*$");
 const std::regex HttpRegexPatterns::LOCATION_PATH_PATTERN("^ *- *path *: *(\\/(?!.*\\.\\.)([A-Za-z0-9._\\-\\/]*))$");
