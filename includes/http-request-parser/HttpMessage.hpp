@@ -25,6 +25,7 @@ public:
 	~HttpMessage();
 
 	std::unordered_map<std::string, std::string> copy_headers();
+	std::unordered_map<std::string, std::string> move_headers();
 	std::unordered_map<std::string, std::string> get_headers() const;
 	std::string									get_header_value(std::string key) const;
 	void										remove_header_key(std::string key);

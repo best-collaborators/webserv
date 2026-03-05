@@ -53,8 +53,11 @@ void	Connection::_formCGIResponse()
 		return;
 
 	std::string & cgi_buffer = _cgi_handler->getBuffer();
-	// HttpStatus::e_code cgi_status = _validateCGIOutput(cgi_buffer);
-	HttpStatus::e_code cgi_status = HttpStatus::e_code::OK;
+
+	Request request;
+	ParseContext context = { .request = request, .raw_bits = cgi_buffer};
+	CGIValidator cgi_validator(context);
+	HttpStatus::e_code cgi_status = cgi_validator._validateCGIOutput();
 
 	if (cgi_status != HttpStatus::e_code::OK)
 	{

@@ -10,6 +10,8 @@ namespace http::headers {
 	constexpr auto TRANSFER_ENCODING = "transfer-encoding";
 	constexpr auto METHOD = "method";
 	constexpr auto VERSION = "version";
+	constexpr auto STATUS = "status";
+	constexpr auto LOCATION = "location";
 }
 
 #endif /* HTTP_HEADERS */
