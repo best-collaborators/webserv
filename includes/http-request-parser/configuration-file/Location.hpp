@@ -34,5 +34,21 @@ inline std::ostream& operator<<(std::ostream& os, const Location& location)
 	return os;
 }
 
+inline std::string to_string(const Location& location)
+{
+	std::string result = "Location path: " + location.path.string() + "\n";
+	
+	if (location.methods_registry)
+		result += "    Methods: allowed\n";
+	if (!location.default_file.empty())
+		result += "    Index: " + location.default_file + "\n";
+	if (!location.root.empty())
+		result += "    Root: " + location.root.string() + "\n";
+	
+	result += "    Autoindex: " + std::string(location.autoindex ? "true" : "false") + "\n";
+	
+	return result;
+}
+
 #endif /* LOCATION_HPP */
 
