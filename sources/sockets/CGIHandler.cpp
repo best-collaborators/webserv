@@ -141,7 +141,6 @@ EventAction CGIHandler::onChildProcessExited()
 {
 	_is_child_dead = true;
 
-	(void)info;
 	if (_is_output_ready)
 		return EventAction::EnableOutput;
 
