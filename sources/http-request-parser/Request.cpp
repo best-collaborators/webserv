@@ -1,10 +1,15 @@
 #include "Request.hpp"
 
-Request::Request() : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)) {}
+Request::Request(ServerBlock const * server_block) : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)), _server_block(server_block) {}
 
 HttpStatus::e_code Request::get_status_code() const
 {
 	return _status_code;
+}
+
+ServerBlock const & Request::getServerBlock()
+{
+	return *_server_block;
 }
 
 void Request::set_status_code(HttpStatus::e_code status_code)

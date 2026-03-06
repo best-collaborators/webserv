@@ -39,7 +39,7 @@ private:
 	bool _isValidUriLength();
 	bool _isMethodAllowed();
 	bool _isCGIPathValid();
-
+	bool _isRequestTargetInConfigFile(const std::string &request_target);
 
 public:
 	RequestLineValidator( ParseContext &parse_context );

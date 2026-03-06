@@ -2,7 +2,7 @@
 #include <sstream>
 #include <cctype>
 
-Connection::Connection( ServerBlock const * server_block, Socket && socket ) : _last_activity(std::chrono::steady_clock::now()), _fd(socket.getFD()), _socket(std::move(socket)), _server_block(server_block), _sent_bytes(0), _read_bytes(0)
+Connection::Connection( ServerBlock const * server_block, Socket && socket ) : _last_activity(std::chrono::steady_clock::now()), _fd(socket.getFD()), _socket(std::move(socket)), _server_block(server_block), _request_reader(server_block), _sent_bytes(0), _read_bytes(0)
 {
 	(void) _server_block;
 }

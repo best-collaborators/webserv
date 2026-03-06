@@ -19,7 +19,7 @@ std::string to_string(const ServerBlock& block)
 	{
 		result += "  locations:\n";
 		for (const auto& loc : block._locations.value())
-			result += "    " + to_string(loc) + "\n";
+			result += "    " + loc.to_string() + "\n";
 	}
 	
 	if (block._cgi.has_value())

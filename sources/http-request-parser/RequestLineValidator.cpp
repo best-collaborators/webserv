@@ -71,6 +71,27 @@ bool RequestLineValidator::_isCGIPathValid()
 	return true;
 }
 
+bool RequestLineValidator::_isRequestTargetInConfigFile(const std::string &request_target) 
+{
+	const ServerBlock &server_block = _parse_context.request.getServerBlock();
+	size_t maxLen = 0;
+	Location matched_loc;
+	for (auto &l : server_block._locations.value())
+	{
+		std::string path = l.getPath().string();
+		size_t i = 0;
+		for (; i < std::min(request_target.size(), path.size()); i++) {
+			if (request_target[i] != path[i]) break;
+		}
+		if (i - 1 > maxLen) {
+			maxLen = i - 1;
+			matched_loc = l;
+		}
+	}
+	std::cout << matched_loc << std::endl;
+	return true;
+}
+
 void RequestLineValidator::parse()
 {
 	std::string buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);
@@ -83,6 +104,9 @@ void RequestLineValidator::parse()
 
 	std::string request_parser = _parse_context.request.get_header_value(http::headers::REQUEST_TARGET);
 	std::string decoded_path = PercentEncoder::percent_encoding(request_parser);
+
+	_isRequestTargetInConfigFile(decoded_path);
+
 	_parse_context.request.set_header_value(http::headers::REQUEST_TARGET_DECODED, decoded_path);
 
 	if (!_isValidHttpVersion()

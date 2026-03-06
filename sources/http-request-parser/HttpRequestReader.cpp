@@ -1,5 +1,7 @@
 #include "HttpRequestReader.hpp"
 
+HttpRequestReader::HttpRequestReader(ServerBlock const * server_block) : _request(server_block) {}
+
 bool HttpRequestReader::_headersComplete(const std::string &read_buffer) const noexcept
 {
 	return read_buffer.find("\r\n\r\n") != std::string::npos;

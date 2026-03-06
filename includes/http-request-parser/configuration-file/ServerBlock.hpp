@@ -2,7 +2,7 @@
 #define SERVER_BLOCK_HPP
 
 #include "ListenData.hpp"
-#include "ErrorPage.hpp"
+#include "HttpPage.hpp"
 #include "HttpMethod.hpp"
 #include "Location.hpp"
 #include "CGI.hpp"
@@ -23,7 +23,6 @@ struct ServerBlock
 	std::optional<std::vector<Location>>		_locations;
 	std::optional<std::vector<CGIPath>>			_cgi;
 	std::bitset<8>								_assigned_fields;
-	// std::optional<HttpMethodRegistry>	_default_allowed_methods;
 };
 
 std::ostream& operator<<(std::ostream& os, const ServerBlock& block);

@@ -8,6 +8,7 @@
 
 #include "RequestParser.hpp"
 #include "BufferManager.hpp"
+#include "ServerBlock.hpp"
 
 class HttpRequestReader
 {
@@ -31,7 +32,7 @@ private:
 	bool		_headersComplete(const std::string &read_buffer) const noexcept;
 
 public:
-	HttpRequestReader() = default;
+	HttpRequestReader() = delete;
 	~HttpRequestReader() = default;
 
 	HttpRequestReader( HttpRequestReader const & ) = delete;
@@ -39,6 +40,8 @@ public:
 
 	HttpRequestReader( HttpRequestReader && ) noexcept = default;
 	HttpRequestReader & operator=( HttpRequestReader && ) noexcept = default;
+
+	HttpRequestReader(ServerBlock const * _server_block);
 
 	ReaderState			_processBody(std::string &buffer, size_t bytes_read) noexcept;
 	ReaderState			_processHeader(std::string &buffer) noexcept;

@@ -12,6 +12,7 @@
 
 #include "RequestBodyStatus.hpp"
 #include "ChunkHandler.hpp"
+#include "ServerBlock.hpp"
 
 class Request : public HttpMessage
 {
@@ -24,8 +25,11 @@ private:
 	ChunkHandler		_chunk_handler;
 	bool				_is_cgi;
 
+	ServerBlock const * _server_block;
+
 public:
-	Request();
+	Request(ServerBlock const * server_block);
+	Request() = default;
 	Request(const Request &other) = default;
 	Request(Request &&other) = default;
 	Request & operator=( Request && ) noexcept = default;
@@ -53,6 +57,7 @@ public:
 
 	void				adjustHeaderForCGI();
 
+	ServerBlock const & getServerBlock();
 	RequestType getBodyStatus() const;
 };
 
