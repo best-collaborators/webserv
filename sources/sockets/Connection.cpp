@@ -202,9 +202,9 @@ IoEvent Connection::_tryInitCGI() noexcept
 	auto headers = _request_reader.getHeaders();
 
 	if (!cgi::isCGITarget(headers["request-target"]))
-	return IoEvent::Error; //! Handle correct return from invalid CGI
+		return IoEvent::Error; //! Handle correct return from invalid CGI
 
-	_request_reader.printHeaders();
+	// _request_reader.printHeaders();
 	try
 	{
 		CGIConfig	config = cgi::buildConfig(headers);

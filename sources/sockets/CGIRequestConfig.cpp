@@ -112,9 +112,14 @@ CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const &
 
 	std::regex	reg_ex("(\\.(?:js|py|php|cgi))");
 	std::string	target = headers.at("request-target");
+	std::cout << "CGI target: " << target << std::endl;
 	std::string extension = RegexMatcher::get_regex_value(target, reg_ex);
+
+
 	if (extension.empty())
 		std::cout << "(cgi::buildConfig) extension.empty()" << std::endl;
+
+	std::cout << "CGI extension: " << extension << std::endl;
 
 	if (extension == ".js")
 		executable = "/usr/local/bin/node";

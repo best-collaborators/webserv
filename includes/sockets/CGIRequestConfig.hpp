@@ -4,6 +4,7 @@
 
 #include "Request.hpp"
 #include "CGIConfig.hpp"
+#include "ServerBlock.hpp"
 #include "RegexMatcher.hpp"
 
 namespace cgi
