@@ -67,32 +67,6 @@ namespace
 		envp["QUERY_STRING"] = queryString;
 	}
 
-	std::string getScriptPath( std::string target, ServerBlock const & server_block )
-	{
-		std::regex reg_ex("(\\w+\\.(?:js|py|php|cgi))");
-		std::string filename = RegexMatcher::get_regex_value(target, reg_ex);
-		if (filename.empty())
-			return "";
-
-		return server_block._root.string() + server_block._cgi.value().at(0).path + filename;
-	}
-
-	std::string getExecutablePath( std::string target, ServerBlock const & server_block )
-	{
-		std::regex reg_ex("(\\.(?:js|py|php|cgi))");
-		std::string extension = RegexMatcher::get_regex_value(target, reg_ex);
-		if (extension.empty() || !server_block._cgi.has_value())
-			return "";
-
-		auto const & exec_paths = server_block._cgi.value().at(0).pass_to;
-		for (auto const & [ext, path] : exec_paths)
-		{
-			if (extension == ext)
-				return path;
-		}
-		return "";
-	}
-
 	std::vector<std::string> buildEnvp( std::unordered_map<std::string, std::string> const & headers )
 	{
 		std::unordered_map<std::string, std::string> envp;
@@ -144,13 +118,13 @@ bool	cgi::isCGITarget( std::string const & target )
 	return false;
 }
 
-CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, ServerBlock const & server_block )
+CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, File const & file )
 {
 	std::string target = headers.at(http::headers::REQUEST_TARGET);
 
 	return CGIConfig {
-		getExecutablePath(target, server_block),
-		getScriptPath(target, server_block),
+		file.getPassTo().value(),
+		file.getFullFilename(),
 		buildEnvp(headers)
 	};
 }

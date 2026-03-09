@@ -201,12 +201,14 @@ IoEvent Connection::_tryInitCGI() noexcept
 {
 	auto headers = _request_reader.getHeaders();
 
+	File const & file = _request_reader.getFile();
+
 	if (!cgi::isCGITarget(headers["request-target"]))
 		return IoEvent::Error; //! Handle correct return from invalid CGI
 
 	try
 	{
-		CGIConfig	config = cgi::buildConfig(headers, *_server_block);
+		CGIConfig	config = cgi::buildConfig(headers, file);
 		_cgi_handler.emplace(config);
 	}
 	catch(const std::exception& e)
