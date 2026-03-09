@@ -169,7 +169,12 @@ std::string Response::form_response( const HttpStatus::e_code &status_code, cons
 	_method = method;
 	_file = file;
 
-	if (HttpStatus::is_good(status_code) && !body.empty())
+	std::cout << "filename: " << file.getFullFilename() << std::endl;
+	if (file.getAutoindex()) {
+		_body = serve_html_webserv_page("IT'S DIRECTORY LISTENING");
+		_content_length = _body.size();
+	}
+	else if (HttpStatus::is_good(status_code) && !body.empty())
 	{
 		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();

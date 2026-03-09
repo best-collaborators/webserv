@@ -147,6 +147,8 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 					std::string full_filename;
 					if (!l.getDefaultFile().empty())
 						full_filename = std::string(l.getRoot()) + "/" + remaining_path + l.getDefaultFile();
+					else if (l.getAutoindex())
+						full_filename = std::string(l.getRoot()) + "/" + remaining_path;
 					else if (server_block._index.has_value())
 						full_filename = std::string(l.getRoot()) + "/" + remaining_path + server_block._index.value();
 
@@ -159,6 +161,8 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 					file.setIsDir(true);
 					file.setAutoindex(l.getAutoindex());
 					file.setFullFilename(normalized_path.string());
+					_parse_context.request.setFile(file);
+					return MATCH_FOUND;
 				}
 				else {
 					std::string request_target_without_path = request_target.substr(path.size());
@@ -264,6 +268,7 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 	}
 
 	std::cout << "Request target " << full_filename;
+	_parse_context.request.setFile(file);
 	return NO_FILE_IN_CONFIG;
 }
 
