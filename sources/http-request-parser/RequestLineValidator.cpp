@@ -80,7 +80,7 @@ namespace {
 	}
 
 	bool hasTrailingSlash(const std::string &request_target) {
-		return request_target.size() > 1 && *(request_target.end() - 1) == '/';
+		return *(request_target.end() - 1) == '/';
 	}
 
 	bool tryRelocate(const Location &location, File &file, std::string &request_target) {
@@ -108,8 +108,9 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 	std::cout << "Filename: " << filename_path.string() << " Extension: " << extension << std::endl;
 
 	bool isDir = isDirectory(server_block._root.string() + request_target);
-	if (isDir && !hasTrailingSlash(request_target)) {
+	if (isDir && request_target.size() > 1 && !hasTrailingSlash(request_target)) {
 		file.setReturnPage({.path = request_target + "/", .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
+		std::cout << "DEBUG" << std::endl;
 		_parse_context.request.setFile(file); 
 		return RELOCATION;
 	}
@@ -127,9 +128,10 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 				}
 
 				if (tryRelocate(l, file, request_target)) {
-					_parse_context.request.setFile(file); 
-					return RELOCATION;
+					// _parse_context.request.setFile(file); 
+					// return RELOCATION;
 				}
+
 
 				if (!l.getReturnPage().path.empty()) {
 					std::string full_filename = std::string(l.getReturnPage().path) + "/" + request_target.substr(path.size());
@@ -230,26 +232,29 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 		}
 	}
 
-	std::string full_filename = server_block._root.string() + request_target;
-	std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_filename);
+	{
+		std::string full_filename = server_block._root.string() + request_target;
+		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_filename);
 
-	bool isFile = std::filesystem::is_regular_file(full_filename);
-	if (isFile) {
-		file.setFullFilename(full_filename);
-		_parse_context.request.setFile(file);
-		return MATCH_FOUND;
+		bool isFile = std::filesystem::is_regular_file(full_filename);
+		if (isFile) {
+			file.setFullFilename(full_filename);
+			_parse_context.request.setFile(file);
+			return MATCH_FOUND;
+		}
+
+		isDir = std::filesystem::is_directory(norm_path_request);
+		if (isDir && request_target.size() > 1 && *(request_target.end() - 1) != '/') {
+			std::cout <<  request_target + "/" << std::endl;
+			file.setReturnPage({.path = request_target + "/", .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
+			_parse_context.request.setFile(file);
+			return RELOCATION;
+		}
 	}
 
-	isDir = std::filesystem::is_directory(norm_path_request);
-	if (isDir && *(request_target.end() - 1) != '/') {
-		std::cout <<  request_target + "/" << std::endl;
-		file.setReturnPage({.path = request_target + "/", .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
-		_parse_context.request.setFile(file);
-		return RELOCATION;
-	}
-
+	std::string full_filename;
 	if ( server_block._index.has_value()) {
-		std::string full_filename = server_block._root.string() + request_target + server_block._index.value();
+		full_filename = server_block._root.string() + request_target + server_block._index.value();
 		_parse_context.request.setFile(file);
 		bool isFile = std::filesystem::is_regular_file(full_filename);
 		if (isFile) {
@@ -259,6 +264,7 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 		}
 	}
 
+	std::cout << "Request target " << full_filename;
 	return NO_FILE_IN_CONFIG;
 }
 
