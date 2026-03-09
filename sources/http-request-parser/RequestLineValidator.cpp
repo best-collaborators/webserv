@@ -83,11 +83,21 @@ namespace {
 		return request_target.size() > 1 && *(request_target.end() - 1) == '/';
 	}
 
-	
+	bool tryRelocate(const Location &location, File &file, std::string &request_target) {
+		
+		std::string return_path = location.getReturnPage().path;
+		HttpStatus::e_code status_code = location.getReturnPage().status_code;
+		if (return_path.empty()) return false;
+
+		std::string path_remaining = request_target.substr(return_path.size());
+		std::string full_filename = return_path + "/" + path_remaining;
+
+		file.setReturnPage({.path = full_filename, .status_code = status_code});
+		return true;
+	}
 }
 
 #include "File.hpp"
-
 RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInConfigFile(std::string &request_target) 
 {
 	const ServerBlock &server_block = _parse_context.request.getServerBlock();
@@ -98,7 +108,7 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 	std::cout << "Filename: " << filename_path.string() << " Extension: " << extension << std::endl;
 
 	bool isDir = isDirectory(server_block._root.string() + request_target);
-	if (isDir && hasTrailingSlash(request_target)) {
+	if (isDir && !hasTrailingSlash(request_target)) {
 		file.setReturnPage({.path = request_target + "/", .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
 		_parse_context.request.setFile(file); 
 		return RELOCATION;
@@ -114,6 +124,11 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 
 				if (path.size() > 1 && request_target[path.size()] != '/') {
 					continue;
+				}
+
+				if (tryRelocate(l, file, request_target)) {
+					_parse_context.request.setFile(file); 
+					return RELOCATION;
 				}
 
 				if (!l.getReturnPage().path.empty()) {
@@ -228,7 +243,7 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 	isDir = std::filesystem::is_directory(norm_path_request);
 	if (isDir && *(request_target.end() - 1) != '/') {
 		std::cout <<  request_target + "/" << std::endl;
-		file.setReturnPage({.path = norm_path_request, .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
+		file.setReturnPage({.path = request_target + "/", .status_code = HttpStatus::e_code::MOVED_PERMANENTLY});
 		_parse_context.request.setFile(file);
 		return RELOCATION;
 	}
