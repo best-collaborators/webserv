@@ -2,13 +2,11 @@
 
 void HttpResponseWriter::formResponse(
 	HttpStatus::e_code status_code,
-	std::unordered_map<std::string, std::string> &&_headers,
-	const std::optional<std::string> & buffer)
+	const HttpMethod::e_code &method,
+	const File &file,
+	const std::string & buffer)
 {
-	if (buffer.has_value())
-		_response.form_response(status_code, std::move(_headers), buffer.value());
-	else
-		_response.form_response(status_code, std::move(_headers), "");
+	_response.form_response(status_code, method, file, buffer);
 }
 
 void	HttpResponseWriter::write()

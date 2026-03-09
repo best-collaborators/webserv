@@ -2,53 +2,42 @@
 #define LOCATION_HPP
 
 #include <string>
+#include "HttpPage.hpp"
 #include "HttpMethodRegistry.hpp"
 #include <optional>
 #include <iostream>
 #include <filesystem>
 
-struct Location
+class Location
 {
 	std::filesystem::path				path;
 	std::filesystem::path				root;
-	bool								autoindex;
+	bool								autoindex = false;
 	std::string							default_file;
 	std::optional<HttpMethodRegistry>	methods_registry;
 	HttpPage							return_page;
+
+	public:
+		// Getters
+		const std::filesystem::path& getPath() const;
+		const std::filesystem::path& getRoot() const;
+		bool getAutoindex() const;
+		const std::string& getDefaultFile() const;
+		const std::optional<HttpMethodRegistry>& getMethodsRegistry() const;
+		const HttpPage& getReturnPage() const;
+
+		// Setters
+		void setPath(const std::filesystem::path& p);
+		void setRoot(const std::filesystem::path& r);
+		void setAutoindex(bool a);
+		void setDefaultFile(const std::string& f);
+		void setMethodsRegistry(const HttpMethodRegistry& m);
+		void setReturnPage(const HttpPage& p);
+
+		std::string to_string() const noexcept;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Location& location)
-{
-	Logger::displayLog(Logger::e_log_level::INFO, "Location path: " + location.path.string(), "config");
-
-	if (location.methods_registry)
-		location.methods_registry->printAllowedMethods();
-	if (!location.default_file.empty())
-		Logger::displayLog(Logger::e_log_level::INFO, "Index: " + location.default_file, "config");
-	if (!location.root.empty())
-		Logger::displayLog(Logger::e_log_level::INFO, "Root: " + location.root.string(), "config");
-
-	std::string autoindex_enabled = (location.autoindex ? "true" : "false");
-	Logger::displayLog(Logger::e_log_level::INFO, "Autoindex: " + autoindex_enabled, "config");
-
-	return os;
-}
-
-inline std::string to_string(const Location& location)
-{
-	std::string result = "Location path: " + location.path.string() + "\n";
-	
-	if (location.methods_registry)
-		result += "    Methods: allowed\n";
-	if (!location.default_file.empty())
-		result += "    Index: " + location.default_file + "\n";
-	if (!location.root.empty())
-		result += "    Root: " + location.root.string() + "\n";
-	
-	result += "    Autoindex: " + std::string(location.autoindex ? "true" : "false") + "\n";
-	
-	return result;
-}
+std::ostream& operator<<(std::ostream& os, const Location& location);
 
 #endif /* LOCATION_HPP */
 

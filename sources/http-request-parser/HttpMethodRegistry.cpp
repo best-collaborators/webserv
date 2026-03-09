@@ -69,3 +69,9 @@ std::string HttpMethodRegistry::to_string() const
 
 	return result;
 }
+
+HttpMethodRegistry & HttpMethodRegistry::operator=( const HttpMethodRegistry & other) noexcept
+{
+	_allowed_methods = other._allowed_methods;
+	return *this;
+}

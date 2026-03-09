@@ -28,6 +28,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpBodyParser.cpp \
 	$(SRC_DIR)/http-request-parser/HttpHeaderParser.cpp \
 	$(SRC_DIR)/http-request-parser/HttpContentType.cpp \
+	$(SRC_DIR)/http-request-parser/File.cpp \
 	$(SRC_DIR)/http-request-parser/HttpStatus.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMethod.cpp \
 	$(SRC_DIR)/http-request-parser/HttpMethodRegistry.cpp \
@@ -44,6 +45,7 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/HttpResponseWriter.cpp \
 	$(SRC_DIR)/http-request-parser/BufferManager.cpp \
 	$(SRC_DIR)/http-request-parser/ServerBlock.cpp \
+	$(SRC_DIR)/http-request-parser/Location.cpp \
 	$(SRC_DIR)/Logger.cpp \
 	$(SRC_DIR)/sockets/main.cpp \
 	$(SRC_DIR)/sockets/Socket.cpp \

@@ -49,14 +49,14 @@ void Response::is_set_default_page()
 		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body = "";
 	}
+	else if (HttpStatus::is_redirect(_status_code)) {
+		_body = serve_html_webserv_page("You've been redirected.");
+	}
 	else if (HttpStatus::is_bad(_status_code)) {
 		_body = serve_html_webserv_page("Error happened.");
 	}
 	else if (method == "POST") {
 		_body = serve_html_webserv_page("Successful post.");
-	}
-	else if (_status_code == static_cast<HttpStatus::e_code>(304)) {
-		_body = serve_html_webserv_page("Other message.");
 	}
 	else {
 		_is_default_page = false;
@@ -111,10 +111,7 @@ void Response::read_body_partially()
 		return;
 	}
 
-	std::string filename
-		= _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
-
-	std::ifstream ifs (filename, std::ios::binary);
+	std::ifstream ifs (_file.getFullFilename(), std::ios::binary);
 	if (!is_ifstream_successful(ifs)) return;
 
 	const std::size_t current_size = _body.size();
@@ -148,7 +145,7 @@ void Response::set_content_type(std::string filename)
 
 std::streampos Response::get_file_size()
 {
-	std::string filename = _root + get_header_value(http::headers::REQUEST_TARGET_DECODED);
+	std::string filename = _file.getFullFilename();
 	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
@@ -161,21 +158,18 @@ std::streampos Response::get_file_size()
 	return _content_length;
 }
 
-std::string Response::form_response(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&http_request_values, std::string body)
+std::string Response::form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body)
 {
-	_status_code = status_code;
 	_response_length = 0;
 	_content_length = 0;
 	_bytes_read = 0;
 	_bytes_sent = 0;
 
-	set_header_value(http::headers::REQUEST_TARGET, http_request_values[http::headers::REQUEST_TARGET]);
-	set_header_value(http::headers::REQUEST_TARGET_DECODED, http_request_values[http::headers::REQUEST_TARGET_DECODED]);
-	set_header_value(http::headers::METHOD, http_request_values[http::headers::METHOD]);
+	_status_code = status_code;
+	_method = method;
+	_file = file;
 
-	http_request_values.clear();
-
-	if (!body.empty())
+	if (HttpStatus::is_good(status_code) && !body.empty())
 	{
 		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();
@@ -184,7 +178,7 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	{
 		is_set_default_page();
 
-		if (!_is_default_page && (get_header_value(http::headers::REQUEST_TARGET_DECODED)).size() < 2) {
+		if (!_is_default_page && (_file.getFullFilename()).size() < 2) {
 			_status_code = HttpStatus::e_code::OK;
 			_body = serve_html_webserv_page("Root not configured");
 			_is_default_page = true;
@@ -194,10 +188,10 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 		if (!_is_default_page)
 		{
 			std::cout << "[response] Not a default page" << std::endl;
-			std::cout << "[response] file to send back: " << _root + get_header_value(http::headers::REQUEST_TARGET_DECODED) << std::endl;
+			std::cout << "[response] file to send back: " << _file.getFullFilename() << std::endl;
 			get_file_size();
 			if (HttpStatus::is_good(_status_code)) {
-				set_content_type(get_header_value(http::headers::REQUEST_TARGET_DECODED));
+				set_content_type(_file.getFullFilename());
 				read_body_partially();
 			}
 		}
@@ -211,6 +205,7 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	// }
 
 	std::ostringstream ostringstream;
+	std::cout << status_code << std::endl;
 
 	ostringstream << "HTTP/1.1"  << " "
 		<< _status_code << "\r\n"
@@ -223,6 +218,10 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 	if (!_body.empty()) {
 		ostringstream  << "Content-Type: " << get_header_value(http::headers::CONTENT_TYPE) << "\r\n";
 		ostringstream << "Content-Length: " << _content_length << "\r\n";
+	}
+
+	if (HttpStatus::is_redirect(status_code)) {
+		ostringstream << "Location: " << _file.getReturnPage().path.string() << "\r\n";
 	}
 
 	//For cache
@@ -242,7 +241,7 @@ std::string Response::form_response(HttpStatus::e_code status_code, std::unorder
 
 	_response_length = _header_str.size() + _content_length;
 	// std::cout << "content length" << _content_length << std::endl;
-	// std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
+	std::cout << "RESPONSE:                  ==> \n" << _body << std::endl;
 	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
 	// std::cout << "size:                  ==> " << _body.size() << std::endl;
 

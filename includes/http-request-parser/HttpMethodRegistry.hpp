@@ -20,7 +20,7 @@ public:
 
 	void			 printAllowedMethods() const;
 
-	HttpMethodRegistry & operator=( HttpMethodRegistry && ) noexcept = default;
+	HttpMethodRegistry & operator=( const HttpMethodRegistry & ) noexcept;
 
 	HttpMethodRegistry() = default;
 	~HttpMethodRegistry() = default;

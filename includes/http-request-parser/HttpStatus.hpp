@@ -9,6 +9,7 @@ public:
 		OK = 200,
 		CREATED = 201,
 		NO_CONTENT = 204,
+		MOVED_PERMANENTLY = 301,
 		BAD_REQUEST = 400,
 		NOT_FOUND = 404,
 		METHOD_NOT_ALLOWED = 405,
@@ -28,6 +29,7 @@ public:
 	static uint			number_from_code(e_code code);
 	static bool			is_bad(e_code code);
 	static bool			is_good(e_code code);
+	static bool			is_redirect(e_code code);
 };
 
 std::ostream& operator<<(std::ostream& os, HttpStatus::e_code code);

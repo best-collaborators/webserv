@@ -8,6 +8,7 @@ std::string HttpStatus::get_status_code_name(e_code s)
 		case e_code::BAD_REQUEST:				  return "Bad Request";
 		case e_code::CREATED:					  return "Created";
 		case e_code::NO_CONTENT:				  return "No Content";
+		case e_code::MOVED_PERMANENTLY:			  return "Moved Permanently";
 		case e_code::NOT_FOUND: 				  return "Not Found";
 		case e_code::METHOD_NOT_ALLOWED: 		  return "Method Not Allowed";
 		case e_code::LENGTH_REQUIRED: 			  return "Length Required";
@@ -42,8 +43,13 @@ bool HttpStatus::is_bad(e_code code)
 	return static_cast<int>(code) >= static_cast<std::underlying_type_t<e_code>>(e_code::BAD_REQUEST);
 }
 
+bool HttpStatus::is_redirect(e_code code)
+{
+	return static_cast<int>(code) >= static_cast<std::underlying_type_t<e_code>>(e_code::MOVED_PERMANENTLY);
+}
+
 bool HttpStatus::is_good(e_code code)
 {
 	return static_cast<int>(code) > 0 &&
-	static_cast<int>(code) < static_cast<std::underlying_type_t<e_code>>(e_code::BAD_REQUEST);
+	static_cast<int>(code) < static_cast<std::underlying_type_t<e_code>>(e_code::MOVED_PERMANENTLY);
 }

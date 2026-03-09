@@ -159,7 +159,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 		return ERROR;
 
 	}
-
 	if (!registry.has_value())
 		registry.emplace();
 	_updateAllowedMethods(methods_str, registry.value());
@@ -261,8 +260,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationI
 	{
 		std::cerr << e.what() << '\n';
 	}
-	
-	location.default_file = line;
+	location.setDefaultFile(index_str);
 	fields.set(1);
 	return OK;
 }
@@ -273,7 +271,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 	if (_checkDuplicateField(2, "root", fields) == ERROR) return ERROR;
 	_extractDirectiveValue(line, 4);
 
-	location.root = std::filesystem::weakly_canonical(line);
+	location.setRoot(std::filesystem::weakly_canonical(line));
 	fields.set(2);
 	return OK;
 }
@@ -294,7 +292,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + line, "config");
 		return ERROR;
 	}
-	location.return_page = page;
+	location.setReturnPage(page);
 	fields.set(3);
 	return OK;
 }
@@ -310,7 +308,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationA
 		return ERROR;
 	}
 
-	location.autoindex = line == "on" ? true : false;
+	location.setAutoindex(line == "on" ? true : false);
 	fields.set(4);
 	return OK;
 }
@@ -318,8 +316,14 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationA
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocationDirective(
 	std::string &line, Location &location, std::bitset<8> &fields)
 {
-	if (isValidHeaderFormat(line, "allowed_methods", true))
-		return _parseAllowedMethods(line, location.methods_registry, fields);
+	if (isValidHeaderFormat(line, "allowed_methods", true)) {
+		std::optional<HttpMethodRegistry> method_registry;
+		e_parse_result result = _parseAllowedMethods(line, method_registry, fields);
+		if (method_registry.has_value())
+			location.setMethodsRegistry(method_registry.value());
+		
+		return result;
+	}
 	if (isValidHeaderFormat(line, "index", true))
 		return _parseLocationIndex(line, location, fields);
 	if (isValidHeaderFormat(line, "root", true))
@@ -343,7 +347,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 
 	std::bitset<8> location_assigned_fields;
 	Location location;
-	location.path = std::filesystem::weakly_canonical(path);
+	location.setPath(std::filesystem::weakly_canonical(path));
 
 	while (getline(ifs, line))
 	{
@@ -471,16 +475,16 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 	if (!s_block._locations.has_value()) return OK;
 
 	for (auto &l : s_block._locations.value()) {
-		if (l.root.empty()) l.root = s_block._root.string();
-		else l.root = s_block._root.string() + l.root.string();
+		if (l.getRoot().empty()) l.setRoot(s_block._root.string() + l.getPath().c_str());
+		else l.setRoot(s_block._root.string() + l.getRoot().string());
 
-		if (!std::filesystem::is_directory(l.root)) {
-			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.root.string(), "config");
+		if (!std::filesystem::is_directory(l.getRoot())) {
+			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.getRoot().string(), "config");
 			return ERROR;
 		}
 
-		std::filesystem::path full = std::filesystem::weakly_canonical(l.root.string() + "/" + l.default_file);
-		if (full.string().find(l.root) == std::string::npos) {
+		std::filesystem::path full = std::filesystem::weakly_canonical(l.getRoot().string() + "/" + l.getDefaultFile());
+		if (full.string().find(l.getRoot()) == std::string::npos) {
 			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
 			return ERROR;
 		}
@@ -673,7 +677,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseSingleSer
 		e_parse_result result = _dispatchServerDirective(ifs, line, extra_line);
 		if (result == ERROR)
 			return ERROR;
-		Logger::displayLog(Logger::e_log_level::CRITICAL, line, "config");
 	}
 	return OK;
 }

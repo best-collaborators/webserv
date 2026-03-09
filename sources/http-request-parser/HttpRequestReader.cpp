@@ -1,5 +1,7 @@
 #include "HttpRequestReader.hpp"
 
+HttpRequestReader::HttpRequestReader(ServerBlock const * server_block) : _request(server_block) {}
+
 bool HttpRequestReader::_headersComplete(const std::string &read_buffer) const noexcept
 {
 	return read_buffer.find("\r\n\r\n") != std::string::npos;
@@ -49,19 +51,17 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 
 	_request.print_http_request_values();
 
+	if (HttpStatus::is_redirect(_request.get_status_code())) {
+		_consumeHeader(read_buffer);
+		return HeaderState::Redirect;
+	}
+
 	if (_request.get_method() != HttpMethod::e_code::POST && read_buffer.size() != 0) {
 		return HeaderState::Error;
 	}
 
-	std::string	target = _request.get_header_value(http::headers::REQUEST_TARGET);
-	std::string path = RegexMatcher::get_regex_value(target, HttpRegexPatterns::CGI_VALID_PATH());
-	
-	if (!path.empty()) {
-		_request.setIsCGI(true);
-		if (_request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
-	}
-
-
+	std::cout << "_request.isCGI() " << _request.isCGI() << std::endl;
+	if (_request.isCGI() && _request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
 	return _handleHeaderMethod(read_buffer);
 }
 
@@ -79,7 +79,9 @@ ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 			}
 			return ReaderState::AwaitingBody;
 
-		//! CHECK RETURN STATUS CLOSE
+		case HeaderState::Redirect:
+			return ReaderState::Complete;
+
 		case HeaderState::Error:
 			std::cout << "[request-reader] Request headers invalid." << std::endl;
 			return ReaderState::Error;
@@ -256,12 +258,17 @@ std::unordered_map<std::string, std::string> HttpRequestReader::getHeaders()
 	return _request.get_headers();
 }
 
-std::unordered_map<std::string, std::string> HttpRequestReader::moveHeaders()
-{
-	return _request.copy_headers();
-}
-
 void HttpRequestReader::printHeaders()
 {
 	_request.print_http_request_values();
+}
+
+const File& HttpRequestReader::getFile() const
+{
+	return _request.getFile();
+}
+
+HttpMethod::e_code HttpRequestReader::getMethod() const
+{
+	return _request.get_method();
 }

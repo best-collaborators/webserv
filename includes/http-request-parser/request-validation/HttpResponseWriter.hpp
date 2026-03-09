@@ -21,7 +21,7 @@ public:
 	HttpResponseWriter( HttpResponseWriter && ) noexcept = default;
 	HttpResponseWriter & operator=( HttpResponseWriter && ) noexcept = default;
 	
-	void formResponse(HttpStatus::e_code status_code, std::unordered_map<std::string, std::string> &&_headers, const std::optional<std::string> & buffer = std::nullopt);
+	void formResponse(HttpStatus::e_code status_code,const HttpMethod::e_code &method, const File &file, const std::string & buffer = "");
 
 	void		write();
 	size_t		totalLength() const noexcept;

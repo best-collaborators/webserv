@@ -66,7 +66,7 @@ private:
 	IoEvent		_sendData() noexcept;
 
 public:
-	Connection() = default;
+	Connection() = delete;
 	Connection( ServerBlock const * server_block, Socket && socket );
 
 	Connection( Connection const & ) = delete;

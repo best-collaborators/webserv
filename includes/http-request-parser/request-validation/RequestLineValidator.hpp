@@ -27,19 +27,25 @@ private:
 	ParseContext &_parse_context;
 
 	//Add to separate utils:
-	
+
 	bool _addValueToMap( std::regex regex_str, std::string &buffer, const char *errmsg, std::string key );
 
 	RequestLineValidator() = delete;
 	RequestLineValidator(const RequestLineValidator & other) = delete;
 	RequestLineValidator(const RequestLineValidator && other) = delete;
 
+	enum e_parse_result {
+		NO_FILE_IN_CONFIG,
+		MATCH_FOUND,
+		RELOCATION
+	};
+
 	bool _isValidRequestLine(std::string &buffer);
 	bool _isValidHttpVersion();
 	bool _isValidUriLength();
 	bool _isMethodAllowed();
 	bool _isCGIPathValid();
-
+	e_parse_result _isRequestTargetInConfigFile(std::string &request_target);
 
 public:
 	RequestLineValidator( ParseContext &parse_context );

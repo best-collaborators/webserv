@@ -1,10 +1,15 @@
 #include "Request.hpp"
 
-Request::Request() : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)) {}
+Request::Request(ServerBlock const * server_block) : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)), _server_block(server_block) {}
 
 HttpStatus::e_code Request::get_status_code() const
 {
 	return _status_code;
+}
+
+ServerBlock const & Request::getServerBlock()
+{
+	return *_server_block;
 }
 
 void Request::set_status_code(HttpStatus::e_code status_code)
@@ -42,10 +47,9 @@ std::string Request::getContentType() const
 	return get_header_value(http::headers::CONTENT_TYPE);
 }
 
-
-bool Request::isStatusCodeBad() const
+bool Request::isGoodStatusCode() const
 {
-	return HttpStatus::is_bad(_status_code);
+	return HttpStatus::is_good(_status_code);
 }
 
 bool Request::isCGI()
@@ -97,4 +101,15 @@ void Request::reset()
 	_chunk_handler.reset();
 	_headers.clear();
 	_body.clear();
+	_file = File();
+}
+
+const File& Request::getFile() const
+{
+	return _file;
+}
+
+void Request::setFile(const File& file)
+{
+	_file = file;
 }
