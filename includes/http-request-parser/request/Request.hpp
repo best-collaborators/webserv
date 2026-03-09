@@ -13,6 +13,7 @@
 #include "RequestBodyStatus.hpp"
 #include "ChunkHandler.hpp"
 #include "ServerBlock.hpp"
+#include "File.hpp"
 
 class Request : public HttpMessage
 {
@@ -26,6 +27,7 @@ private:
 	bool				_is_cgi;
 
 	ServerBlock const * _server_block;
+	File				_file;
 
 public:
 	Request(ServerBlock const * server_block);
@@ -41,6 +43,9 @@ public:
 	HttpMethod::e_code	 get_method() const;
 	void				 set_method(std::string method);
 
+	const File			&getFile() const;
+	void				setFile(const File &file);
+
 	std::string			 getContentType() const;
 
 	void				 print_http_request_values() const;
@@ -50,15 +55,15 @@ public:
 	ChunkHandler&		 chunkHandler();
 	void				 reset();
 
-	bool				isStatusCodeBad() const;
+	bool				isGoodStatusCode() const;
 
 	bool				isCGI();
 	void				setIsCGI(bool is_cgi);
 
 	void				adjustHeaderForCGI();
 
-	ServerBlock const & getServerBlock();
-	RequestType getBodyStatus() const;
+	ServerBlock const &	getServerBlock();
+	RequestType 		getBodyStatus() const;
 };
 
 #endif /* HTTP_REQUEST */

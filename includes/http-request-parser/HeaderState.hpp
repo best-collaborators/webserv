@@ -6,5 +6,6 @@ enum class HeaderState
 	Incomplete,
 	ContainsBody,
 	Error,
+	Redirect,
 	CGI
 };

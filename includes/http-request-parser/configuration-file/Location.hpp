@@ -12,7 +12,7 @@ class Location
 {
 	std::filesystem::path				path;
 	std::filesystem::path				root;
-	bool								autoindex;
+	bool								autoindex = false;
 	std::string							default_file;
 	std::optional<HttpMethodRegistry>	methods_registry;
 	HttpPage							return_page;

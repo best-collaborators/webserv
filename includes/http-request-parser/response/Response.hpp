@@ -17,18 +17,24 @@
 #include "HttpMethod.hpp"
 #include "HttpHeaders.hpp"
 #include "HttpMessage.hpp"
+#include "File.hpp"
 
 class Response : HttpMessage
 {
 private:
 	HttpStatus::e_code		_status_code;
+	HttpMethod::e_code		_method;
+	File					_file;
+
 	std::size_t				_response_length;
 	std::streampos			_content_length;
-	std::string				_root = "data";
 	size_t					_bytes_sent;
 	ssize_t					_bytes_read;
 	size_t					_buffer = 10240;
+
 	bool					_is_default_page;
+
+	//? temp for debug
 	std::string				_header_str;
 
 	std::string				get_file_last_modified_date(const std::string &filename);
@@ -47,8 +53,8 @@ public:
 	Response & operator=( Response && ) noexcept = default;
 	~Response() = default;
 
-	std::string 		form_response(HttpStatus::e_code _status_code, std::unordered_map<std::string, std::string> &&_http_request_values, std::string body = "");
 	HttpStatus::e_code	status_code() const noexcept;
+	std::string			form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body );
 	size_t				get_total_response_length() const noexcept;
 	size_t				get_current_length() const noexcept;
 	const char			*getResponseData() const noexcept;

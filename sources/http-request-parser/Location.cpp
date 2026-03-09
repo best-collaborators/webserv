@@ -41,6 +41,8 @@ void Location::setDefaultFile(const std::string& f) {
 }
 
 void Location::setMethodsRegistry(const HttpMethodRegistry& m) {
+	if (!methods_registry.has_value())
+		methods_registry.emplace();
 	methods_registry.value() = m;
 }
 

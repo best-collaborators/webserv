@@ -47,10 +47,9 @@ std::string Request::getContentType() const
 	return get_header_value(http::headers::CONTENT_TYPE);
 }
 
-
-bool Request::isStatusCodeBad() const
+bool Request::isGoodStatusCode() const
 {
-	return HttpStatus::is_bad(_status_code);
+	return HttpStatus::is_good(_status_code);
 }
 
 bool Request::isCGI()
@@ -102,4 +101,15 @@ void Request::reset()
 	_chunk_handler.reset();
 	_headers.clear();
 	_body.clear();
+	_file = File();
+}
+
+const File& Request::getFile() const
+{
+	return _file;
+}
+
+void Request::setFile(const File& file)
+{
+	_file = file;
 }

@@ -39,7 +39,7 @@ void	Connection::_formResponse()
 	if (_cgi_handler)
 		_formCGIResponse();
 	else
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders());
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile());
 
 	size_t content_length = _request_reader.getContentLength();
 	if (content_length > 0)
@@ -62,11 +62,11 @@ void	Connection::_formCGIResponse()
 	if (cgi_status != HttpStatus::e_code::OK)
 	{
 		_request_reader.setStatusCode(cgi_status);
-		_response_writer.formResponse(cgi_status, _request_reader.moveHeaders());
+		_response_writer.formResponse(cgi_status, _request_reader.getMethod(), _request_reader.getFile());
 	}
 	else
 	{
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.moveHeaders(), cgi_buffer);
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile(), cgi_buffer);
 	}
 
 	_cgi_handler.reset();

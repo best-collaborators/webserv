@@ -260,8 +260,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationI
 	{
 		std::cerr << e.what() << '\n';
 	}
-	
-	location.setDefaultFile(line);
+	location.setDefaultFile(index_str);
 	fields.set(1);
 	return OK;
 }
@@ -320,7 +319,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocati
 	if (isValidHeaderFormat(line, "allowed_methods", true)) {
 		std::optional<HttpMethodRegistry> method_registry;
 		e_parse_result result = _parseAllowedMethods(line, method_registry, fields);
-		std::cout << "location\n";
 		if (method_registry.has_value())
 			location.setMethodsRegistry(method_registry.value());
 		
@@ -477,7 +475,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 	if (!s_block._locations.has_value()) return OK;
 
 	for (auto &l : s_block._locations.value()) {
-		if (l.getRoot().empty()) l.setRoot(s_block._root.string());
+		if (l.getRoot().empty()) l.setRoot(s_block._root.string() + l.getPath().c_str());
 		else l.setRoot(s_block._root.string() + l.getRoot().string());
 
 		if (!std::filesystem::is_directory(l.getRoot())) {
@@ -679,7 +677,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseSingleSer
 		e_parse_result result = _dispatchServerDirective(ifs, line, extra_line);
 		if (result == ERROR)
 			return ERROR;
-		Logger::displayLog(Logger::e_log_level::CRITICAL, line, "config");
 	}
 	return OK;
 }

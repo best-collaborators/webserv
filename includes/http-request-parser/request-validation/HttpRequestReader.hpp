@@ -54,9 +54,10 @@ public:
 	void				setStatusCode(HttpStatus::e_code status);
 	HttpStatus::e_code	getStatusCode();
 
-	std::unordered_map<std::string, std::string> getHeaders();
-	std::unordered_map<std::string, std::string> moveHeaders();
+	const File			&getFile() const;
+	HttpMethod::e_code	getMethod() const;
 
+	std::unordered_map<std::string, std::string> getHeaders();
 	void printHeaders();
 };
 

@@ -50,14 +50,10 @@ namespace
 	std::string	scriptPathResolver( std::unordered_map<std::string, std::string> const & headers )
 	{
 		std::regex	reg_ex("(\\w+\\.(?:js|py|php|cgi))");
-		std::string	target = headers.at("request-target");
-		std::string filename = RegexMatcher::get_regex_value(target, reg_ex);
-		if (filename.empty())
-			return "";
+		std::string	target = headers.at("request-target-decoded");
+		std::cout << "filename: " << target << std::endl;
 
-		std::cout << "filename: " << filename << std::endl;
-
-		return "tests/" + filename;
+		return target;
 	}
 
 	std::vector<std::string> buildEnvp( std::unordered_map<std::string, std::string> const & headers )
