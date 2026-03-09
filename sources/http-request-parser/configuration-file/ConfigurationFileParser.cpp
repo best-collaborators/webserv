@@ -484,8 +484,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 		}
 
 		std::filesystem::path full = std::filesystem::weakly_canonical(l.getRoot().string() + "/" + l.getDefaultFile());
-		if (full.string().find(l.getRoot()) == std::string::npos) {
-			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+		if (full.string().find(l.getRoot().c_str(), 0, l.getRoot().string().size() - 1) == std::string::npos) {
+			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory: " + full.string(), "config");
 			return ERROR;
 		}
 	}
