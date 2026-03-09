@@ -280,13 +280,12 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 	std::string &line, Location &location, std::bitset<8> &fields)
 {
 	if (_checkDuplicateField(3, "redirect", fields) == ERROR) return ERROR;
-	_extractDirectiveValue(line, 6);
+	_extractDirectiveValue(line, 8);
 
-	std::string copy = line;
 	HttpPage page;
 	try {
-		page.path = std::filesystem::weakly_canonical(line);;
-		page.status_code = HttpStatus::e_code(std::stoi(line.substr(3)));
+		page.path = std::filesystem::weakly_canonical(line.substr(3));
+		page.status_code = HttpStatus::e_code(std::stoi(line.substr(0, 3)));
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + line, "config");
