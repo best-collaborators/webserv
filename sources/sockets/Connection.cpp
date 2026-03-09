@@ -204,10 +204,9 @@ IoEvent Connection::_tryInitCGI() noexcept
 	if (!cgi::isCGITarget(headers["request-target"]))
 		return IoEvent::Error; //! Handle correct return from invalid CGI
 
-	// _request_reader.printHeaders();
 	try
 	{
-		CGIConfig	config = cgi::buildConfig(headers);
+		CGIConfig	config = cgi::buildConfig(headers, *_server_block);
 		_cgi_handler.emplace(config);
 	}
 	catch(const std::exception& e)

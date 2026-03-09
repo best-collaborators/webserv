@@ -1,6 +1,7 @@
 #pragma once
 
 #include <regex>
+#include <string_view>
 
 #include "Request.hpp"
 #include "CGIConfig.hpp"
@@ -10,5 +11,5 @@
 namespace cgi
 {
 	bool isCGITarget( std::string const & target );
-	CGIConfig buildConfig( std::unordered_map<std::string, std::string> const & headers );
+	CGIConfig buildConfig( std::unordered_map<std::string, std::string> const & headers, ServerBlock const & server_block );
 }

@@ -1,95 +1,133 @@
 #include "CGIRequestConfig.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <unordered_set>
+
 namespace
 {
-	void addMethodEnv( std::string value, std::unordered_map<std::string, std::string> & envp )
+	const std::unordered_set<std::string> CGI_HEADERS = {
+		http::headers::METHOD,
+		http::headers::VERSION,
+		http::headers::REQUEST_TARGET,
+		http::headers::REQUEST_TARGET_DECODED,
+		http::headers::HOST,
+		http::headers::STATUS,
+		http::headers::CONTENT_TYPE,
+		http::headers::CONTENT_LENGTH,
+		http::headers::TRANSFER_ENCODING
+	};
+
+	bool isCGIHeader( std::string const & key )
 	{
-		envp.insert({ "REQUEST_METHOD", value });
+		return CGI_HEADERS.count(key) > 0;
 	}
 
-	void addProtocolEnv( std::string value, std::unordered_map<std::string, std::string> & envp )
+	std::string toCGIHeaderName( std::string const & headerName )
 	{
-		envp.insert({ "SERVER_PROTOCOL", value });
-	}
-
-	void addHostEnv( std::string value, std::unordered_map<std::string, std::string> & envp )
-	{
-		size_t	pos = value.find(':');
-
-		if (pos != std::string::npos)
+		std::string result = "HTTP_";
+		for (char c : headerName)
 		{
-			envp.insert({ "SERVER_NAME", value.substr(0, pos) });
-			envp.insert({ "SERVER_PORT", value.substr(pos + 1) });
+			if (c == '-')
+				result += '_';
+			else
+				result += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
 		}
+		return result;
 	}
 
-	void addTargetEnv( std::string value, std::unordered_map<std::string, std::string> & envp )
+	void addHostEnv( std::string const & value, std::unordered_map<std::string, std::string> & envp )
 	{
-		size_t	pos = value.find('?');
-
+		size_t pos = value.find(':');
 		if (pos != std::string::npos)
 		{
-			envp.insert({ "SCRIPT_NAME", value.substr(0, pos) });
-			envp.insert({ "QUERY_STRING", value.substr(pos + 1) });
+			envp["SERVER_NAME"] = value.substr(0, pos);
+			envp["SERVER_PORT"] = value.substr(pos + 1);
 		}
 		else
 		{
-			envp.insert({ "SCRIPT_NAME", value });
-			envp.insert({ "QUERY_STRING", "" });
+			envp["SERVER_NAME"] = value;
+			envp["SERVER_PORT"] = "80";
 		}
 	}
 
-	void addContentEnv( std::string key, std::string value, std::unordered_map<std::string, std::string> & envp )
+	void addTargetEnv( std::string const & value, std::unordered_map<std::string, std::string> & envp )
 	{
-		if (key == http::headers::CONTENT_TYPE)
-			envp.insert({ "CONTENT_TYPE", value });
-		else if (key == http::headers::CONTENT_LENGTH)
-			envp.insert({ "CONTENT_LENGTH", value });
+		std::string path = value;
+		std::string queryString;
+
+		size_t qpos = value.find('?');
+		if (qpos != std::string::npos)
+		{
+			path = value.substr(0, qpos);
+			queryString = value.substr(qpos + 1);
+		}
+
+		envp["SCRIPT_NAME"] = path;
+		envp["QUERY_STRING"] = queryString;
 	}
 
-	std::string	scriptPathResolver( std::unordered_map<std::string, std::string> const & headers )
+	std::string getScriptPath( std::string target, ServerBlock const & server_block )
 	{
-		std::regex	reg_ex("(\\w+\\.(?:js|py|php|cgi))");
-		std::string	target = headers.at("request-target-decoded");
-		std::cout << "filename: " << target << std::endl;
+		std::regex reg_ex("(\\w+\\.(?:js|py|php|cgi))");
+		std::string filename = RegexMatcher::get_regex_value(target, reg_ex);
+		if (filename.empty())
+			return "";
 
-		return target;
+		return server_block._root.string() + server_block._cgi.value().at(0).path + filename;
+	}
+
+	std::string getExecutablePath( std::string target, ServerBlock const & server_block )
+	{
+		std::regex reg_ex("(\\.(?:js|py|php|cgi))");
+		std::string extension = RegexMatcher::get_regex_value(target, reg_ex);
+		if (extension.empty() || !server_block._cgi.has_value())
+			return "";
+
+		auto const & exec_paths = server_block._cgi.value().at(0).pass_to;
+		for (auto const & [ext, path] : exec_paths)
+		{
+			if (extension == ext)
+				return path;
+		}
+		return "";
 	}
 
 	std::vector<std::string> buildEnvp( std::unordered_map<std::string, std::string> const & headers )
 	{
-		std::vector <std::string> env_vars;
 		std::unordered_map<std::string, std::string> envp;
 
-		std::string method = headers.at("method");
+		envp["GATEWAY_INTERFACE"] = "CGI/1.1";
 
-		for (auto && header : headers)
+		if (headers.count(http::headers::METHOD))
+			envp["REQUEST_METHOD"] = headers.at(http::headers::METHOD);
+
+		if (headers.count(http::headers::VERSION))
+			envp["SERVER_PROTOCOL"] = headers.at(http::headers::VERSION);
+
+		if (headers.count(http::headers::HOST))
+			addHostEnv(headers.at(http::headers::HOST), envp);
+
+		if (headers.count(http::headers::REQUEST_TARGET))
+			addTargetEnv(headers.at(http::headers::REQUEST_TARGET), envp);
+
+		if (headers.count(http::headers::CONTENT_TYPE))
+			envp["CONTENT_TYPE"] = headers.at(http::headers::CONTENT_TYPE);
+
+		if (headers.count(http::headers::CONTENT_LENGTH))
+			envp["CONTENT_LENGTH"] = headers.at(http::headers::CONTENT_LENGTH);
+
+		for (auto const & [key, value] : headers)
 		{
-			std::string key = header.first;
-			std::string value = header.second;
-
-			if (method == "POST")
-				addContentEnv(key, value, envp);
-
-			if (key == http::headers::METHOD)
-				addMethodEnv(value, envp);
-			else if (key == http::headers::REQUEST_TARGET)
-				addTargetEnv(value, envp);
-			else if (key == http::headers::VERSION)
-				addProtocolEnv(value, envp);
-			else if (key == http::headers::HOST)
-				addHostEnv(value, envp);
-
-			std::cout << key << ": " << value << std::endl;
+			if (isCGIHeader(key))
+				continue;
+			envp[toCGIHeaderName(key)] = value;
 		}
 
-		std::cout << "\n\nENV VARIABLES: " << std::endl;
-		for (auto && [key, value] : envp)
-		{
+		std::vector<std::string> env_vars;
+		env_vars.reserve(envp.size());
+		for (auto const & [key, value] : envp)
 			env_vars.push_back(key + "=" + value);
-			std::cout << key << ": " << value << std::endl;
-		}
-		std::cout << "\n\n" << std::endl;
 
 		return env_vars;
 	}
@@ -97,7 +135,7 @@ namespace
 
 bool	cgi::isCGITarget( std::string const & target )
 {
-	const std::regex regex("(^/cgi-bin/\\w+.(?:js|py|php|cgi))");
+	const std::regex regex("(^/cgi-bin/\\w+\\.(?:js|py|php|cgi))");
 	std::smatch match;
 
 	if (std::regex_search(target, match, regex) && match.ready())
@@ -106,36 +144,13 @@ bool	cgi::isCGITarget( std::string const & target )
 	return false;
 }
 
-CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers )
+CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, ServerBlock const & server_block )
 {
-	std::string	executable;
+	std::string target = headers.at(http::headers::REQUEST_TARGET);
 
-	std::regex	reg_ex("(\\.(?:js|py|php|cgi))");
-	std::string	target = headers.at("request-target");
-	std::cout << "CGI target: " << target << std::endl;
-	std::string extension = RegexMatcher::get_regex_value(target, reg_ex);
-
-
-	if (extension.empty())
-		std::cout << "(cgi::buildConfig) extension.empty()" << std::endl;
-
-	std::cout << "CGI extension: " << extension << std::endl;
-
-	if (extension == ".js")
-		executable = "/usr/local/bin/node";
-	else if (extension == ".py")
-		executable = "/usr/local/bin/python";
-	else if (extension == ".php")
-		executable = "/usr/bin/php";
-
-	std::string	scriptPath = scriptPathResolver(headers);
-	std::vector<std::string> envVariables = buildEnvp(headers);
-
-	CGIConfig	config = {
-		executable,
-		scriptPath,
-		envVariables
+	return CGIConfig {
+		getExecutablePath(target, server_block),
+		getScriptPath(target, server_block),
+		buildEnvp(headers)
 	};
-
-	return config;
 }
