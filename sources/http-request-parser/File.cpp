@@ -57,3 +57,23 @@ void File::setReturnPage(HttpPage return_page)
 {
 	_return_page = return_page;
 }
+
+const HttpMethodRegistry &File::getMethodRegistry() const
+{
+	return _method_registry;
+}
+
+void File::setMethodRegistry(HttpMethodRegistry method_registry)
+{
+	_method_registry = method_registry;
+}
+
+size_t File::getMaxBodySize() const
+{
+	return _max_body_size;
+}
+
+void File::setMaxBodySize(size_t max_body_size)
+{
+	_max_body_size = max_body_size;
+}

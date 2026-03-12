@@ -12,7 +12,7 @@ void HttpBodyParser::_handleMultipart()
 
 void HttpBodyParser::_handleChunked()
 {
-	FileUploadHandler file_uploader("data/", _parse_context.request);
+	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 
 	TransferEncodingChunkedParser chunked_parser(_parse_context);
 	chunked_parser.parse();
@@ -28,7 +28,7 @@ void HttpBodyParser::_handleChunked()
 
 void HttpBodyParser::_handleRawUpload()
 {
-	FileUploadHandler file_uploader("data/", _parse_context.request);
+	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 	file_uploader.write_into_file(_parse_context.raw_bits);
 	_parse_context.request.set_status_code(HttpStatus::e_code::NO_CONTENT);
 }

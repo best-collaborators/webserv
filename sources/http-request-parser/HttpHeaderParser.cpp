@@ -91,13 +91,13 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 	try {
 		size_t pos;
 		const std::string content_length_str = _parse_context.request.get_header_value(http::headers::CONTENT_LENGTH);
-		int test_length = std::stoll(content_length_str, &pos, 10);
+		size_t test_length = std::stoull(content_length_str, &pos, 10);
 		if (content_length_str.length() != pos) {
 			std::cerr << "400 Bad Request - content-length is NAN" << std::endl; 
 			return HttpStatus::e_code::BAD_REQUEST;
 		}
 
-		if (test_length > http::limits::max_body_length) {
+		if (test_length > _parse_context.request.getServerBlock()._max_body_size) {
 			std::cerr << "413 Request Entity Too Large" << std::endl;
 			return HttpStatus::e_code::CONTENT_TOO_LARGE;
 		}

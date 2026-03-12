@@ -45,7 +45,8 @@ bool HttpStatus::is_bad(e_code code)
 
 bool HttpStatus::is_redirect(e_code code)
 {
-	return static_cast<int>(code) >= static_cast<std::underlying_type_t<e_code>>(e_code::MOVED_PERMANENTLY);
+	return static_cast<int>(code) >= static_cast<std::underlying_type_t<e_code>>(e_code::MOVED_PERMANENTLY)
+	&& static_cast<int>(code) < static_cast<std::underlying_type_t<e_code>>(e_code::BAD_REQUEST);;
 }
 
 bool HttpStatus::is_good(e_code code)

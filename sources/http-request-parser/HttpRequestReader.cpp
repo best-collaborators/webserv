@@ -28,7 +28,7 @@ HeaderState HttpRequestReader::_handleHeaderMethod(std::string &read_buffer) noe
 	std::string method = _request.get_header_value(http::headers::METHOD);
 	if (!HttpMethod::hasBody(_request.get_method())) {
 
-		if (_request.get_content_length() != -1 || read_buffer.size() > 0) {
+		if (_request.get_content_length() != 0 || read_buffer.size() > 0) {
 			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)" << std::endl;
 			return HeaderState::Error;
 		}
@@ -110,7 +110,13 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 	if (_stored_body_bytes == _request.get_content_length()) {
 		return BodyState::Complete;
 	}
-	else if ( _request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
+	else if (_request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
+	{
+		std::cout << "Read buffer size: " << read_buffer.size() << std::endl;
+		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
+		return BodyState::Overflow;
+	}
+	else if (_stored_body_bytes > _request.getFile().getMaxBodySize())
 	{
 		std::cout << "Read buffer size: " << read_buffer.size() << std::endl;
 		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
@@ -164,8 +170,6 @@ BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 
 ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_read) noexcept
 {
-	// std::cout << "body: " << _read_buffer << std::endl;
-
 	switch (_checkBodyState(buffer, bytes_read))
 	{
 		case BodyState::Incomplete:
@@ -233,12 +237,12 @@ ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
 	return _curr_state;
 }
 
-ssize_t HttpRequestReader::getStoredBodyBytes() const noexcept
+size_t HttpRequestReader::getStoredBodyBytes() const noexcept
 {
 	return _stored_body_bytes;
 }
 
-ssize_t HttpRequestReader::getContentLength() const noexcept
+size_t HttpRequestReader::getContentLength() const noexcept
 {
 	return _request.get_content_length();
 }

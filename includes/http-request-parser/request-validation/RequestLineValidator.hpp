@@ -19,6 +19,18 @@
 
 class RequestLineValidator : public IParser
 {
+public:
+	enum e_parse_result {
+		NO_FILE_IN_CONFIG,
+		MATCH_FOUND,
+		RELOCATION
+	};
+
+	RequestLineValidator( ParseContext &parse_context );
+	~RequestLineValidator() = default;
+
+	void	parse();
+
 private:
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
 	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
@@ -34,24 +46,12 @@ private:
 	RequestLineValidator(const RequestLineValidator & other) = delete;
 	RequestLineValidator(const RequestLineValidator && other) = delete;
 
-	enum e_parse_result {
-		NO_FILE_IN_CONFIG,
-		MATCH_FOUND,
-		RELOCATION
-	};
-
 	bool _isValidRequestLine(std::string &buffer);
 	bool _isValidHttpVersion();
 	bool _isValidUriLength();
 	bool _isMethodAllowed();
 	bool _isCGIPathValid();
 	e_parse_result _isRequestTargetInConfigFile(std::string &request_target);
-
-public:
-	RequestLineValidator( ParseContext &parse_context );
-	~RequestLineValidator() = default;
-
-	void	parse();
 };
 
 #endif /* REQUEST_LINE_VALIDATOR */

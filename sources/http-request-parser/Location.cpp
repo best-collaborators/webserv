@@ -73,7 +73,7 @@ std::string Location::to_string() const noexcept
 	std::string result = "Location path: " + path.string() + "\n";
 	
 	if (methods_registry.has_value())
-		result += "    Methods: allowed\n";
+		result += "    Methods: " + methods_registry.value().to_string() + "\n";
 	if (!default_file.empty())
 		result += "    Index: " + default_file + "\n";
 	if (!root.empty())
