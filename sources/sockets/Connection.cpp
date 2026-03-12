@@ -42,8 +42,7 @@ void	Connection::_formResponse()
 		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile());
 
 	size_t content_length = _request_reader.getContentLength();
-	if (content_length > 0)
-		_buffer_manager.consume(content_length);
+	_buffer_manager.consume(content_length);
 	_response_formed = true;
 }
 

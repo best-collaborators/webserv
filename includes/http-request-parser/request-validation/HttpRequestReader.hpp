@@ -15,7 +15,7 @@ class HttpRequestReader
 private:
 	Request		_request;
 
-	ssize_t		_stored_body_bytes = 0;
+	size_t		_stored_body_bytes = 0;
 	ReaderState	_curr_state = ReaderState::AwaitingHeaders;
 
 	HeaderState	_checkHeaderState(std::string &read_buffer) noexcept;
@@ -48,8 +48,8 @@ public:
 	void				reset();
 
 	ReaderState			read(std::string &buffer, size_t bytes_read);
-	ssize_t 			getStoredBodyBytes() const noexcept;
-	ssize_t				getContentLength() const noexcept;
+	size_t 			getStoredBodyBytes() const noexcept;
+	size_t				getContentLength() const noexcept;
 
 	void				setStatusCode(HttpStatus::e_code status);
 	HttpStatus::e_code	getStatusCode();

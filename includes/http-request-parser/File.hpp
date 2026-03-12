@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 #include "HttpPage.hpp"
+#include "HttpMethodRegistry.hpp"
 
 class File
 {
@@ -14,6 +15,8 @@ private:
 	std::string					_extension;
 	std::optional<std::string>	_pass_to;
 	HttpPage					_return_page;
+	HttpMethodRegistry			_method_registry;
+	size_t						_max_body_size;
 
 public:
 	File(/* args */);
@@ -31,6 +34,10 @@ public:
 	void								setPassTo(const std::optional<std::string>& pass);
 	const HttpPage						&getReturnPage() const;
 	void								setReturnPage(HttpPage _return_page);
+	const HttpMethodRegistry			&getMethodRegistry() const;
+	void								setMethodRegistry(HttpMethodRegistry _method_registry);
+	size_t								getMaxBodySize() const;
+	void								setMaxBodySize(size_t max_body_size);
 };
 
 #endif /* FILE_HPP */

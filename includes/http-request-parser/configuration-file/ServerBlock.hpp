@@ -17,7 +17,7 @@ struct ServerBlock
 	std::string									_server_name;
 	ListenData									_listen_data;
 	std::map<HttpStatus::e_code, std::string>	_error_pages;
-	int 										_max_body_size;
+	size_t										_max_body_size;
 	std::filesystem::path						_root;
 	std::optional<std::string>					_index;
 	std::optional<std::vector<Location>>		_locations;

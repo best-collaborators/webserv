@@ -34,7 +34,7 @@ public:
 	size_t										amount_of_headers() const;
 	void										set_header_value(std::string key, std::string new_value);
 	void										append_header_value(std::string key, std::string additional_value);
-	ssize_t										get_content_length() const;
+	size_t										get_content_length() const;
 
 	void										append_body_value(std::string addition);
 	void										append_body_value(std::string addition, size_t bytes);
