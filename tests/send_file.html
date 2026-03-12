@@ -44,7 +44,7 @@
 
     const file = fileInput.files[0];
 
-    fetch("http://127.0.0.1:3490/", {
+    fetch("http://127.0.0.1:3490/videos/", {
       method: "POST",
       headers: {
         "Content-Type": file.type || "application/octet-stream"
