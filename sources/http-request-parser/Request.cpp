@@ -7,9 +7,9 @@ HttpStatus::e_code Request::get_status_code() const
 	return _status_code;
 }
 
-ServerBlock const & Request::getServerBlock()
+ServerBlock const * Request::getServerBlock()
 {
-	return *_server_block;
+	return _server_block;
 }
 
 void Request::set_status_code(HttpStatus::e_code status_code)

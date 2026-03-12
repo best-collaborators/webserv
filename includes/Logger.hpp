@@ -23,7 +23,7 @@ public:
 		NONE
 	};
 	static void displayLog(e_log_level level, const std::string& message, const std::string& module = "http");
-	static constexpr e_log_level _max_log_lvl = e_log_level::INFO;
+	static constexpr e_log_level _max_log_lvl = e_log_level::DEBUG;
 
 private:
 	Logger() = delete;

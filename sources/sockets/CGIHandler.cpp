@@ -103,8 +103,9 @@ IoEvent CGIHandler::readFromCGI() noexcept
 
 			_content_length = parse_data.request.get_content_length();
 
-			if (_content_length == 0)
+			if (parse_data.request.get_header_count(http::headers::CONTENT_LENGTH) && _content_length == 0)
 			{
+				_recv_buffer = _recv_buffer.substr(0, _header_end_offset);
 				Log::debug("CGI content-length is 0, done", "CGI");
 				return IoEvent::Done;
 			}

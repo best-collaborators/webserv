@@ -55,7 +55,7 @@ public:
 	~Response() = default;
 
 	HttpStatus::e_code	status_code() const noexcept;
-	std::string			form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body );
+	std::string			form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body, bool isCGI = false );
 	size_t				get_total_response_length() const noexcept;
 	size_t				get_current_length() const noexcept;
 	const char			*getResponseData() const noexcept;

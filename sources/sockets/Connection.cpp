@@ -65,7 +65,7 @@ void	Connection::_formCGIResponse()
 	}
 	else
 	{
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile(), cgi_buffer);
+		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile(), cgi_buffer, true);
 	}
 
 	_cgi_handler.reset();
@@ -202,8 +202,6 @@ IoEvent Connection::_tryInitCGI() noexcept
 
 	File const & file = _request_reader.getFile();
 
-	if (!cgi::isCGITarget(headers["request-target"]))
-		return IoEvent::Error; //! Handle correct return from invalid CGI
 
 	try
 	{

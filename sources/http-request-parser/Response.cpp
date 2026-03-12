@@ -158,7 +158,7 @@ std::streampos Response::get_file_size()
 	return _content_length;
 }
 
-std::string Response::form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body)
+std::string Response::form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body, bool isCGI)
 {
 	_response_length = 0;
 	_content_length = 0;
@@ -173,7 +173,7 @@ std::string Response::form_response( const HttpStatus::e_code &status_code, cons
 		_body = ListingGenerator::getListingPage(file);
 		_content_length = _body.size();
 	}
-	else if (HttpStatus::is_good(status_code) && !body.empty())
+	else if (HttpStatus::is_good(status_code) && isCGI)
 	{
 		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();

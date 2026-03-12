@@ -62,7 +62,7 @@ public:
 
 	void				adjustHeaderForCGI();
 
-	ServerBlock const &	getServerBlock();
+	ServerBlock const *	getServerBlock();
 	RequestType 		getBodyStatus() const;
 };
 

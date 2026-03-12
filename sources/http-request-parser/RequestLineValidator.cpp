@@ -309,7 +309,9 @@ namespace {
 #include "File.hpp"
 RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInConfigFile(std::string &request_target)
 {
-	const ServerBlock &server_block = _parse_context.request.getServerBlock();
+	if (!_parse_context.request.getServerBlock()) return UNKNOWN_ERROR;
+
+	const ServerBlock &server_block = *_parse_context.request.getServerBlock();
 	Request &request = _parse_context.request;
 
 	std::filesystem::path filename_path(request_target);
@@ -348,6 +350,12 @@ void RequestLineValidator::parse()
 	std::string decoded_path = PercentEncoder::percent_encoding(request_parser);
 
 	e_parse_result result = _isRequestTargetInConfigFile(decoded_path);
+	if (result == UNKNOWN_ERROR) {
+		_parse_context.request.set_status_code(HttpStatus::e_code::SERVICE_UNAVAILABLE);
+		Log::warning("Server block null reference.");
+		return ;
+	}
+
 	if (result == NO_FILE_IN_CONFIG) {
 		_parse_context.request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 		Log::warning("Request target is not in configuration file.");

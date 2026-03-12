@@ -4,9 +4,10 @@ void HttpResponseWriter::formResponse(
 	HttpStatus::e_code status_code,
 	const HttpMethod::e_code &method,
 	const File &file,
-	const std::string & buffer)
+	const std::string & buffer,
+	bool isCGI)
 {
-	_response.form_response(status_code, method, file, buffer);
+	_response.form_response(status_code, method, file, buffer, isCGI);
 }
 
 void	HttpResponseWriter::write()

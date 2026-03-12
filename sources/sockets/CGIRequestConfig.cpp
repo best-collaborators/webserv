@@ -107,21 +107,8 @@ namespace
 	}
 }
 
-bool	cgi::isCGITarget( std::string const & target )
-{
-	const std::regex regex("(^/cgi-bin/\\w+\\.(?:js|py|php|cgi))");
-	std::smatch match;
-
-	if (std::regex_search(target, match, regex) && match.ready())
-		return true;
-
-	return false;
-}
-
 CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, File const & file )
 {
-	std::string target = headers.at(http::headers::REQUEST_TARGET);
-
 	return CGIConfig {
 		file.getPassTo().value(),
 		file.getFullFilename(),

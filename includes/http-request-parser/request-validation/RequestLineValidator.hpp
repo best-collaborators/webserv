@@ -23,7 +23,8 @@ public:
 	enum e_parse_result {
 		NO_FILE_IN_CONFIG,
 		MATCH_FOUND,
-		RELOCATION
+		RELOCATION,
+		UNKNOWN_ERROR
 	};
 
 	RequestLineValidator( ParseContext &parse_context );

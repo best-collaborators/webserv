@@ -18,7 +18,7 @@ private:
 	PipeFD			_write_fd;
 	PipeFD			_read_fd;
 
-	ssize_t			_content_length = -1;
+	size_t			_content_length = 0;
 	size_t			_header_end_offset = 0;
 	bool			_headers_parsed = false;
 	size_t			_write_offset = 0;
