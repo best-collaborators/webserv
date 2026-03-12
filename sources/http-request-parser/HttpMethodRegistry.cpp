@@ -1,5 +1,10 @@
 #include "HttpMethodRegistry.hpp"
 
+HttpMethodRegistry::HttpMethodRegistry()
+{
+	_allowed_methods.set(0);
+}
+
 void HttpMethodRegistry::initAllowedMethods()
 {
 	_allowed_methods.set();

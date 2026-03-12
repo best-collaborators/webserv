@@ -22,7 +22,7 @@ public:
 
 	HttpMethodRegistry & operator=( const HttpMethodRegistry & ) noexcept;
 
-	HttpMethodRegistry() = default;
+	HttpMethodRegistry();
 	~HttpMethodRegistry() = default;
 	HttpMethodRegistry(const HttpMethodRegistry & other) = default;
 	
