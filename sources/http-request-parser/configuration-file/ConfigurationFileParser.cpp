@@ -474,7 +474,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 	if (!s_block._locations.has_value()) return OK;
 
 	for (auto &l : s_block._locations.value()) {
-		if (l.getRoot().empty()) l.setRoot(s_block._root.string() + l.getPath().c_str());
+		if (l.getRoot().empty()) l.setRoot(s_block._root.string());
 		else l.setRoot(s_block._root.string() + l.getRoot().string());
 
 		if (!std::filesystem::is_directory(l.getRoot())) {
