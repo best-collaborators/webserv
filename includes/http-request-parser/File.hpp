@@ -9,6 +9,7 @@
 class File
 {
 private:
+	std::string					_relative_path;
 	std::string					_full_filename;
 	bool 						_is_dir = false;
 	bool 						_autoindex = false;
@@ -24,6 +25,8 @@ public:
 
 	const std::string					&getFullFilename() const;
 	void								setFullFilename(const std::string& filename);
+	const std::string					&getRelativePath() const;
+	void								setRelativePath(const std::string& path);
 	bool								isDir() const;
 	void								setIsDir(bool dir);
 	bool 								getAutoindex() const;
