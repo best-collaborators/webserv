@@ -169,9 +169,8 @@ std::string Response::form_response( const HttpStatus::e_code &status_code, cons
 	_method = method;
 	_file = file;
 
-	std::cout << "filename: " << file.getFullFilename() << std::endl;
-	if (status_code != HttpStatus::e_code::NO_CONTENT && file.getAutoindex()) {
-		_body = serve_html_webserv_page("IT'S DIRECTORY LISTENING");
+	if (status_code != HttpStatus::e_code::NO_CONTENT && file.isDir() && file.getAutoindex()) {
+		_body = ListingGenerator::getListingPage(file);
 		_content_length = _body.size();
 	}
 	else if (HttpStatus::is_good(status_code) && !body.empty())

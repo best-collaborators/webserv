@@ -16,6 +16,14 @@ void File::setFullFilename(const std::string& filename) {
 	_full_filename = filename;
 }
 
+const std::string &File::getRelativePath() const {
+	return _relative_path;
+}
+
+void File::setRelativePath(const std::string& path) {
+	_relative_path = path;
+}
+
 bool File::isDir() const {
 	return _is_dir;
 }
