@@ -44,6 +44,7 @@ void	Connection::_formResponse()
 	size_t content_length = _request_reader.getContentLength();
 	_buffer_manager.consume(content_length);
 	_response_formed = true;
+	_request_reader.reset();
 }
 
 void	Connection::_formCGIResponse()
@@ -201,7 +202,6 @@ IoEvent Connection::_tryInitCGI() noexcept
 	auto headers = _request_reader.getHeaders();
 
 	File const & file = _request_reader.getFile();
-
 
 	try
 	{

@@ -99,8 +99,9 @@ namespace {
 		return false;
 	}
 
-	bool tryRelocate(const Location &location, const std::string &location_path, File &file, std::string &request_target) {
+	bool tryRelocate(const Location &location, const std::string &location_path, std::string &request_target) {
 		
+		File file;
 		std::string return_path = location.getReturnPage().path;
 		HttpStatus::e_code status_code = location.getReturnPage().status_code;
 		if (return_path.empty()) return false;
@@ -118,162 +119,189 @@ namespace {
 		return true;
 	}
 
-	std::filesystem::path getFullFilename(Request &request, const std::string &remaining_path, const Location &loc, std::optional<std::string> index = std::nullopt)
+	std::filesystem::path getFullFilename(Request &request, const std::string &request_target, const Location &loc, std::optional<std::string> index = std::nullopt)
 	{
-		std::string full_name = loc.getRoot().string() + "/" + loc.getPath().string() + remaining_path;
+		std::string full_name = loc.getRoot().string() + "/" + request_target;
 		std::filesystem::path norm_path = std::filesystem::weakly_canonical(full_name);
-		if (loc.getAutoindex() || request.get_method() == HttpMethod::e_code::POST) {
+		if (!loc.getDefaultFile().empty()) {
+			return std::filesystem::weakly_canonical(full_name + "/" + loc.getDefaultFile());
+		}
+		else if (loc.getAutoindex() || request.get_method() == HttpMethod::e_code::POST) {
 			return norm_path.string() + "/";
-		}
-		else if (!loc.getDefaultFile().empty()) {
-			return std::filesystem::weakly_canonical(full_name + loc.getDefaultFile());
-		}
+		} 
 		else if (index.has_value()) {
-			return std::filesystem::weakly_canonical(full_name + index.value());
+			return std::filesystem::weakly_canonical(full_name + "/" + index.value());
 		}
 		return "";
 	}
 
-	File isMatchedDirectory(Request &request, const std::string &request_target, const Location &loc, std::optional<std::string> index = std::nullopt)
+	std::filesystem::path getFullFilename(const std::string &full_name, const CGIPath &cgi)
+	{
+		std::filesystem::path norm_path = std::filesystem::weakly_canonical(full_name);
+		if (!cgi.index.empty()) {
+			return std::filesystem::weakly_canonical(full_name + cgi.index);
+		}
+		return std::filesystem::weakly_canonical(full_name);
+	}
+
+	File isMatchedDirectory(Request &request,
+		const std::string &request_target,
+		const Location &loc,
+		ServerBlock server_block)
 	{
 		File file;
-		if (!isDirectory(loc.getRoot().string() + request_target)) return file;
+		std::string full_name = loc.getRoot().string() + request_target;
+		if (!isDirectory(full_name)) return file;
 
-		std::string remaining_path;
-		std::string path = loc.getPath().string();
-		if (path.size() <= request_target.size()) {
-			remaining_path = request_target.substr(path.size());
-		}
-
-		std::filesystem::path full_filename = getFullFilename(request, remaining_path, loc, index);
-		std::cout << "full_name: " << full_filename << std::endl;
+		std::filesystem::path full_filename_path = getFullFilename(request, request_target, loc, server_block._index);
 
 		file.setIsDir(true);
 		file.setAutoindex(loc.getAutoindex());
-		file.setFullFilename(full_filename);
+
+		if (!loc.getAutoindex())
+			file.setFullFilename(full_filename_path);
+		else
+			file.setFullFilename(full_name);
+
+		HttpMethodRegistry method_registry;
+		file.setMethodRegistry(loc.getMethodsRegistry().value_or(method_registry));
+		file.setMaxBodySize(server_block._max_body_size);
+		request.setFile(file);
+
+		std::cout << "full_name: " << file.getFullFilename() << std::endl;
+		return file;
+	}
+
+	File isMatchedDirectory(Request &request, const std::string &request_target, const CGIPath &cgi, ServerBlock server_block)
+	{
+		File file;
+		std::string full_name = server_block._root.string() + request_target;
+		if (!isDirectory(full_name)) return file;
+
+		std::filesystem::path full_filename_path = getFullFilename(full_name, cgi);
+		std::string extension = full_filename_path.extension();
+		
+		file.setFullFilename(full_filename_path.string());
+		file.setExtension(extension);
+
+		std::string pass_to = cgi.pass_to.count(extension) > 0 ? cgi.pass_to.at(extension) : "";
+		if (!pass_to.empty()) {
+			request.setIsCGI(true);
+			file.setPassTo(pass_to);
+		}
+		file.setIsDir(true);
+
+		HttpMethodRegistry method_registry;
+		file.setMethodRegistry(cgi.methods_registry.value_or(method_registry));
+		file.setMaxBodySize(server_block._max_body_size);
+		request.setFile(file);
 
 		return file;
 	}
 
-	bool isRegularFile(ServerBlock &server_block, File &file, Request &request)
+	bool isRegularFile(ServerBlock &server_block, Location &loc, Request &request, std::string request_target)
 	{
-		bool isFile = std::filesystem::is_regular_file(file.getFullFilename());
-		if (!isFile) return false;
-		
-		file.setFullFilename(file.getFullFilename());
-		file.setMaxBodySize(server_block._max_body_size);
-		request.setFile(file);
-		return true;
-	}
+		File file;
+		std::string full_name = loc.getRoot().string() + request_target;
+		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
 
-	bool isRegularFile(ServerBlock &server_block, File &file, std::string &file_path, Request &request)
-	{
-		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(file_path);
 		bool isFile = std::filesystem::is_regular_file(norm_path_request);
 		if (!isFile) return false;
 		
-		file.setFullFilename(norm_path_request);
+		file.setFullFilename(full_name);
 		file.setMaxBodySize(server_block._max_body_size);
+
+		HttpMethodRegistry method_registry;
+		file.setMethodRegistry(loc.getMethodsRegistry().value_or(method_registry));
 		request.setFile(file);
+
 		return true;
 	}
 
-	std::string getExtension(std::string &path)
+	bool isRegularFile(ServerBlock &server_block, CGIPath &cgi, Request &request, std::string request_target)
 	{
-		std::filesystem::path full_filename_path = std::filesystem::weakly_canonical(path);
-		return full_filename_path.extension();
+		File file;
+		std::string full_name = server_block._root.string() + request_target;
+		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
+
+		bool isFile = std::filesystem::is_regular_file(norm_path_request);
+		if (!isFile) return false;
+	
+		file.setFullFilename(full_name);
+		file.setMaxBodySize(server_block._max_body_size);
+
+		HttpMethodRegistry method_registry;
+		file.setMethodRegistry(cgi.methods_registry.value_or(method_registry));
+
+		request.setIsCGI(true);
+		request.setFile(file);
+		return true;
 	}
 
 	RequestLineValidator::e_parse_result isMatchedLocations(ServerBlock server_block, std::string &request_target, Request &request)
 	{
-		Location matched_loc;
-		File file;
+		Log::debug("Check for matches in Location", "parser");
 
+		Location matched_loc;
 		for (auto &l : server_block._locations.value())
 		{
 			std::string path = l.getPath().string();
-			if (!request_target.compare(0, path.size(), path)) {
-
-				if (path.size() > 1 && request_target[path.size()] != '/') {
-					continue;
+			if (path.size() > 2 &&
+				path.size() > matched_loc.getPath().string().size() &&
+				!request_target.compare(0, path.size(), path)) {
+					matched_loc = l;
 				}
-
-				if (tryRelocate(l, path, file, request_target)) {
-					request.setFile(file); 
-					return RequestLineValidator::e_parse_result::RELOCATION;
-				}
-
-				file = isMatchedDirectory(request, request_target, l, server_block._index);
-				if (!file.getFullFilename().empty()) {
-					auto &mr = l.getMethodsRegistry();
-					if (mr.has_value())
-						file.setMethodRegistry(mr.value());
-					request.setFile(file);
-					file.setMaxBodySize(server_block._max_body_size);
-					return RequestLineValidator::e_parse_result::MATCH_FOUND;
-				}
-
-				std::string remaining_path;
-				if (path.size() <= request_target.size()) {
-					remaining_path = request_target.substr(path.size());
-				}
-				std::string full_filename = std::string(l.getRoot()) + "/" + remaining_path;
-				file.setExtension(getExtension(full_filename));
-				matched_loc = l;
-			}
 		}
-		if (!matched_loc.getPath().empty()) {
-			std::cout << "LOCATION MATCH: \n" << matched_loc << std::endl;
+		std::cout << "LOCATION MATCH: \n" << matched_loc << std::endl;
+		if (matched_loc.getPath().empty())
+			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 
-			if (isDirectoryRedirect(server_block._root.string(), request_target, request)) {
-				return RequestLineValidator::e_parse_result::RELOCATION;
-			}
-			if (isRegularFile(server_block, file, request)) {
-				auto &mr = matched_loc.getMethodsRegistry();
-				if (mr.has_value())
-					file.setMethodRegistry(mr.value());
-				file.setMaxBodySize(server_block._max_body_size);
-				return RequestLineValidator::e_parse_result::MATCH_FOUND;
-			}
+		if (tryRelocate(matched_loc, matched_loc.getPath(), request_target)) {
+			return RequestLineValidator::e_parse_result::RELOCATION;
+		}
+
+		if (isRegularFile(server_block, matched_loc, request, request_target)) {
+			return RequestLineValidator::e_parse_result::MATCH_FOUND;
+		}
+
+		if (isDirectoryRedirect(server_block._root.string(), request_target, request)) {
+			return RequestLineValidator::e_parse_result::RELOCATION;
+		}
+
+		isMatchedDirectory(request, request_target, matched_loc, server_block);
+		if (!request.getFile().getFullFilename().empty()) {
+			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 		}
 		return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 	}
 
 	RequestLineValidator::e_parse_result isMatchedCGI(ServerBlock server_block, std::string &request_target, Request &request)
 	{
+		Log::debug("Check for matches in CGI", "parser");
 		CGIPath matched_cgi;
-		File file;
-		file.setMaxBodySize(server_block._max_body_size);
-		std::string extension = getExtension(request_target);
 		for (auto &cgi : server_block._cgi.value())
 		{
 			std::string path = cgi.path;
-			if (!request_target.compare(0, path.size(), path)) {
+			if (path.size() > 2 && path.size() > matched_cgi.path.size()
+				&& !request_target.compare(0, path.size(), path)) {
 
-				if (request_target[path.size()] != '/') {
-					continue;
+					matched_cgi = cgi;
 				}
-				std::string full_filename = std::string(server_block._root) + request_target;
-				request_target = full_filename;
-				file.setFullFilename(request_target);
-				file.setExtension(extension);
+		}
+		std::cout << "CGI MATCH: \n" << matched_cgi << std::endl;
+		if (matched_cgi.path.empty())
+			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 
-				std::string pass_to = cgi.pass_to.count(extension) > 0 ? cgi.pass_to.at(extension) : "";
-				if (!pass_to.empty())
-					file.setPassTo(pass_to);
-				matched_cgi = cgi;
-			}
+		if (isRegularFile(server_block, matched_cgi, request, request_target)) {
+			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 		}
 
-		if (!matched_cgi.path.empty()) {
-			std::cout << "CGI MATCH: \n" << matched_cgi.path << std::endl;
-			bool is_cgi = file.getPassTo().has_value();
-			request.setIsCGI(is_cgi);
-			auto &mr = matched_cgi.methods_registry;
-				if (mr.has_value())
-					file.setMethodRegistry(mr.value());
-			file.setMaxBodySize(server_block._max_body_size);
-			request.setFile(file);
+		if (isDirectoryRedirect(server_block._root.string(), request_target, request)) {
+			return RequestLineValidator::e_parse_result::RELOCATION;
+		}
+
+		isMatchedDirectory(request, request_target, matched_cgi, server_block);
+		if (!request.getFile().getFullFilename().empty()) {
 			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 		}
 		return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
@@ -283,24 +311,41 @@ namespace {
 	{
 		File file;
 		file.setMaxBodySize(server_block._max_body_size);
+		Log::debug("Handle no file in config", "parser");
 
-		std::string full_filename = server_block._root.string() + request_target;
-		if (isRegularFile(server_block, file, full_filename, request)) {
-			return RequestLineValidator::e_parse_result::MATCH_FOUND;
-		}
-
-		if (isDirectoryRedirect(server_block._root.string(), full_filename, request)) {
+		Location server_loc = server_block._root_restrictions;
+		std::cout << server_loc << std::endl;
+		if (tryRelocate(server_loc, server_loc.getPath(), request_target)) {
+			Log::debug("Is a relocation file " + server_loc.getPath().string(), "parser");
 			return RequestLineValidator::e_parse_result::RELOCATION;
 		}
 
-		if ( server_block._index.has_value()) {
-			full_filename = server_block._root.string() + request_target + "/" + server_block._index.value();
-			if (isRegularFile(server_block, file, full_filename, request)) {
-				return RequestLineValidator::e_parse_result::MATCH_FOUND;
-			}
+		if (isRegularFile(server_block, server_loc, request, request_target)) {
+			Log::debug("Is a regular file " + server_loc.getRoot().string() + request_target, "parser");
+			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 		}
 
-		std::cout << "Tried to return " << full_filename;
+		if (isDirectoryRedirect(server_block._root.string(), request_target, request)) {
+			Log::debug("Is a dir redir " + server_block._root.string() + request_target, "parser");
+			return RequestLineValidator::e_parse_result::RELOCATION;
+		}
+
+		isMatchedDirectory(request, request_target, server_loc, server_block);
+		if (!request.getFile().getFullFilename().empty()) {
+			Log::debug("Is a dir " + server_loc.getRoot().string() + request_target, "parser");
+			return RequestLineValidator::e_parse_result::MATCH_FOUND;
+		}
+
+		std::cout << "Tried to return "
+			<< server_loc.getRoot().string() + request_target
+			+ server_block._index.value_or("") << std::endl;
+		
+		file.setFullFilename(server_loc.getRoot().string() + request_target
+			+ server_block._index.value_or(""));
+		file.setMaxBodySize(server_block._max_body_size);
+
+		HttpMethodRegistry method_registry;
+		file.setMethodRegistry(server_loc.getMethodsRegistry().value_or(method_registry));
 		request.setFile(file);
 		return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 	}

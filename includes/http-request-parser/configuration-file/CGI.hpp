@@ -12,6 +12,7 @@ struct CGIPath
 	std::string										path;
 	std::unordered_map<std::string, std::string>	pass_to;
 	std::string										extension;
+	std::string										index;
 	std::optional<HttpMethodRegistry>				methods_registry;
 };
 
@@ -20,6 +21,7 @@ inline std::ostream& operator<<(std::ostream& os, const CGIPath& cgi)
 	if (cgi.methods_registry.has_value())
 		cgi.methods_registry->printAllowedMethods();
 	Logger::displayLog(Logger::e_log_level::INFO, "Path: " + cgi.path, "config");
+	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + cgi.index, "config");
 	for (const auto &[name, value] : cgi.pass_to) {
 		Logger::displayLog(Logger::e_log_level::INFO, "Extension: " + name + " Executable: " + value, "config");
 	}
@@ -33,6 +35,7 @@ inline std::string to_string(const CGIPath& cgi)
 	std::string result = "";
 	result += "    path: " + cgi.path + "\n";
 	result += "    extension: " + cgi.extension + "\n";
+	result += "    index: " + cgi.index + "\n";
 	result += "    pass_to: {";
 	for (const auto& [name, value] : cgi.pass_to) {
 		result += "\n    " + name + ": " + value;

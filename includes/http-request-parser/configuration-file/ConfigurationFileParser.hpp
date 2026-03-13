@@ -88,6 +88,7 @@ private:
 	// CGI directive sub-parsers
 	e_parse_result _dispatchCGIDirective(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
 	e_parse_result _parseCGIPassTo(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
+	e_parse_result _parseCGIIndex(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
 };
 
 #endif /* CONFIGURATION_FILE_PARSER_HPP */

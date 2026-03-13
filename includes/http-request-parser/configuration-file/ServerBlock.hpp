@@ -25,6 +25,7 @@ struct ServerBlock
 	std::optional<std::vector<Location>>  _locations;
 	std::optional<std::vector<CGIPath>>	  _cgi;
 	std::bitset<8>						  _assigned_fields;
+	Location							  _root_restrictions;
 };
 
 std::ostream& operator<<(std::ostream& os, const ServerBlock& block);

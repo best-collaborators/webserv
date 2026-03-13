@@ -36,7 +36,7 @@ private:
 	HttpStatus::e_code		_status_code;
 	const Request			*_request;
 
-	std::size_t				_response_length;
+	std::size_t				_response_length = 0;
 	std::streampos			_content_length;
 	size_t					_bytes_sent;
 	ssize_t					_bytes_read;

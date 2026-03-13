@@ -195,6 +195,26 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPassTo
 	return OK;
 }
 
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIIndex(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+{
+	try {
+		_extractDirectiveValue(line, 5);
+		line = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
+		if (line.empty()) {
+			throw std::logic_error("Index path is invalid");
+		}
+	}
+	catch(const std::exception& e) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Index is invalid: " + line, "config");
+		return ERROR;
+	}
+
+	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + line, "config");
+	cgi.index = line;
+	fields.set(2);
+	return OK;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDirective(
 	std::string &line, CGIPath &	cgi, std::bitset<8> &fields)
 {
@@ -202,6 +222,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDir
 		return _parseAllowedMethods(line, cgi.methods_registry, fields);
 	if (isValidHeaderFormat(line, "pass_to", true))
 		return _parseCGIPassTo(line, cgi, fields);
+	if (isValidHeaderFormat(line, "index", true))
+		return _parseCGIIndex(line, cgi, fields);
 
 	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
 	return ERROR;
@@ -211,7 +233,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 {
 	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
 		return ERROR;
 	}
 
@@ -362,6 +384,9 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 	if (!_current_server_block._locations.has_value())
 		_current_server_block._locations.emplace();
 
+	if (location.getPath() == "/") {
+		_current_server_block._root_restrictions = location;
+	}
 	_current_server_block._locations->push_back(location);
 	return OK;
 }
@@ -473,6 +498,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 {
 	if (!s_block._locations.has_value()) return OK;
 
+	s_block._root_restrictions.setRoot(s_block._root);
+
 	for (auto &l : s_block._locations.value()) {
 		if (l.getRoot().empty()) l.setRoot(s_block._root.string());
 		else l.setRoot(s_block._root.string() + l.getRoot().string());
@@ -507,7 +534,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleListenDi
 
 	getline(ifs, line);
 	if (!_isStreamGood(ifs)) return ERROR;
-	if (_isStreamFinished(ifs)) return OK; // will be caught by validation
+	if (_isStreamFinished(ifs)) return OK;
 	if (!_validateAndConsumeIndent(line, 2, '\t')) return ERROR;
 	if (_parseListen(line) == ERROR) return ERROR;
 
