@@ -16,54 +16,49 @@ std::_Put_time<char> Response::get_date_GMT()
 	return std::put_time(std::gmtime(&t), "%a, %d %b %Y %H:%M:%S GMT");
 }
 
-std::string Response::serve_html_webserv_page(std::string msg)
+std::string Response::serve_html_webserv_page(const std::string &msg)
 {
     set_header_value(http::headers::CONTENT_TYPE, "text/html");
 
-    return "<!DOCTYPE html>\n"
-           "<html lang=\"en\">\n"
-           "<head>\n"
-           "    <meta charset=\"UTF-8\">\n"
-           "    <title>" +
-           std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
-           HttpStatus::get_status_code_name(_status_code) +
-           "</title>\n"
-           "</head>\n"
-           "<body>\n"
-           "    <center>\n"
-           "        <h1>" +
-           std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
-           HttpStatus::get_status_code_name(_status_code) +
-           "</h1>\n"
-           "    </center>\n"
-           "    <hr><center>webserv/42.0.0</center>\n"
-           "    <p>" + msg + "</p>\n"
-           "</body>\n"
-           "</html>\n";
+	return "<!DOCTYPE html>\n"
+		   "<html lang=\"en\">\n"
+		   "<head>\n"
+		   "    <meta charset=\"UTF-8\">\n"
+		   "    <title>" +
+		   std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
+		   HttpStatus::get_status_code_name(_status_code) +
+		   "</title>\n"
+		   "</head>\n"
+		   "<body>\n"
+		   "    <center>\n"
+		   "        <h1>" +
+		   std::to_string(HttpStatus::number_from_code(_status_code)) + " " +
+		   HttpStatus::get_status_code_name(_status_code) +
+		   "</h1>\n"
+		   "    </center>\n"
+		   "    <hr><center>webserv/42.0.0</center>\n"
+		   "    <p>" + (msg.empty() ? HttpStatus::get_message(_status_code) : msg) + "</p>\n"
+		   "</body>\n"
+		   "</html>\n";
 }
 
-void Response::is_set_default_page()
+Response::e_response_type Response::is_set_default_page(const error_map &error_pages)
 {
-	std::string method = get_header_value(http::headers::METHOD);
-	if (method == "OPTIONS" || _status_code == HttpStatus::e_code::NO_CONTENT) {
+	auto method = _request->get_method();
+	if (error_pages.count(_status_code)) {
+		return CUSTOM_ERROR_PAGE;
+	}
+
+	if (method == HttpMethod::e_code::OPTIONS || _status_code == HttpStatus::e_code::NO_CONTENT) {
 		_status_code = HttpStatus::e_code::NO_CONTENT;
-		_body = "";
+		_body.clear();
 	}
-	else if (HttpStatus::is_redirect(_status_code)) {
-		_body = serve_html_webserv_page("You've been redirected.");
+	else if (HttpStatus::is_redirect(_status_code)
+		  || HttpStatus::is_bad(_status_code)
+		  || method == HttpMethod::e_code::POST) {
+			return DEFAULT_ERROR_PAGE;
 	}
-	else if (HttpStatus::is_bad(_status_code)) {
-		_body = serve_html_webserv_page("Error happened.");
-	}
-	else if (method == "POST") {
-		_body = serve_html_webserv_page("Successful post.");
-	}
-	else {
-		_is_default_page = false;
-		return ;
-	}
-	_content_length = _body.size();
-	_is_default_page = true;
+	return FILE;
 }
 
 bool Response::is_ifstream_successful(std::ifstream &ifs)
@@ -73,14 +68,8 @@ bool Response::is_ifstream_successful(std::ifstream &ifs)
 	switch (errno)
 	{
 		case 2:
-			//No such file or directory
 			std::cout << "[response] No such file or directory" << std::endl;
 			_status_code = HttpStatus::e_code::NOT_FOUND;
-			break;
-		case 13:
-			//Permission denied
-			std::cout << "[response] File system error" << std::endl;
-			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 		default:
 			std::cout << "[response] File system error" << std::endl;
@@ -88,7 +77,7 @@ bool Response::is_ifstream_successful(std::ifstream &ifs)
 			break;
 	}
 	ifs.close();
-	_body = serve_html_webserv_page("Sorry.");
+	_body = serve_html_webserv_page();
 	_content_length = _body.size();
 	return false;
 }
@@ -101,7 +90,7 @@ std::streampos Response::get_file_read_position()
 		return std::streampos(_bytes_read);
 }
 
-void Response::read_body_partially()
+void Response::read_body_partially(const std::string &filename)
 {
 	if (_response_length > 0 &&
 		(_body.size() >= _response_length ||
@@ -111,7 +100,7 @@ void Response::read_body_partially()
 		return;
 	}
 
-	std::ifstream ifs (_file.getFullFilename(), std::ios::binary);
+	std::ifstream ifs (filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) return;
 
 	const std::size_t current_size = _body.size();
@@ -143,9 +132,8 @@ void Response::set_content_type(std::string filename)
 	set_header_value(http::headers::CONTENT_TYPE, HttpContentType::get_content_type_by_extension(extension.string()));
 }
 
-std::streampos Response::get_file_size()
+std::streampos Response::get_file_size(const std::string &filename)
 {
-	std::string filename = _file.getFullFilename();
 	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
@@ -158,58 +146,69 @@ std::streampos Response::get_file_size()
 	return _content_length;
 }
 
-std::string Response::form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body, bool isCGI)
+std::string Response::form_response( const Request *request, const std::string &body, bool isCGI)
 {
 	_response_length = 0;
 	_content_length = 0;
 	_bytes_read = 0;
 	_bytes_sent = 0;
+	_is_default_page = false;
 
-	_status_code = status_code;
-	_method = method;
-	_file = file;
+	_request = request;
+	auto file = _request->getFile();
+	auto error_pages = _request->getServerBlock()->_error_pages;
+	_status_code = _request->get_status_code();
 
-	if (status_code != HttpStatus::e_code::NO_CONTENT && file.isDir() && file.getAutoindex()) {
+	if (_status_code != HttpStatus::e_code::NO_CONTENT && file.isDir() && file.getAutoindex()) {
 		_body = ListingGenerator::getListingPage(file);
 		_content_length = _body.size();
 	}
-	else if (HttpStatus::is_good(status_code) && isCGI)
+	else if (HttpStatus::is_good(_status_code) && isCGI)
 	{
 		_body = serve_html_webserv_page(body);
 		_content_length = _body.size();
 	}
 	else
 	{
-		is_set_default_page();
-
-		if (!_is_default_page && (_file.getFullFilename()).size() < 2) {
-			_status_code = HttpStatus::e_code::OK;
-			_body = serve_html_webserv_page("Root not configured");
-			_is_default_page = true;
-			_content_length = _body.size();
-		}
-
-		if (!_is_default_page)
+		e_response_type response_type = is_set_default_page(error_pages);
+		switch (response_type)
 		{
-			std::cout << "[response] Not a default page" << std::endl;
-			std::cout << "[response] file to send back: " << _file.getFullFilename() << std::endl;
-			get_file_size();
-			if (HttpStatus::is_good(_status_code)) {
-				set_content_type(_file.getFullFilename());
-				read_body_partially();
+			case FILE:
+			{
+				std::string filename = file.getFullFilename();
+
+				Log::info("File to send back:" + filename, "response");
+
+				get_file_size(filename);
+				if (HttpStatus::is_good(_status_code)) {
+					set_content_type(filename);
+					read_body_partially(filename);
+				}
+				break;
 			}
+			case DEFAULT_ERROR_PAGE:
+				_body = serve_html_webserv_page();
+				_content_length = _body.size();
+				break;
+			case CUSTOM_ERROR_PAGE:
+			{
+				std::string filename = error_pages.at(_status_code);
+				Log::info("Custom error page: " + filename, "response");
+				
+				get_file_size(filename);
+				if (HttpStatus::is_good(_status_code)) {
+					set_content_type(filename);
+					read_body_partially(filename);
+				}
+				break;
+			}
+			default:
+				break;
 		}
 	}
 
-	//* TODO: AFTER CONFIGURATION FILE IS CREATED ADJUST THIS TO WORK WITH STRING NOT ONLY FILE
-	// if (!_is_a_file)
-	// {
-	// 	buffer = _parse_result.get_content();
-	// 	_response_length = buffer.size();
-	// }
-
 	std::ostringstream ostringstream;
-	std::cout << status_code << std::endl;
+	std::cout << _status_code << std::endl;
 
 	ostringstream << "HTTP/1.1"  << " "
 		<< _status_code << "\r\n"
@@ -224,8 +223,8 @@ std::string Response::form_response( const HttpStatus::e_code &status_code, cons
 		ostringstream << "Content-Length: " << _content_length << "\r\n";
 	}
 
-	if (HttpStatus::is_redirect(status_code)) {
-		ostringstream << "Location: " << _file.getReturnPage().path.string() << "\r\n";
+	if (HttpStatus::is_redirect(_status_code)) {
+		ostringstream << "Location: " << file.getReturnPage().path.string() << "\r\n";
 	}
 
 	//For cache

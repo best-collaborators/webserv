@@ -1,18 +1,16 @@
 #include "HttpResponseWriter.hpp"
 
 void HttpResponseWriter::formResponse(
-	HttpStatus::e_code status_code,
-	const HttpMethod::e_code &method,
-	const File &file,
+	const Request *request,
 	const std::string & buffer,
 	bool isCGI)
 {
-	_response.form_response(status_code, method, file, buffer, isCGI);
+	_response.form_response(request, buffer, isCGI);
 }
 
-void	HttpResponseWriter::write()
+void	HttpResponseWriter::write( const Request *request )
 {
-	_response.read_body_partially();
+	_response.read_body_partially(request->getFile().getFullFilename());
 }
 
 size_t HttpResponseWriter::totalLength() const noexcept

@@ -43,12 +43,14 @@ public:
 
 	HttpRequestReader(ServerBlock const * _server_block);
 
+	const Request		*request();
+
 	ReaderState			_processBody(std::string &buffer, size_t bytes_read) noexcept;
 	ReaderState			_processHeader(std::string &buffer) noexcept;
 	void				reset();
 
 	ReaderState			read(std::string &buffer, size_t bytes_read);
-	size_t 			getStoredBodyBytes() const noexcept;
+	size_t 				getStoredBodyBytes() const noexcept;
 	size_t				getContentLength() const noexcept;
 
 	void				setStatusCode(HttpStatus::e_code status);

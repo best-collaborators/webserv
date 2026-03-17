@@ -30,6 +30,7 @@ public:
 	static bool			is_bad(e_code code);
 	static bool			is_good(e_code code);
 	static bool			is_redirect(e_code code);
+	static std::string	get_message(e_code code);
 };
 
 std::ostream& operator<<(std::ostream& os, HttpStatus::e_code code);

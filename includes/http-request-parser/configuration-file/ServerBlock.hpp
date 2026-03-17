@@ -7,22 +7,24 @@
 #include "Location.hpp"
 #include "CGI.hpp"
 #include "HttpStatus.hpp"
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <optional>
 #include <string>
 
+using error_map = std::unordered_map<HttpStatus::e_code, std::string>;
+
 struct ServerBlock
 {
-	std::string									_server_name;
-	ListenData									_listen_data;
-	std::map<HttpStatus::e_code, std::string>	_error_pages;
-	size_t										_max_body_size;
-	std::filesystem::path						_root;
-	std::optional<std::string>					_index;
-	std::optional<std::vector<Location>>		_locations;
-	std::optional<std::vector<CGIPath>>			_cgi;
-	std::bitset<8>								_assigned_fields;
+	std::string							  _server_name;
+	ListenData							  _listen_data;
+	error_map							  _error_pages;
+	size_t								  _max_body_size;
+	std::filesystem::path				  _root;
+	std::optional<std::string>			  _index;
+	std::optional<std::vector<Location>>  _locations;
+	std::optional<std::vector<CGIPath>>	  _cgi;
+	std::bitset<8>						  _assigned_fields;
 };
 
 std::ostream& operator<<(std::ostream& os, const ServerBlock& block);
