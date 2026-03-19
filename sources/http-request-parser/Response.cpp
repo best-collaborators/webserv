@@ -134,9 +134,10 @@ void Response::set_content_type(std::string filename)
 
 std::streampos Response::get_file_size(const std::string &filename)
 {
-	std::ifstream ifs(filename, std::ios::binary);
+	std::filesystem::path normalized_path = std::filesystem::weakly_canonical(filename);
+	std::ifstream ifs(normalized_path, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
-		std::cerr << "[response] Impossible to retrieve size of " << filename << std::endl;
+		std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
 		return 0;
 	}
 	std::streampos fbegin = ifs.tellg();
@@ -183,6 +184,27 @@ std::string Response::form_response( const Request *request, const std::string &
 				if (HttpStatus::is_good(_status_code)) {
 					set_content_type(filename);
 					read_body_partially(filename);
+				}
+				else {
+					_body.clear();
+					std::string filename = error_pages.at(_status_code);
+					Log::info("Custom error page: " + filename, "response");
+					
+					std::filesystem::path normalized_path = std::filesystem::weakly_canonical(filename);
+					std::ifstream ifs(normalized_path, std::ios::binary);
+					if (!is_ifstream_successful(ifs)) {
+						std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
+						_body = serve_html_webserv_page();
+						_content_length = _body.size();
+					}
+					else {
+						std::streampos fbegin = ifs.tellg();
+						ifs.seekg(0, ifs.end);
+						_content_length = ifs.tellg() - fbegin;
+						ifs.close();
+						set_content_type(filename);
+						read_body_partially(filename);
+					}
 				}
 				break;
 			}
