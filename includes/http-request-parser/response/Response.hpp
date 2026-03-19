@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <filesystem>
 #include <vector>
+#include "Request.hpp"
 
 #include "HttpStatus.hpp"
 #include "HttpMethod.hpp"
@@ -23,9 +24,17 @@
 class Response : HttpMessage
 {
 private:
+	using error_map = std::unordered_map<HttpStatus::e_code, std::string>;
+
+	enum e_response_type
+	{
+		DEFAULT_ERROR_PAGE,
+		CUSTOM_ERROR_PAGE,
+		FILE
+	};
+
 	HttpStatus::e_code		_status_code;
-	HttpMethod::e_code		_method;
-	File					_file;
+	const Request			*_request;
 
 	std::size_t				_response_length;
 	std::streampos			_content_length;
@@ -33,18 +42,18 @@ private:
 	ssize_t					_bytes_read;
 	size_t					_buffer = 10240;
 
-	bool					_is_default_page;
+	bool					_is_default_page = false;
 
 	//? temp for debug
 	std::string				_header_str;
 
 	std::string				get_file_last_modified_date(const std::string &filename);
 	std::_Put_time<char>	get_date_GMT();
-	std::string				serve_html_webserv_page(std::string errmsg);
-	void					is_set_default_page();
+	std::string				serve_html_webserv_page(const std::string &msg = "");
+	e_response_type			is_set_default_page(const error_map &error_pages);
 	bool					is_ifstream_successful(std::ifstream &ifs);
 	void					set_content_type(std::string filename);
-	std::streampos			get_file_size();
+	std::streampos			get_file_size(const std::string &filename);
 	std::streampos			get_file_read_position();
 
 public:
@@ -55,12 +64,12 @@ public:
 	~Response() = default;
 
 	HttpStatus::e_code	status_code() const noexcept;
-	std::string			form_response( const HttpStatus::e_code &status_code, const HttpMethod::e_code &method, const File &file, const std::string &body, bool isCGI = false );
+	std::string			form_response( const Request *request, const std::string &body, bool isCGI = false );
 	size_t				get_total_response_length() const noexcept;
 	size_t				get_current_length() const noexcept;
 	const char			*getResponseData() const noexcept;
 	void				consume_body(size_t consume_length);
-	void				read_body_partially();
+	void				read_body_partially(const std::string &filename);
 };
 
 #endif /* RESPONSE_GENERATOR_HPP */

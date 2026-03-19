@@ -38,8 +38,8 @@ void	Connection::_formResponse()
 
 	if (_cgi_handler)
 		_formCGIResponse();
-	else
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile());
+	else 
+		_response_writer.formResponse(_request_reader.request());
 
 	size_t content_length = _request_reader.getContentLength();
 	_buffer_manager.consume(content_length);
@@ -61,11 +61,11 @@ void	Connection::_formCGIResponse()
 	if (cgi_status != HttpStatus::e_code::OK)
 	{
 		_request_reader.setStatusCode(cgi_status);
-		_response_writer.formResponse(cgi_status, _request_reader.getMethod(), _request_reader.getFile());
+		_response_writer.formResponse(_request_reader.request());
 	}
 	else
 	{
-		_response_writer.formResponse(_request_reader.getStatusCode(), _request_reader.getMethod(), _request_reader.getFile(), cgi_buffer, true);
+		_response_writer.formResponse(_request_reader.request(), cgi_buffer, true);
 	}
 
 	_cgi_handler.reset();
@@ -300,7 +300,7 @@ IoEvent	Connection::_sendData() noexcept
 	Log::debug("EPOLLOUT triggered for fd " + std::to_string(_fd), "Connection");
 	Log::debug("Start sending data...", "Connection");
 
-	_response_writer.write();
+	_response_writer.write(_request_reader.request());
 
 	size_t msg_len = _response_writer.currResponseLength();
 	size_t total_msg_len = _response_writer.totalLength();

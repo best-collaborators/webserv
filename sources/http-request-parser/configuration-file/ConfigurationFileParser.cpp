@@ -459,7 +459,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexP
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateErrorPages(ServerBlock &s_block)
 {
 	for (auto &err_page : s_block._error_pages) {
-		err_page.second = s_block._root.string() + "/" + err_page.second;
+		err_page.second = s_block._root.string() + err_page.second;
 		std::filesystem::path full = std::filesystem::weakly_canonical(err_page.second);
 		if (full.string().find(s_block._root) == std::string::npos) {
 			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");

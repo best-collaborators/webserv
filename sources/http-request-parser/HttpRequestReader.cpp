@@ -242,6 +242,11 @@ size_t HttpRequestReader::getStoredBodyBytes() const noexcept
 	return _stored_body_bytes;
 }
 
+const Request *HttpRequestReader::request()
+{
+	return &_request;
+}
+
 size_t HttpRequestReader::getContentLength() const noexcept
 {
 	return _request.get_content_length();

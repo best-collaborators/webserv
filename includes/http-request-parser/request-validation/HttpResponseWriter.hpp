@@ -21,9 +21,9 @@ public:
 	HttpResponseWriter( HttpResponseWriter && ) noexcept = default;
 	HttpResponseWriter & operator=( HttpResponseWriter && ) noexcept = default;
 	
-	void formResponse(HttpStatus::e_code status_code,const HttpMethod::e_code &method, const File &file, const std::string & buffer = "", bool isCGI = false);
+	void formResponse( const Request *request, const std::string & buffer = "", bool isCGI = false);
 
-	void		write();
+	void		write( const Request *request );
 	size_t		totalLength() const noexcept;
 	size_t		currResponseLength() const noexcept;
 	const char	*getResponseData() const noexcept;

@@ -23,6 +23,52 @@ std::string HttpStatus::get_status_code_name(e_code s)
 	}
 }
 
+std::string HttpStatus::get_message(e_code code) {
+	switch (code) {
+		// 2xx Success
+		case e_code::OK:
+		case e_code::CREATED:
+		case e_code::NO_CONTENT:
+			return "Request successful";
+
+		// 3xx Redirection
+		case e_code::MOVED_PERMANENTLY:
+			return "Resource moved";
+
+		// 4xx Client errors
+		case e_code::BAD_REQUEST:
+			return "Invalid request";
+
+		case e_code::NOT_FOUND:
+			return "Resource not found";
+
+		case e_code::METHOD_NOT_ALLOWED:
+			return "Method not allowed";
+
+		case e_code::LENGTH_REQUIRED:
+		case e_code::CONTENT_TOO_LARGE:
+		case e_code::URI_TOO_LONG:
+		case e_code::REQUEST_HEADER_FIELDS_TOO_LARGE:
+			return "Request too large or malformed";
+
+		// 5xx Server errors
+		case e_code::INTERNAL_SERVER_ERROR:
+			return "Server error";
+
+		case e_code::SERVICE_UNAVAILABLE:
+			return "Service unavailable";
+
+		case e_code::GATEWAY_TIMEOUT:
+			return "Gateway timeout";
+
+		case e_code::HTTP_VERSION_NOT_SUPPORTED:
+			return "Protocol not supported";
+
+		default:
+			return "Unknown status";
+	}
+}
+
 std::ostream& operator<<(std::ostream& os, HttpStatus::e_code code)
 {
 	return os << (std::to_string(static_cast<int>(code)) + " " + HttpStatus::get_status_code_name(code));
