@@ -106,5 +106,7 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 		std::cerr << "400 Bad Request - content-length is NAN" << std::endl;
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
+
 	return HttpStatus::e_code::OK;
 }
+

@@ -91,6 +91,12 @@ namespace
 		if (headers.count(http::headers::CONTENT_LENGTH))
 			envp["CONTENT_LENGTH"] = headers.at(http::headers::CONTENT_LENGTH);
 
+envp["SCRIPT_NAME"]     = "/directory/youpi.bla";   // ✅ FIX
+envp["SCRIPT_FILENAME"] = "/home/kvalerii/Desktop/webserv2/YoupiBanane/youpi.bla";
+
+envp["PATH_INFO"]       = "/";                      // keep this
+envp["PATH_TRANSLATED"] = "/home/kvalerii/Desktop/webserv2/YoupiBanane/";
+
 		for (auto const & [key, value] : headers)
 		{
 			if (isCGIHeader(key))

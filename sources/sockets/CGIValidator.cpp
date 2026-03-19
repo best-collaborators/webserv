@@ -53,7 +53,7 @@ HttpStatus::e_code CGIValidator::handleStatus(const std::string& value) {
 		Log::error("Unknown status code from CGI", "cgi");
 		return HttpStatus::e_code::INTERNAL_SERVER_ERROR;
 	}
-	return HttpStatus::e_code::OK;
+	return _parse_context.request.get_status_code();
 }
 
 //! ADD REGEX MATCHER CONST FUNCTIONS
