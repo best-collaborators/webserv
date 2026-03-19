@@ -141,8 +141,12 @@ namespace {
 		ServerBlock server_block)
 	{
 		File file;
+
+		Log::warning(loc.getRoot());
 		std::string remaining_path = request_target.substr(loc.getPath().string().size());
 		std::string full_name = loc.getRoot().string() + remaining_path;
+
+		std::cout << full_name << std::endl;
 		if (!isDirectory(full_name)) return file;
 
 		std::filesystem::path full_filename_path = getFullFilename(request, remaining_path, loc, server_block._index);
@@ -175,8 +179,8 @@ namespace {
 		std::string full_name = loc.getRoot().string() + remaining_path;
 		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
 
-		bool isFile = std::filesystem::is_regular_file(norm_path_request);
-		if (!isFile) return false;
+		bool isDir = std::filesystem::is_directory(norm_path_request);
+		if (isDir) return false;
 		
 		file.setFullFilename(full_name);
 		file.setMaxBodySize(loc.getMaxBodySize());
@@ -273,6 +277,9 @@ namespace {
 		if (matched_cgi.pass_to.empty())
 			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 
+		if (!matched_cgi.extensions.count(std::filesystem::path(request_target).extension())) {
+			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
+		}
 		Log::debug("CGI MATCH: \n" + to_string(matched_cgi), "http-parser");
 		if (isRegularFile(server_block, matched_cgi, request, request_target)) {
 			return RequestLineValidator::e_parse_result::MATCH_FOUND;

@@ -44,7 +44,7 @@ private:
 	bool					_isStreamGood(std::ifstream &ifs);
 	bool					_isStreamFinished(std::ifstream &ifs);
 	bool					_validateAndConsumeIndent(std::string &line, size_t intend_level, char c, bool show_msg = true);
-	void					_updateAllowedMethods(std::string &method_str, HttpMethodRegistry &methods_registry);
+	e_parse_result 			_updateAllowedMethods(std::string &method_str, HttpMethodRegistry &methods_registry);
 	void					_clearServerBlock();
 
 	e_parse_result			_parseServerBlock();

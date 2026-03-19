@@ -126,6 +126,7 @@ void TransferEncodingChunkedParser::parse()
 			_parse_context.request.chunkHandler().finalize();
 			return ;
 		}
+		_parse_context.request.get_body().append(buffer);
 		_parse_context.raw_bits.erase(0, 2);
 		_parse_context.request.chunkHandler().reset();
 		_chunk_size = 0;

@@ -307,6 +307,8 @@ IoEvent	Connection::_sendData() noexcept
 	size_t total_msg_len = _response_writer.totalLength();
 	const char *body =  _response_writer.getResponseData();
 
+	Log::debug("Sending " + std::to_string(msg_len) + " bytes out of " + std::to_string(total_msg_len), "Connection");
+
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 
 	if (curr_sent_bytes > 0)

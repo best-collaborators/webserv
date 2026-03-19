@@ -15,6 +15,11 @@ bool HttpHeaderParser::_isValidHeader(std::string &buffer)
 	name.erase(name.length() - 1);
 	RequestStringUtils::transform_to_lower(name);
 
+	Trimmer::trim(buffer);
+	RequestStringUtils::transform_to_lower(buffer);
+	if (name == http::headers::TRANSFER_ENCODING && buffer != "chunked")
+		return false;
+
 	if ((name == http::headers::HOST || name == http::headers::CONTENT_LENGTH) && buffer.empty())
 		return false;
 

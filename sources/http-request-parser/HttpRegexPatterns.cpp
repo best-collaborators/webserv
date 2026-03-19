@@ -3,7 +3,7 @@
 const std::regex HttpRegexPatterns::METHOD_PATTERN("(^[A-Z]{1,32}[ ]+)");
 const std::regex HttpRegexPatterns::FILEPATH_PATTERN("^( *\\/\\S* *)");
 const std::regex HttpRegexPatterns::VERSION_PATTERN("(HTTP\\/(\\d)+.(\\d)+\\s*$)");
-const std::regex HttpRegexPatterns::HEADER_PATTERN("(^\\S{1,256}:[ ]+)");
+const std::regex HttpRegexPatterns::HEADER_PATTERN("(^\\S{1,256}\\: +)");
 const std::regex HttpRegexPatterns::CONTENT_DISPOSITION_PATTERN("^[C,c]ontent-[D,d]isposition: form-data;\\s*name=\"(\\S{1,256})\";?\\s*(filename=\"(\\S{1,256})\")?");
 const std::regex HttpRegexPatterns::CONTENT_TYPE_PATTERN("^[C,c]ontent-[T,t]ype:\\s*(\\S{1,256}\\/\\S{1,256})\\s*");
 const std::regex HttpRegexPatterns::BOUNDARY_PATTERN("^multipart/form-data;\\s*boundary=([^;\\s]+$)");

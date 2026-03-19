@@ -14,22 +14,8 @@ void HttpBodyParser::_handleChunked()
 {
 	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 
-	// 	std::vector<std::string> parts = {
-	// 	"4\r",
-	// 	"\nWi",
-	// 	"ki\r\n5\r",
-	// 	"\nped",
-	// 	"ia\r",
-	// 	"\n0\r",
-	// 	"\n\r",
-	// 	"\n"
-	// };
-	// _parse_context.raw_bits = "";
-	// for (auto &p : parts) {
-	// 	_parse_context.raw_bits += p;
-		TransferEncodingChunkedParser chunked_parser(_parse_context);
-		chunked_parser.parse();
-	// }
+	TransferEncodingChunkedParser chunked_parser(_parse_context);
+	chunked_parser.parse();
 
 	if (!_parse_context.request.chunkHandler().isReceived()) return ;
 
