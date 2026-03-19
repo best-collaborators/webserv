@@ -10,6 +10,7 @@ std::string HttpStatus::get_status_code_name(e_code s)
 		case e_code::NO_CONTENT:				  return "No Content";
 		case e_code::MOVED_PERMANENTLY:			  return "Moved Permanently";
 		case e_code::NOT_FOUND: 				  return "Not Found";
+		case e_code::FORBIDDEN: 				  return "Forbidden";
 		case e_code::METHOD_NOT_ALLOWED: 		  return "Method Not Allowed";
 		case e_code::LENGTH_REQUIRED: 			  return "Length Required";
 		case e_code::CONTENT_TOO_LARGE: 		  return "Content Too Large";

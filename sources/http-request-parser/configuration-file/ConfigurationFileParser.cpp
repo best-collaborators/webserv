@@ -23,20 +23,15 @@ std::string ConfigurationFileParser::_extractDirectiveValue(std::string &line, s
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseMaxBodySize(std::string &line)
 {
-	size_t max_body_size = 0;
 	try {
-		_extractDirectiveValue(line, 13);
 		size_t pos = 0;
-		max_body_size = std::stoll(line, &pos, 10);
+		std::stoll(line, &pos, 10);
 		if (pos != line.size()) throw std::logic_error("Body size has wrong format");
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Body size is invalid: " + line, "config");
 		return ERROR;
 	}
-
-	_current_server_block._max_body_size = max_body_size;
-	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + line, "config");
 	return OK;
 }
 
@@ -135,6 +130,40 @@ bool isValidHeaderFormat(const std::string& line,
 	return std::regex_match(line, reg);
 }
 
+
+//TODO: change allowed methods regex to split
+namespace {
+	std::unordered_set<std::string> split(const std::string& s)
+	{
+		std::unordered_set<std::string> result;
+		size_t start = 0;
+
+		for (size_t i = 0; i <= s.size(); i++)
+		{
+			if (i == s.size() || s[i] == '|')
+			{
+				std::string token = s.substr(start, i - start);
+
+				size_t first = token.find_first_not_of(" \t");
+				size_t last = token.find_last_not_of(" \t");
+
+				std::cout << *token.begin() << std::endl;
+				std::string to_insert = token.substr(first, last - first + 1);
+				if (result.count(to_insert)) {
+					result.clear();
+					break;
+				}
+				if (first != std::string::npos)
+					result.insert(token.substr(first, last - first + 1));
+
+				start = i + 1;
+			}
+		}
+		return result;
+	}
+}
+
+
 void ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, HttpMethodRegistry &methods_registry)
 {
 	Trimmer::trim(methods_str, '"');
@@ -152,7 +181,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	if (_checkDuplicateField(0, "allowed_methods", fields) == ERROR) return ERROR;
 
 	_extractDirectiveValue(line, 15);
-
 	std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
 	if (methods_str.empty()) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
@@ -166,64 +194,65 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPassTo(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPath(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
 {
-	_extractDirectiveValue(line, 7);
-
-	Trimmer::trim(line);
-	auto pos = line.find(' ');
-	if (pos == std::string::npos) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to has invalid format: " + line, "config");
+	_extractDirectiveValue(line, 4);
+	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
+	if (path.empty()) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
 		return ERROR;
 	}
 
-	std::string extension = line.substr(0, pos);
-	line.erase(0, pos);
-	Trimmer::trim(line);
-
-	if (access(line.c_str(), X_OK) || std::filesystem::is_directory(line)){
-		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + line, "config");
-		return ERROR;
-	}
-
-	if (cgi.pass_to.count(extension)) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Pass to extension " + extension + " is duplicate", "config");
-		return ERROR;
-	}
-	cgi.pass_to[extension] = line;
+	cgi.path = line;
 	fields.set(1);
 	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIIndex(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIExtensions(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
 {
 	try {
-		_extractDirectiveValue(line, 5);
-		line = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
-		if (line.empty()) {
-			throw std::logic_error("Index path is invalid");
+		_extractDirectiveValue(line, 10);
+		Trimmer::trim(line);
+		Trimmer::trim(line, '"');
+		cgi.extensions = split(line);
+
+		if (cgi.extensions.empty()) {
+			throw std::logic_error("Extensions are invalid");
 		}
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Index is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Extensions are invalid: " + line, "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + line, "config");
-	cgi.index = line;
+	Logger::displayLog(Logger::e_log_level::INFO, to_string(cgi.extensions), "config");
 	fields.set(2);
 	return OK;
 }
 
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIMaxBodySize(
+	std::string &line, CGIPath &cgi, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(5, "max_body_size", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 13);
+
+	if (_parseMaxBodySize(line) == ERROR) return ERROR;
+	cgi.max_body_size = std::stoll(line);
+	fields.set(5);
+	return OK;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDirective(
-	std::string &line, CGIPath &	cgi, std::bitset<8> &fields)
+	std::string &line, CGIPath & cgi, std::bitset<8> &fields)
 {
 	if (isValidHeaderFormat(line, "allowed_methods", true))
 		return _parseAllowedMethods(line, cgi.methods_registry, fields);
-	if (isValidHeaderFormat(line, "pass_to", true))
-		return _parseCGIPassTo(line, cgi, fields);
-	if (isValidHeaderFormat(line, "index", true))
-		return _parseCGIIndex(line, cgi, fields);
+	if (isValidHeaderFormat(line, "path", true))
+		return _parseCGIPath(line, cgi, fields);
+	if (isValidHeaderFormat(line, "extensions", true))
+		return _parseCGIExtensions(line, cgi, fields);
+	if (isValidHeaderFormat(line, "max_body_size", true))
+		return _parseCGIMaxBodySize(line, cgi, fields);
 
 	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
 	return ERROR;
@@ -231,15 +260,22 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDir
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::ifstream &ifs, std::string &line)
 {
-	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
-	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
+	_extractDirectiveValue(line, 0);
+	_extractDirectiveValue(line, 7);
+	std::string pass_to = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
+	if (pass_to.empty()) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "CGI pass_to is invalid: " + line, "config");
 		return ERROR;
 	}
 
 	std::bitset<8> cgi_assigned_fields;
 	CGIPath cgi;
-	cgi.path = std::filesystem::weakly_canonical(path);
+	cgi.pass_to = std::filesystem::weakly_canonical(pass_to);
+
+	if (access(cgi.pass_to.c_str(), X_OK) || std::filesystem::is_directory(cgi.pass_to)){
+		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + line, "config");
+		return ERROR;
+	}
 
 	while (getline(ifs, line))
 	{
@@ -253,8 +289,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 		if (_isStreamFinished(ifs)) break;
 	}
 
-	if (!cgi_assigned_fields.test(1)) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Missing pass_to for CGI", "config");
+	if (!cgi_assigned_fields.test(2)) {
+		Logger::displayLog(Logger::e_log_level::ERROR, "Missing extensions for CGI", "config");
 		return ERROR;
 	}
 
@@ -334,6 +370,18 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationA
 	return OK;
 }
 
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationMaxBodySize(
+	std::string &line, Location &location, std::bitset<8> &fields)
+{
+	if (_checkDuplicateField(5, "max_body_size", fields) == ERROR) return ERROR;
+	_extractDirectiveValue(line, 13);
+
+	if (_parseMaxBodySize(line) == ERROR) return ERROR;
+	location.setMaxBodySize(std::stoll(line));
+	fields.set(5);
+	return OK;
+}
+
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocationDirective(
 	std::string &line, Location &location, std::bitset<8> &fields)
 {
@@ -353,6 +401,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocati
 		return _parseLocationRedirect(line, location, fields);
 	if (isValidHeaderFormat(line, "autoindex", true))
 		return _parseLocationAutoindex(line, location, fields);
+	if (isValidHeaderFormat(line, "max_body_size", true))
+		return _parseLocationMaxBodySize(line, location, fields);
 
 	Logger::displayLog(Logger::e_log_level::ERROR, "Invalid field: " + line, "config");
 	return ERROR;
@@ -360,6 +410,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchLocati
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations(std::ifstream &ifs, std::string &line)
 {
+	_extractDirectiveValue(line, 0);
+	_extractDirectiveValue(line, 4);
 	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (path.empty()) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
@@ -451,6 +503,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 		if (_validateIndexPath(s_block.second) == ERROR) return ERROR;
 		if (_validateErrorPages(s_block.second) == ERROR) return ERROR;
 		if (_validateLocations(s_block.second) == ERROR) return ERROR;
+		if (_validateCGI(s_block.second) == ERROR) return ERROR;
 
 		std::cout << s_block.second << std::endl;
 	}
@@ -459,8 +512,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequiredFields(const ServerBlock &s_block)
 {
-	// bits 0=listen, 1=server_name, 3=max_body_size, 4=root are required
-	static const std::vector<size_t> required = {0, 1, 3, 4};
+	// bits 0=listen, 1=server_name, 4=root are required
+	static const std::vector<size_t> required = {0, 1, 4};
 	for (size_t i : required) {
 		if (!s_block._assigned_fields.test(i)) {
 			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field " + std::to_string(i), "config");
@@ -499,10 +552,19 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 	if (!s_block._locations.has_value()) return OK;
 
 	s_block._root_restrictions.setRoot(s_block._root);
+	std::unordered_set<std::string> seen_paths;
 
 	for (auto &l : s_block._locations.value()) {
-		if (l.getRoot().empty()) l.setRoot(s_block._root.string());
-		else l.setRoot(s_block._root.string() + l.getRoot().string());
+
+		std::string path = l.getPath();
+		if (seen_paths.count(path)) {
+			Logger::displayLog(
+				Logger::e_log_level::ERROR, "Duplicate location path: " + path, "config");
+			return ERROR;
+		}
+		seen_paths.insert(path);
+
+		if (!std::filesystem::is_directory(l.getRoot())) l.setRoot(s_block._root.string());
 
 		if (!std::filesystem::is_directory(l.getRoot())) {
 			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.getRoot().string(), "config");
@@ -514,6 +576,24 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory: " + full.string(), "config");
 			return ERROR;
 		}
+	}
+	return OK;
+}
+
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateCGI(ServerBlock &s_block)
+{
+	if (!s_block._cgi.has_value()) return OK;
+	std::unordered_set<std::string> seen_paths;
+
+	for (auto &cgi : s_block._cgi.value()) {
+
+		std::string path = cgi.path;
+		if (seen_paths.count(path)) {
+			Logger::displayLog(
+				Logger::e_log_level::ERROR, "Duplicate location path: " + path, "config");
+			return ERROR;
+		}
+		seen_paths.insert(path);
 	}
 	return OK;
 }
@@ -569,16 +649,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleErrorPag
 		if (_isStreamFinished(ifs)) break;
 	}
 	_current_server_block._assigned_fields.set(2);
-	return OK;
-}
-
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleMaxBodySizeDirective(std::string &line, bool &extra_line)
-{
-	if (_checkDuplicateField(3, "max_body_size", _current_server_block._assigned_fields) == ERROR) return ERROR;
-
-	if (_parseMaxBodySize(line) == ERROR) return ERROR;
-	extra_line = false;
-	_current_server_block._assigned_fields.set(3);
 	return OK;
 }
 
@@ -665,9 +735,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchServer
 	if (isValidHeaderFormat(line, "error_pages", false))
 		return _handleErrorPagesDirective(ifs, line, extra_line);
 
-	if (isValidHeaderFormat(line, "max_body_size", true))
-		return _handleMaxBodySizeDirective(line, extra_line);
-
 	if (isValidHeaderFormat(line, "root", true))
 		return _handleRootDirective(line, extra_line);
 
@@ -694,6 +761,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseSingleSer
 			getline(ifs, line);
 
 		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 1, '\t', false)) {
 			extra_line = true;

@@ -2,6 +2,7 @@
 #define HTTP_CONTENT_TYPE_HPP
 
 #include <string>
+#include <filesystem>
 
 class HttpContentType {
 public:
@@ -22,9 +23,8 @@ public:
 		APPLICATION_OCTET_STREAM
 	} t_code;
 
-	static std::string_view get_content_type_name(e_code s);
-	static HttpContentType::e_code get_content_type_code_by_extension(std::string_view extension);
-	static std::string get_content_type_by_extension(std::string_view extension);
+	static std::string_view to_string(e_code s);
+	static HttpContentType::e_code to_code(const std::string &filename);
 	static std::string get_extension_by_content_type(std::string_view content_type);
 };
 

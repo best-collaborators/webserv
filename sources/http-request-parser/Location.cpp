@@ -61,6 +61,7 @@ std::ostream& operator<<(std::ostream& os, const Location& location)
 		Logger::displayLog(Logger::e_log_level::INFO, "Index: " + location.getDefaultFile(), "config");
 	if (!location.getRoot().empty())
 		Logger::displayLog(Logger::e_log_level::INFO, "Root: " + location.getRoot().string(), "config");
+	Logger::displayLog(Logger::e_log_level::CRITICAL, "Max body size: " + std::to_string(location.getMaxBodySize()), "config");
 
 	std::string autoindex_enabled = (location.getAutoindex() ? "true" : "false");
 	Logger::displayLog(Logger::e_log_level::INFO, "Autoindex: " + autoindex_enabled, "config");
@@ -76,10 +77,21 @@ std::string Location::to_string() const noexcept
 		result += "    Methods: " + methods_registry.value().to_string() + "\n";
 	if (!default_file.empty())
 		result += "    Index: " + default_file + "\n";
+	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + std::to_string(getMaxBodySize()), "config");
 	if (!root.empty())
 		result += "    Root: " + root.string() + "\n";
 	
 	result += "    Autoindex: " + std::string(autoindex ? "true" : "false") + "\n";
 	
 	return result;
+}
+
+size_t Location::getMaxBodySize() const
+{
+	return _max_body_size;
+}
+
+void Location::setMaxBodySize(size_t max_body_size)
+{
+	_max_body_size = max_body_size;
 }

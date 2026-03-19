@@ -109,9 +109,18 @@ namespace
 
 CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, File const & file )
 {
+	std::string target = headers.at(http::headers::REQUEST_TARGET);
+
+	if (file.getPassTo().has_value())
+		Log::critical("file.getPassTo().has_value()");
+	std::string pass_to = file.getPassTo().value();
+	Log::critical("pass_to: " + pass_to);
+	std::string full_filename =  file.getFullFilename();
+	Log::critical("full_filename: " + full_filename);
+
 	return CGIConfig {
-		file.getPassTo().value(),
-		file.getFullFilename(),
+		pass_to,
+		full_filename,
 		buildEnvp(headers)
 	};
 }

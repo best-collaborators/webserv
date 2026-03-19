@@ -33,6 +33,7 @@ private:
 		FILE
 	};
 
+	HttpContentType::e_code	_content_type;
 	HttpStatus::e_code		_status_code;
 	const Request			*_request;
 

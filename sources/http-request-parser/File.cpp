@@ -85,3 +85,25 @@ void File::setMaxBodySize(size_t max_body_size)
 {
 	_max_body_size = max_body_size;
 }
+
+bool File::isIndex() const
+{
+	return _is_index;
+}
+
+void File::setIsIndex(bool is_index)
+{
+	_is_index = is_index;
+}
+
+
+const std::string &File::getPathInfo() const
+{
+	return _path_info;
+}
+
+void File::setPathInfo(const std::string &path_info)
+{
+	_path_info = path_info;
+}
+

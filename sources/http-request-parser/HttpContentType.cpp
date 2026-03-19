@@ -1,6 +1,6 @@
 #include "HttpContentType.hpp"
 
-std::string_view HttpContentType::get_content_type_name(HttpContentType::e_code code)
+std::string_view HttpContentType::to_string(HttpContentType::e_code code)
 {
 	switch (code)
 	{
@@ -35,8 +35,11 @@ std::string_view HttpContentType::get_content_type_name(HttpContentType::e_code 
 	}
 }
 
-HttpContentType::e_code HttpContentType::get_content_type_code_by_extension(std::string_view extension)
+HttpContentType::e_code HttpContentType::to_code(const std::string &filename)
 {
+	std::filesystem::path path = filename;
+	auto extension = path.extension();
+
 	if (extension == ".xml")
 		return HttpContentType::e_code::TEXT_XML;
 	if (extension == ".css")
@@ -64,37 +67,6 @@ HttpContentType::e_code HttpContentType::get_content_type_code_by_extension(std:
 	if (extension == ".json")
 		return HttpContentType::e_code::APPLICATION_JSON;
 	return HttpContentType::e_code::APPLICATION_OCTET_STREAM;
-}
-
-std::string HttpContentType::get_content_type_by_extension(std::string_view extension)
-{
-	if (extension == ".xml")
-		return "text/xml";
-	if (extension == ".css")
-		return "text/css";
-	if (extension == ".csv")
-		return "text/csv";
-	if (extension == ".js")
-		return "text/javascript";
-	if (extension == ".html" || extension == ".htm")
-		return "text/html";
-	if (extension == ".txt")
-		return "text/plain";
-	if (extension == ".jpeg")
-		return "image/jpeg";
-	if (extension == ".png")
-		return "image/png";
-	if (extension == ".jpg")
-		return "image/jpg";
-	if (extension == ".gif")
-		return "image/gif";
-	if (extension == ".webp")
-		return "image/webp";
-	if (extension == ".ico")
-		return "image/icon";
-	if (extension == ".json")
-		return "application/json";
-	return "application/octet-stream";
 }
 
 std::string HttpContentType::get_extension_by_content_type(std::string_view content_type)
