@@ -12,8 +12,10 @@ void HttpRequestReader::_parseHeaders(std::string &read_buffer) noexcept
 	RequestParser header_parser(_request, read_buffer);
 	header_parser.parse_headers();
 
-	std::cout << "Header received. Status code -> "
-			<< _request.get_status_code() << std::endl;
+	#ifdef DDEBUG_FLAG
+		std::cout << "Header received. Status code -> "
+				<< _request.get_status_code() << std::endl;
+	#endif
 }
 
 void HttpRequestReader::_consumeHeader(std::string &read_buffer) noexcept
@@ -29,7 +31,7 @@ HeaderState HttpRequestReader::_handleHeaderMethod(std::string &read_buffer) noe
 	if (!HttpMethod::hasBody(_request.get_method())) {
 
 		if (_request.get_content_length() != 0 || read_buffer.size() > 0) {
-			std::cout << "[parser] Error (GET/OPTIONS/HEAD requests cannot have body)" << std::endl;
+			Log::error("Error (GET/OPTIONS/HEAD requests cannot have body)", "parser");
 			return HeaderState::Error;
 		}
 	}
@@ -60,7 +62,7 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Error;
 	}
 
-	std::cout << "_request.isCGI() " << _request.isCGI() << std::endl;
+	Log::error("_request.isCGI() " + std::to_string(_request.isCGI()), "parser");
 	if (_request.isCGI() && _request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
 	return _handleHeaderMethod(read_buffer);
 }
@@ -70,7 +72,7 @@ ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 	switch (_checkHeaderState(read_buffer))
 	{
 		case HeaderState::Incomplete:
-			std::cout << "[request-reader] Request received (partial buffer)." << std::endl;
+			Log::debug("Request received (partial buffer)." + std::to_string(_request.isCGI()), "request-reader");
 			return ReaderState::AwaitingHeaders;
 
 		case HeaderState::Complete:
@@ -83,11 +85,11 @@ ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 			return ReaderState::Complete;
 
 		case HeaderState::Error:
-			std::cout << "[request-reader] Request headers invalid." << std::endl;
+			Log::error("Request headers invalid." + std::to_string(_request.isCGI()), "request-reader");
 			return ReaderState::Error;
 
 		case HeaderState::CGI:
-			std::cout << "[request-reader] Request is CGI" << std::endl;
+			Log::debug("Request is CGI." + std::to_string(_request.isCGI()), "request-reader");
 			_stored_body_bytes = read_buffer.size();
 			return ReaderState::CGI;
 
@@ -102,7 +104,6 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 		return BodyState::Complete;
 	}
 	_stored_body_bytes = read_buffer.size();
-	// std::cout << "\n[request-reader] stored_body_bytes: " << read_buffer << "\n===============\n";
 
 	if (_request.get_header_count(http::headers::TRANSFER_ENCODING)) {
 		return BodyState::Chunked;
@@ -112,13 +113,13 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 	}
 	else if (_request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
 	{
-		std::cout << "Read buffer size: " << read_buffer.size() << std::endl;
+		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
 		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 		return BodyState::Overflow;
 	}
 	else if (_stored_body_bytes > _request.getFile().getMaxBodySize())
 	{
-		std::cout << "Read buffer size: " << read_buffer.size() << std::endl;
+		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
 		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 		return BodyState::Overflow;
 	}
@@ -127,38 +128,29 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 
 void HttpRequestReader::_handleCompleteBody(std::string &buffer) noexcept
 {
-	std::cout << "[request-reader] Request received (complete)." << std::endl;
+	Log::debug("Request received (complete).", "request-reader");
 
 	RequestParser body_parser(_request, buffer);
 	body_parser.parse_body();
 
-	std::cout << "Body received. Status code -> "
-			  << _request.get_status_code() << std::endl;
+	#ifdef DDEBUG_FLAG
+		std::cout << "Body received. Status code -> "
+				<< _request.get_status_code() << std::endl;
+	#endif
 }
 
 BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 {
-	std::cout << "[request-reader] Request received (chunked)." << std::endl;
-
-	// std::cout << "_read_buffer is\n"
-			// << _read_buffer << std::endl;
+	Log::debug("Request received (chunked).", "request-reader");
 
 	RequestParser body_parser(_request, buffer);
 	body_parser.parse_body();
 
-	// std::cout << "Chunk received, chunk size is :"
-	// 		<< _request.chunkHandler().getExpectedSize() << std::endl;
-
-	// std::cout << "Body is\n"
-	// 		<< _request.get_body() << std::endl;
-
-	// std::cout << "_read_buffer is\n"
-	// 		<< _read_buffer << std::endl;
-
 	if (_request.chunkHandler().isReceived()) {
-
-		std::cout << "Body received. Status code -> "
-			  << _request.get_status_code() << std::endl;
+		#ifdef DDEBUG_FLAG
+			std::cout << "Body received. Status code -> "
+					<< _request.get_status_code() << std::endl;
+		#endif
 		if (HttpStatus::is_good(_request.get_status_code()) && _request.isCGI()) {
 			return BodyState::CGI;
 		}
@@ -172,32 +164,32 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 	switch (_checkBodyState(buffer, bytes_read))
 	{
 		case BodyState::Incomplete:
-			std::cout << "[request-reader] Request received (partial buffer)." << std::endl;
+			Log::debug("Request received (partial buffer)", "request-reader");
 			return ReaderState::AwaitingBody;
 
 		case BodyState::Complete:
 			if (_request.isCGI())
 			{
-				std::cout << "[request-reader] Request received (CGI)" << std::endl;
+				Log::debug("Request received (CGI)", "request-reader");
 				return ReaderState::CGI;
 			}
 			_handleCompleteBody(buffer);
-			std::cout << "[request-reader] Request received (complete buffer)." << std::endl;
+			Log::debug("Request received (complete buffer)", "request-reader");
 			return ReaderState::Complete;
 
 		case BodyState::Chunked:
 		{
 			BodyState chunked_body_state = _handleChunkedBody(buffer);
-			std::cout << "[request-reader] Request received (chunk buffer)." << std::endl;
+			Log::debug("Request received (chunk buffer)", "request-reader");
 			if (chunked_body_state == BodyState::CGI)
 			{
-				std::cout << "[request-reader] Request received (CGI)" << std::endl;
+				Log::debug("Request received (CGI)", "request-reader");
 				_request.adjustHeaderForCGI();
 				buffer = _request.get_body();
 				return ReaderState::CGI;
 			}
 			if (chunked_body_state == BodyState::Complete) {
-				std::cout << "[request-reader] Request received (completed chunked)." << std::endl;
+				Log::debug("Request received (completed chunked)", "request-reader");
 				return ReaderState::Complete;
 			}
 			return ReaderState::AwaitingBody;
@@ -205,12 +197,12 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
-			std::cout << "[request-reader] Request received. Body too long." << std::endl;
+			Log::debug("Request received. Body too long.", "request-reader");
 			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return ReaderState::Error;
 
 		case BodyState::Invalid:
-			std::cout << "[request-reader] Request received. Request is not suppose to have body." << std::endl;
+			Log::debug("Request received. Request is not suppose to have body.", "request-reader");
 			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return ReaderState::Error;
 		

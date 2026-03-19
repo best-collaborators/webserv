@@ -213,7 +213,7 @@ IoEvent Connection::_tryInitCGI() noexcept
 	{
 		Log::error("CGI executor error " + std::to_string(*(e.what())), "CGI");
 		_request_reader.setStatusCode(HttpStatus::e_code::SERVICE_UNAVAILABLE);
-		return IoEvent::Received; //! Return 500 error code and send response back
+		return IoEvent::Received;
 	}
 	return IoEvent::Init;
 }
@@ -338,7 +338,7 @@ IoEvent	Connection::_handleSendState( ssize_t sent_bytes, ssize_t message_length
 		_request_reader.reset();
 		return IoEvent::Sent;
 	}
-	else if (sent_bytes < message_length) //! Implement partial send
+	else if (sent_bytes < message_length)
 	{
 		Log::debug("Response sent partially", "Connection");
 	}

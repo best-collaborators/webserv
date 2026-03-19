@@ -18,7 +18,9 @@ std::string PercentEncoder::percent_encoding(std::string &buffer)
 			char char_encoded = std::stoi(hex, nullptr, 16);
 			copy.replace(index, 3, 1, char_encoded);
 		}
-		catch(const std::exception& e) { std::cout << "[http-parser] Not a percent encoding character" << std::endl; }
+		catch(const std::exception& e) {
+			Log::error("Not a percent encoding character", "http-parser");
+		}
 		pos = std::find(copy.begin() + index + 1, copy.end(), '%');
 	}
 	return copy;

@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 
+#include "Logger.hpp"
+
 class MultipartFormData
 {
 private:

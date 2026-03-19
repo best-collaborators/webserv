@@ -21,7 +21,7 @@ int	main( int argc, char *argv[] )
 		return 1;
 	}
 
-	signal(SIGPIPE, SIG_IGN); //! Set to ignore SIGPIPE signal
+	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, &sig_handler);
 
 	try

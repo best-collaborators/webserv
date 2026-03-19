@@ -19,10 +19,12 @@ void Request::set_status_code(HttpStatus::e_code status_code)
 
 void Request::print_http_request_values() const
 {
-	for (auto values : _headers) {
-		std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
-	}
-	std::cout << std::endl;
+	#ifdef DDEBUG_FLAG
+		for (auto values : _headers) {
+			std::cout << "[" << values.first << "] " << "[" << values.second  << "] " << std::endl;
+		}
+		std::cout << std::endl;
+	#endif
 }
 
 
@@ -64,7 +66,6 @@ void Request::setIsCGI(bool is_cgi)
 
 void Request::adjustHeaderForCGI()
 {
-	std::cout << "ADJUST HEADERS" << std::endl;
 	set_header_value(http::headers::CONTENT_LENGTH, std::to_string(_body.size()));
 	remove_header_key(http::headers::TRANSFER_ENCODING);
 }

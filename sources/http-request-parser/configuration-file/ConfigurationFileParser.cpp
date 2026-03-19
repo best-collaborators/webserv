@@ -147,7 +147,9 @@ namespace {
 				size_t first = token.find_first_not_of(" \t");
 				size_t last = token.find_last_not_of(" \t");
 
-				std::cout << *token.begin() << std::endl;
+				#ifdef DDEBUG_FLAG
+					std::cout << *token.begin() << std::endl;
+				#endif
 				std::string to_insert = token.substr(first, last - first + 1);
 				if (result.count(to_insert)) {
 					result.clear();
@@ -505,7 +507,9 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 		if (_validateLocations(s_block.second) == ERROR) return ERROR;
 		if (_validateCGI(s_block.second) == ERROR) return ERROR;
 
-		std::cout << s_block.second << std::endl;
+		#ifdef DDEBUG_FLAG
+			std::cout << s_block.second << std::endl;
+		#endif
 	}
 	return OK;
 }
@@ -689,11 +693,14 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleLocation
 		if (_isStreamFinished(ifs)) break;
 	}
 
-	if (_current_server_block._locations.has_value()) {
-		for (auto &l : _current_server_block._locations.value()) {
-			std::cout << l << std::endl;
+	#ifdef DDEBUG_FLAG
+		if (_current_server_block._locations.has_value()) {
+			for (auto &l : _current_server_block._locations.value()) {
+				std::cout << l << std::endl;
+			}
 		}
-	}
+	#endif
+
 	_current_server_block._assigned_fields.set(6);
 	return OK;
 }
@@ -715,11 +722,14 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleCGIDirec
 		if (_parseCGI(ifs, line) == ERROR) return ERROR;
 	}
 
-	if (_current_server_block._cgi.has_value()) {
-		for (auto &cgi : _current_server_block._cgi.value()) {
-			std::cout << cgi << std::endl;
+	#ifdef DDEBUG_FLAG
+		if (_current_server_block._cgi.has_value()) {
+			for (auto &cgi : _current_server_block._cgi.value()) {
+				std::cout << cgi << std::endl;
+			}
 		}
-	}
+	#endif
+
 	_current_server_block._assigned_fields.set(7);
 	return OK;
 }

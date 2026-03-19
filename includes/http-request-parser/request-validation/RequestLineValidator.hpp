@@ -16,6 +16,7 @@
 #include "ParseContext.hpp"
 
 #include "IParser.hpp"
+#include "File.hpp"
 
 class RequestLineValidator : public IParser
 {

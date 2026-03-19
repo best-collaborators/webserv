@@ -3,15 +3,15 @@
 MultipartFormData::MultipartFormData(std::string content_type, std::string name, std::string filename)
 : _content_type(content_type), _name(name), _filename(filename) {
 
-	std::cout << _content_type <<" "<<_name << " " << _filename << std::endl;
+	Log::debug(_content_type + " " + _name + " " + _filename, "http-parser");
 }
 
 void MultipartFormData::print_all_data()
 {
-	std::cout << "Content-Type: " << _content_type << std::endl;
-	std::cout << "Name: " << _name << std::endl;
-	std::cout << "Filename: " << _filename << std::endl;
-	std::cout << "Content: " << _content << std::endl;
+	Log::debug("Content-Type: " + _content_type, "http-parser");
+	Log::debug("Name: " + _name, "http-parser");
+	Log::debug("Filename: " + _filename, "http-parser");
+	Log::debug("Content: " + _content, "http-parser");
 }
 
 const std::string &MultipartFormData::get_content_type() const {

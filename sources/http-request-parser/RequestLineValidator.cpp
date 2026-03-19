@@ -238,7 +238,7 @@ namespace {
 		if (matched_loc.getPath().empty())
 			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 
-		std::cout << "LOCATION MATCH: \n" << matched_loc << std::endl;
+		Log::debug("LOCATION MATCH: \n" + matched_loc.to_string(), "http-parser");
 		if (tryRelocate(matched_loc, matched_loc.getPath(), request_target)) {
 			return RequestLineValidator::e_parse_result::RELOCATION;
 		}
@@ -273,7 +273,7 @@ namespace {
 		if (matched_cgi.pass_to.empty())
 			return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 
-		std::cout << "CGI MATCH: \n" << matched_cgi << std::endl;
+		Log::debug("CGI MATCH: \n" + to_string(matched_cgi), "http-parser");
 		if (isRegularFile(server_block, matched_cgi, request, request_target)) {
 			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 		}
@@ -288,7 +288,7 @@ namespace {
 		
 		Location server_loc = server_block._root_restrictions;
 		file.setMaxBodySize(server_loc.getMaxBodySize());
-		std::cout << server_loc << std::endl;
+		Log::debug("server_loc: \n" + server_loc.to_string(), "http-parser");
 		if (tryRelocate(server_loc, server_loc.getPath(), request_target)) {
 			Log::debug("Is a relocation file " + server_loc.getPath().string(), "parser");
 			return RequestLineValidator::e_parse_result::RELOCATION;
@@ -317,7 +317,7 @@ namespace {
 		else {
 			file_to_return = server_loc.getRoot().string() + request_target;
 		}
-		std::cout << "Tried to return " << file_to_return << std::endl;
+		Log::debug("Tried to return: " + file_to_return, "http-parser");
 		file.setFullFilename(file_to_return);
 		file.setMaxBodySize(server_loc.getMaxBodySize());
 
@@ -328,7 +328,6 @@ namespace {
 	}
 }
 
-#include "File.hpp"
 RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInConfigFile(std::string &request_target)
 {
 	if (!_parse_context.request.getServerBlock()) return UNKNOWN_ERROR;
@@ -338,7 +337,7 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 
 	std::filesystem::path filename_path(request_target);
 	std::string extension = filename_path.extension().string();
-	std::cout << "Filename: " << filename_path.string() << " Extension: " << extension << std::endl;
+	Log::debug("Filename: " + filename_path.string() + " Extension: " + extension, "http-parser");
 
 	if (isDirectoryRedirect(server_block._root.string(), request_target, request)) 
 		return RELOCATION;

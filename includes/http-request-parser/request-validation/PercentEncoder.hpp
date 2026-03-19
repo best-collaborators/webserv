@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "Logger.hpp"
+
 class PercentEncoder
 {
 private:

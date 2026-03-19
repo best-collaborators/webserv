@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 
+#include <Logger.hpp>
 class ChildSignalHandler
 {
 private:

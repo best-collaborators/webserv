@@ -45,7 +45,6 @@ private:
 
 	bool					_is_default_page = false;
 
-	//? temp for debug
 	std::string				_header_str;
 
 	std::string				get_file_last_modified_date(const std::string &filename);

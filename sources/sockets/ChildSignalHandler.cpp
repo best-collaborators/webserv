@@ -30,7 +30,7 @@ void ChildSignalHandler::_readSignalFD() noexcept
 
 	read_bytes = read(_sig_fd, &status, sizeof(status));
 	if (read_bytes != sizeof(status))
-		std::cerr << "[server] sigfd read failed." << std::endl;
+		Log::error("sigfd read failed.", "server");
 }
 
 int ChildSignalHandler::getFD() const noexcept
@@ -50,8 +50,8 @@ std::vector<pid_t> ChildSignalHandler::handleFinishedChildren() noexcept
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 	{
 		finished.push_back(pid);
-		std::cout << "pid: " << pid << std::endl;
-		std::cout << "status: " << status << std::endl;
+		Log::debug("pid: " + std::to_string(pid), "server");
+		Log::debug("status: " + std::to_string(status), "server");
 	}
 	return finished;
 }

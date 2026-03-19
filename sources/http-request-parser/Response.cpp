@@ -68,11 +68,11 @@ bool Response::is_ifstream_successful(std::ifstream &ifs)
 	switch (errno)
 	{
 		case 2:
-			std::cout << "[response] No such file or directory" << std::endl;
+			Log::error("No such file or directory" + _body, "response");
 			_status_code = HttpStatus::e_code::NOT_FOUND;
 			break;
 		default:
-			std::cout << "[response] File system error" << std::endl;
+			Log::error("File system error" + _body, "response");
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
@@ -243,7 +243,6 @@ std::string Response::form_response( const Request *request, const std::string &
 	}
 
 	std::ostringstream ostringstream;
-	std::cout << _status_code << std::endl;
 
 	ostringstream << "HTTP/1.1"  << " "
 		<< _status_code << "\r\n"
@@ -278,10 +277,7 @@ std::string Response::form_response( const Request *request, const std::string &
 	_body = ostringstream.str();
 
 	_response_length = _header_str.size() + _content_length;
-	// std::cout << "content length" << _content_length << std::endl;
-	std::cout << "RESPONSE:\n" << std::quoted(_body) << std::endl;
-	// std::cout << "header size:                  ==> \n" << _header_str.size() << std::endl;
-	// std::cout << "size:                  ==> " << _body.size() << std::endl;
+	Log::debug("RESPONSE: " + _body, "http-parser");
 
 	return _body;
 }

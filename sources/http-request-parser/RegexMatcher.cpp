@@ -7,12 +7,6 @@ std::string RegexMatcher::get_regex_value(std::string &line, std::regex regex_me
 
 	if (matches.empty()) return "";
 
-	// std::cout << "Line " << std::quoted(line) << "\n";
-	// std::cout << "Full match: " << matches[0] << "\n";
-	// for (size_t i = 0; i < matches.size(); ++i) {
-	// 	std::cout << "Group " << i << ": [" << matches[i] << "]\n";
-	// }
-
 	std::string matched_string = matches.str(1);
 	line = matches.suffix();
 	return matched_string;
@@ -27,11 +21,6 @@ std::string RegexMatcher::get_regex_value(std::string &line, std::regex regex_me
 			Logger::displayLog(Logger::e_log_level::ERROR, "No match found: " + line, "config");
 		return "";
 	}
-
-	// std::cout << "Full match: " << matches[0] << "\n";
-	// for (size_t i = 0; i < matches.size(); ++i) {
-	// 	std::cout << "Group " << i << ": [" << matches[i] << "]\n";
-	// }
 
 	if (match_number >= matches.size()) {
 		if (show_msg)

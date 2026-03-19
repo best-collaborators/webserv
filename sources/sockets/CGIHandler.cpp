@@ -123,8 +123,6 @@ IoEvent CGIHandler::readFromCGI() noexcept
 			return IoEvent::Done;
 		}
 	}
-
-	// If no Content-Length header (_content_length == -1), rely on EOF (read == 0) above
 	return IoEvent::Pending;
 }
 

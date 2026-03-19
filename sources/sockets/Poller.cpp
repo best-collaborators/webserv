@@ -14,7 +14,7 @@ static std::string operationToString( int op )
 
 Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 {
-	int status = epoll_create1(EPOLL_CLOEXEC); //! Check for forks
+	int status = epoll_create1(EPOLL_CLOEXEC);
 
 	if (status == -1)
 	{
@@ -28,7 +28,7 @@ Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 
 Poller::~Poller()
 {
-	if (_epoll_fd != -1) //! Replace with safe close fd
+	if (_epoll_fd != -1)
 	{
 		while (close(_epoll_fd) == -1 && errno == EINTR) {}
 
@@ -42,7 +42,7 @@ int		Poller::wait()
 
 	if (count == -1)
 	{
-		if (errno == EINTR) //! Handle tab resize or debugger
+		if (errno == EINTR)
 		{
 			return 0;
 		}
