@@ -16,6 +16,7 @@ class Location
 	std::string							default_file;
 	std::optional<HttpMethodRegistry>	methods_registry;
 	HttpPage							return_page;
+	size_t								_max_body_size = 0;
 
 	public:
 		// Getters
@@ -25,6 +26,7 @@ class Location
 		const std::string& getDefaultFile() const;
 		const std::optional<HttpMethodRegistry>& getMethodsRegistry() const;
 		const HttpPage& getReturnPage() const;
+		size_t getMaxBodySize() const;
 
 		// Setters
 		void setPath(const std::filesystem::path& p);
@@ -32,9 +34,9 @@ class Location
 		void setAutoindex(bool a);
 		void setDefaultFile(const std::string& f);
 		void setMethodsRegistry(const HttpMethodRegistry& m);
-		void setReturnPage(const HttpPage& p);
-
+		void setMaxBodySize(const size_t max_body_size);
 		std::string to_string() const noexcept;
+		void setReturnPage(const HttpPage& p);
 };
 
 std::ostream& operator<<(std::ostream& os, const Location& location);

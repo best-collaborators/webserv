@@ -18,7 +18,7 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(const std::string &msg)
 {
-    set_header_value(http::headers::CONTENT_TYPE, "text/html");
+	_content_type = HttpContentType::e_code::TEXT_HTML;
 
 	return "<!DOCTYPE html>\n"
 		   "<html lang=\"en\">\n"
@@ -100,6 +100,11 @@ void Response::read_body_partially(const std::string &filename)
 		return;
 	}
 
+	if (std::filesystem::is_directory(filename)) {
+		_status_code = HttpStatus::e_code::NOT_FOUND;
+		return;
+	}
+
 	std::ifstream ifs (filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) return;
 
@@ -127,19 +132,25 @@ void Response::read_body_partially(const std::string &filename)
 
 void Response::set_content_type(std::string filename)
 {
-	std::filesystem::path path = filename;
-	auto extension = path.extension();
-	set_header_value(http::headers::CONTENT_TYPE, HttpContentType::get_content_type_by_extension(extension.string()));
+	_content_type = HttpContentType::to_code(filename);
 }
 
 std::streampos Response::get_file_size(const std::string &filename)
 {
 	std::filesystem::path normalized_path = std::filesystem::weakly_canonical(filename);
-	std::ifstream ifs(normalized_path, std::ios::binary);
+	if (std::filesystem::is_directory(normalized_path)) {
+		_status_code = HttpStatus::e_code::NOT_FOUND;
+		_body = serve_html_webserv_page("Is a directory.");
+		_content_length = _body.size();
+		return 0;
+	}
+
+	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs)) {
 		std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
 		return 0;
 	}
+
 	std::streampos fbegin = ifs.tellg();
 	ifs.seekg(0, ifs.end);
 	_content_length = ifs.tellg() - fbegin;
@@ -157,12 +168,14 @@ std::string Response::form_response( const Request *request, const std::string &
 
 	_request = request;
 	auto file = _request->getFile();
-	auto error_pages = _request->getServerBlock()->_error_pages;
+	error_map error_pages = _request->getServerBlock()->_error_pages;
 	_status_code = _request->get_status_code();
 
 	if (_status_code != HttpStatus::e_code::NO_CONTENT && file.isDir() && file.getAutoindex()) {
 		_body = ListingGenerator::getListingPage(file);
+		_content_type = HttpContentType::e_code::TEXT_HTML;
 		_content_length = _body.size();
+		
 	}
 	else if (HttpStatus::is_good(_status_code) && isCGI)
 	{
@@ -236,12 +249,12 @@ std::string Response::form_response( const Request *request, const std::string &
 		<< _status_code << "\r\n"
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
-		<< "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-  		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
+		<< "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
+		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	if (!_body.empty()) {
-		ostringstream  << "Content-Type: " << get_header_value(http::headers::CONTENT_TYPE) << "\r\n";
+	if (!HttpStatus::is_redirect(_status_code) && _status_code != HttpStatus::e_code::NO_CONTENT) {
+		ostringstream  << "Content-Type: " << HttpContentType::to_string(_content_type) << "\r\n";
 		ostringstream << "Content-Length: " << _content_length << "\r\n";
 	}
 

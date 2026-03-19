@@ -18,6 +18,8 @@ private:
 	HttpPage					_return_page;
 	HttpMethodRegistry			_method_registry;
 	size_t						_max_body_size;
+	bool						_is_index;
+	std::string					_path_info;
 
 public:
 	File(/* args */);
@@ -29,6 +31,8 @@ public:
 	void								setRelativePath(const std::string& path);
 	bool								isDir() const;
 	void								setIsDir(bool dir);
+	bool								isIndex() const;
+	void								setIsIndex(bool dir);
 	bool 								getAutoindex() const;
 	void								setAutoindex(bool index);
 	const std::string					&getExtension() const;
@@ -41,6 +45,8 @@ public:
 	void								setMethodRegistry(HttpMethodRegistry _method_registry);
 	size_t								getMaxBodySize() const;
 	void								setMaxBodySize(size_t max_body_size);
+	const std::string					&getPathInfo() const;
+	void								setPathInfo(const std::string &path_info);
 };
 
 #endif /* FILE_HPP */

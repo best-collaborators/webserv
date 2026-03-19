@@ -5,7 +5,6 @@ std::string to_string(const ServerBlock& block)
 	std::string result = "ServerBlock {\n";
 	result += "  listen_data: " + block._listen_data.ip_address + ":" + std::to_string(block._listen_data.port) + "\n";
 	result += "  server_name: " + block._server_name + "\n";
-	result += "  max_body_size: " + std::to_string(block._max_body_size) + "\n";
 	result += "  root: " + block._root.string() + "\n";
 	
 	if (block._index.has_value())

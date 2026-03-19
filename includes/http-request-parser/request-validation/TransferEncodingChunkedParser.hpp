@@ -15,6 +15,7 @@ class TransferEncodingChunkedParser : public IParser
 private:
 	ParseContext &_parse_context;
 	size_t		_chunk_size = 0;
+	static std::string old_raw_bits;
 
 	TransferEncodingChunkedParser() = delete;
 	TransferEncodingChunkedParser(const TransferEncodingChunkedParser && other) = delete;
@@ -24,7 +25,7 @@ private:
 	bool _tryGetNewChunk( std::string &buffer);
 	bool _isBad( std::string &buffer);
 	bool _isComplete( std::string &buffer);
-	bool _consumeChunkSize(std::string &buffer, size_t bytes);
+	bool _consumeChunkSize(std::string &buffer);
 
 public:
 	TransferEncodingChunkedParser( ParseContext &parse_context );

@@ -102,7 +102,7 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 		return BodyState::Complete;
 	}
 	_stored_body_bytes = read_buffer.size();
-	std::cout << "\n[request-reader] stored_body_bytes: " << _stored_body_bytes << "\n===============\n";
+	// std::cout << "\n[request-reader] stored_body_bytes: " << read_buffer << "\n===============\n";
 
 	if (_request.get_header_count(http::headers::TRANSFER_ENCODING)) {
 		return BodyState::Chunked;
@@ -159,12 +159,11 @@ BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 
 		std::cout << "Body received. Status code -> "
 			  << _request.get_status_code() << std::endl;
-		if (_request.isCGI()) {
+		if (HttpStatus::is_good(_request.get_status_code()) && _request.isCGI()) {
 			return BodyState::CGI;
 		}
 		return BodyState::Complete;
 	}
-
 	return BodyState::Incomplete;
 }
 
@@ -197,8 +196,10 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 				buffer = _request.get_body();
 				return ReaderState::CGI;
 			}
-			if (chunked_body_state == BodyState::Complete)
+			if (chunked_body_state == BodyState::Complete) {
+				std::cout << "[request-reader] Request received (completed chunked)." << std::endl;
 				return ReaderState::Complete;
+			}
 			return ReaderState::AwaitingBody;
 		}
 

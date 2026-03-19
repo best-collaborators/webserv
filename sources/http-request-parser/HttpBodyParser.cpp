@@ -14,10 +14,23 @@ void HttpBodyParser::_handleChunked()
 {
 	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 
-	TransferEncodingChunkedParser chunked_parser(_parse_context);
-	chunked_parser.parse();
+	// 	std::vector<std::string> parts = {
+	// 	"4\r",
+	// 	"\nWi",
+	// 	"ki\r\n5\r",
+	// 	"\nped",
+	// 	"ia\r",
+	// 	"\n0\r",
+	// 	"\n\r",
+	// 	"\n"
+	// };
+	// _parse_context.raw_bits = "";
+	// for (auto &p : parts) {
+	// 	_parse_context.raw_bits += p;
+		TransferEncodingChunkedParser chunked_parser(_parse_context);
+		chunked_parser.parse();
+	// }
 
-	// std::cout << std::boolalpha << _parse_context.request.chunkHandler().isReceived() << std::endl;
 	if (!_parse_context.request.chunkHandler().isReceived()) return ;
 
 	if (_parse_context.request.isCGI()) return ;
@@ -30,14 +43,13 @@ void HttpBodyParser::_handleRawUpload()
 {
 	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 	file_uploader.write_into_file(_parse_context.raw_bits);
-	_parse_context.request.set_status_code(HttpStatus::e_code::NO_CONTENT);
+	_parse_context.request.set_status_code(HttpStatus::e_code::CREATED);
 }
 
 void HttpBodyParser::parse()
 {
 	RequestType body_status = _parse_context.request.getBodyStatus();
 
-	std::cout << body_status << std::endl;
 	switch (body_status)
 	{
 	case RequestType::CHUNKED:

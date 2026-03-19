@@ -44,6 +44,7 @@ void	Connection::_formResponse()
 	size_t content_length = _request_reader.getContentLength();
 	_buffer_manager.consume(content_length);
 	_response_formed = true;
+	_request_reader.reset();
 }
 
 void	Connection::_formCGIResponse()
@@ -60,6 +61,7 @@ void	Connection::_formCGIResponse()
 
 	if (cgi_status != HttpStatus::e_code::OK)
 	{
+		Log::critical("CGI returned error: " + cgi_buffer, "cgi");
 		_request_reader.setStatusCode(cgi_status);
 		_response_writer.formResponse(_request_reader.request());
 	}
@@ -201,7 +203,6 @@ IoEvent Connection::_tryInitCGI() noexcept
 	auto headers = _request_reader.getHeaders();
 
 	File const & file = _request_reader.getFile();
-
 
 	try
 	{

@@ -91,6 +91,12 @@ namespace
 		if (headers.count(http::headers::CONTENT_LENGTH))
 			envp["CONTENT_LENGTH"] = headers.at(http::headers::CONTENT_LENGTH);
 
+envp["SCRIPT_NAME"]     = "/directory/youpi.bla";   // ✅ FIX
+envp["SCRIPT_FILENAME"] = "/home/kvalerii/Desktop/webserv2/YoupiBanane/youpi.bla";
+
+envp["PATH_INFO"]       = "/";                      // keep this
+envp["PATH_TRANSLATED"] = "/home/kvalerii/Desktop/webserv2/YoupiBanane/";
+
 		for (auto const & [key, value] : headers)
 		{
 			if (isCGIHeader(key))
@@ -109,9 +115,18 @@ namespace
 
 CGIConfig cgi::buildConfig( std::unordered_map<std::string, std::string> const & headers, File const & file )
 {
+	std::string target = headers.at(http::headers::REQUEST_TARGET);
+
+	if (file.getPassTo().has_value())
+		Log::critical("file.getPassTo().has_value()");
+	std::string pass_to = file.getPassTo().value();
+	Log::critical("pass_to: " + pass_to);
+	std::string full_filename =  file.getFullFilename();
+	Log::critical("full_filename: " + full_filename);
+
 	return CGIConfig {
-		file.getPassTo().value(),
-		file.getFullFilename(),
+		pass_to,
+		full_filename,
 		buildEnvp(headers)
 	};
 }
