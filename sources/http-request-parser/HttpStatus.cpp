@@ -98,6 +98,6 @@ bool HttpStatus::is_redirect(e_code code)
 
 bool HttpStatus::is_good(e_code code)
 {
-	return static_cast<int>(code) > 0 &&
+	return static_cast<int>(code) >= 200 &&
 	static_cast<int>(code) < static_cast<std::underlying_type_t<e_code>>(e_code::MOVED_PERMANENTLY);
 }

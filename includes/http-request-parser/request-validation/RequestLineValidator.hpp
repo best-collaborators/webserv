@@ -25,6 +25,7 @@ public:
 		NO_FILE_IN_CONFIG,
 		MATCH_FOUND,
 		RELOCATION,
+		CGI,
 		UNKNOWN_ERROR
 	};
 
@@ -36,7 +37,6 @@ public:
 private:
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
 	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
-	const char *ERROR_HTTP_VERSION = "LOG: ERROR INVALID REQUEST VERSION";
 
 	ParseContext &_parse_context;
 

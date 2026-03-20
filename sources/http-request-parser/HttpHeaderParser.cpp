@@ -49,24 +49,20 @@ namespace {
 HttpHeaderParser::HttpHeaderParser( ParseContext &parse_context )
 : _parse_context(parse_context) { }
 
-// Check if the buffer length is within limits
 bool HttpHeaderParser::_isValidHeaderLength(const std::string &buffer) const {
 	return buffer.length() <= http::limits::max_header_value_length;
 }
 
-// Parse header into name/value
 std::pair<std::string, std::string> HttpHeaderParser::_parseHeader(const std::string &buffer) const {
 	return checkHeaderFormatValidity(buffer);
 }
 
-// Normalize: lowercase + trim value
 void HttpHeaderParser::_normalizeHeader(std::string &name, std::string &value) const {
 	RequestStringUtils::transform_to_lower(name);
 	Trimmer::trim(value);
 	RequestStringUtils::transform_to_lower(value);
 }
 
-// Validate special headers
 bool HttpHeaderParser::_validateSpecialHeaders(const std::string &name,
 											   const std::string &value,
 											   const std::string &buffer) const
@@ -80,7 +76,6 @@ bool HttpHeaderParser::_validateSpecialHeaders(const std::string &name,
 	return true;
 }
 
-// Handle header duplication
 bool HttpHeaderParser::_handleDuplicates(const std::string &name,
 										const std::string &buffer)
 {
@@ -92,14 +87,12 @@ bool HttpHeaderParser::_handleDuplicates(const std::string &name,
 		return false;
 	}
 
-	// Append non-critical headers only if the value is different
 	if (_parse_context.request.get_header_value(name) != buffer)
 		_parse_context.request.append_header_value(name, buffer);
 
 	return true;
 }
 
-// Identify critical headers
 bool HttpHeaderParser::_isCriticalHeader(const std::string &name) const {
 	return name == http::headers::HOST
 		|| name == http::headers::CONTENT_LENGTH
@@ -124,7 +117,7 @@ bool HttpHeaderParser::_isValidHeader(std::string &buffer)
 	if (!_handleDuplicates(name, buffer))
 		return false;
 
-	_parse_context.request.set_header_value(name, buffer);
+	_parse_context.request.set_header_value(name, value);
 	return true;
 }
 
@@ -153,7 +146,6 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 		buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);
 	}
 
-	_parse_context.request.set_method(_parse_context.request.get_header_value(http::headers::METHOD));
 	if (_parse_context.request.getBodyStatus() != RequestType::NO_BODY
 		&& !_parse_context.request.has_body_required_headers()) {
 
@@ -195,7 +187,7 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 		}
 	}
 	catch(const std::exception& e) {
-		std::cerr << "400 Bad Request - content-length is NAN" << std::endl;
+		std::cerr << "2. 400 Bad Request - content-length is NAN" << std::endl;
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 
