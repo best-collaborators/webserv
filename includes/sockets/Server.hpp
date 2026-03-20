@@ -28,8 +28,7 @@ private:
 		Listener listener;
 		ServerBlock const * server_block;
 
-		ListenerEntry( Listener l, ServerBlock const * sb ) : listener(std::move(l)), server_block(sb)
-		{}
+		ListenerEntry( Listener l, ServerBlock const * sb );
 	};
 
 	using connections_map = std::map<int, Connection>;
@@ -42,7 +41,7 @@ private:
 	std::chrono::seconds	_connection_timeout;
 	std::chrono::seconds	_cgi_timeout;
 
-	server_blocks_map			_server_blocks;
+	server_blocks_map		_server_blocks;
 	listeners_map			_listeners;
 
 	Poller					_poller;

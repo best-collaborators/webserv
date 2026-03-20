@@ -1,17 +1,12 @@
-#include "../includes/sockets/main.hpp"
-#include "../includes/sockets/Listener.hpp"
-#include "../includes/sockets/Server.hpp"
+#include "main.hpp"
 
-#include "ConfigurationFileParser.hpp"
-#include <unordered_map>
-
-void	sig_handler(int signum)
+static void	sig_handler(int signum)
 {
 	if (signum == SIGINT)
 		g_running = false;
 }
 
-int	main( int argc, char *argv[] )
+int	main(int argc, char **argv)
 {
 	if (argc < 2) return 1;
 

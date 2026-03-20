@@ -2,6 +2,9 @@
 
 volatile sig_atomic_t g_running = true;
 
+Server::ListenerEntry::ListenerEntry(Listener l, ServerBlock const *sb) : listener(std::move(l)), server_block(sb)
+{}
+
 static std::string eventsToString( uint32_t events )
 {
 	if (events == (EPOLLIN | EPOLLOUT))
