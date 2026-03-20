@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Client Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 40px auto;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    #result {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Send Data to Server</h2>
+
+  <!-- New form fields -->
+  <input id="name" type="text" placeholder="Your Name" />
+  <input id="email" type="email" placeholder="Your Email" />
+  <textarea id="message" placeholder="Type your message"></textarea>
+  <input id="file" type="file" />
+  <button onclick="send()">Send</button>
+
+  <div id="result"></div>
+
+<script>
+  function send() {
+    const formData = new FormData();
+    formData.append("name", document.getElementById("name").value);
+    formData.append("email", document.getElementById("email").value);
+    formData.append("message", document.getElementById("message").value);
+    
+    const fileInput = document.getElementById("file");
+    if (fileInput.files.length > 0) {
+      formData.append("file", fileInput.files[0]);
+    }
+
+    fetch("http://127.0.0.1:3490/TEST.CGI", {
+      method: "POST",
+      body: formData
+    })
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById("result").innerHTML = html;
+    })
+    .catch(err => {
+      document.getElementById("result").textContent = "Error: " + err;
+    });
+  }
+</script>
+
+</body>
+</html>
