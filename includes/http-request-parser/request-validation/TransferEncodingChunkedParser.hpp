@@ -21,11 +21,7 @@ private:
 	TransferEncodingChunkedParser(const TransferEncodingChunkedParser && other) = delete;
 	TransferEncodingChunkedParser(const TransferEncodingChunkedParser & other) = delete;
 
-	bool _isFinalChunk( std::string &buffer);
 	bool _tryGetNewChunk( std::string &buffer);
-	bool _isBad( std::string &buffer);
-	bool _isComplete( std::string &buffer);
-	bool _consumeChunkSize(std::string &buffer);
 
 public:
 	TransferEncodingChunkedParser( ParseContext &parse_context );
