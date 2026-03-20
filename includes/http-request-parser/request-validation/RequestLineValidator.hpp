@@ -31,7 +31,7 @@ public:
 	RequestLineValidator( ParseContext &parse_context );
 	~RequestLineValidator() = default;
 
-	void	parse();
+	void parse();
 
 private:
 	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";

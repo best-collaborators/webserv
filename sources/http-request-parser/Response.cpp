@@ -284,7 +284,8 @@ void Response::build_headers()
 		<< "Date: " << get_date_GMT() << "\r\n";
 
 	if (!HttpStatus::is_redirect(_status_code) &&
-		_status_code != HttpStatus::e_code::NO_CONTENT)
+		_status_code != HttpStatus::e_code::NO_CONTENT &&
+		_status_code != HttpStatus::e_code::CREATED)
 	{
 		oss << "Content-Type: "
 			<< HttpContentType::to_string(_content_type) << "\r\n"

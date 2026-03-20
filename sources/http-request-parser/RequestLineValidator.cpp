@@ -22,9 +22,10 @@ bool RequestLineValidator::_isValidRequestLine(std::string &buffer)
 {
 	if (buffer.empty() || buffer.length() > http::limits::max_header_value_length) return false;
 
-	return (_addValueToMap(HttpRegexPatterns::METHOD(), buffer, ERROR_HTTP_METHOD, http::headers::METHOD)
-	&& _addValueToMap(HttpRegexPatterns::FILEPATH(), buffer, ERROR_HTTP_REQUEST_TARGET, http::headers::REQUEST_TARGET)
-	&& _addValueToMap(HttpRegexPatterns::VERSION(), buffer, ERROR_HTTP_VERSION, "version"));
+	bool result = _addValueToMap(HttpRegexPatterns::METHOD(), buffer, ERROR_HTTP_METHOD, http::headers::METHOD)
+	&& _addValueToMap(HttpRegexPatterns::FILEPATH(), buffer, ERROR_HTTP_REQUEST_TARGET, http::headers::REQUEST_TARGET);
+	_parse_context.request.set_header_value("version", buffer);
+	return result;
 }
 
 bool RequestLineValidator::_isValidHttpVersion()

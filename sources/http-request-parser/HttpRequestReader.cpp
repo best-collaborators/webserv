@@ -58,11 +58,7 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Redirect;
 	}
 
-	if (_request.get_method() != HttpMethod::e_code::POST && read_buffer.size() != 0) {
-		return HeaderState::Error;
-	}
-
-	Log::error("_request.isCGI() " + std::to_string(_request.isCGI()), "parser");
+	Log::debug("_request.isCGI() " + std::to_string(_request.isCGI()), "parser");
 	if (_request.isCGI() && _request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
 	return _handleHeaderMethod(read_buffer);
 }

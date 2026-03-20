@@ -21,8 +21,8 @@ extern volatile sig_atomic_t	g_running;
 class Server
 {
 private:
-	static constexpr int		CONNECTION_TIMEOUT = 1000;
-	static constexpr int		CGI_TIMEOUT = 1000;
+	static constexpr int		CONNECTION_TIMEOUT = 10;
+	static constexpr int		CGI_TIMEOUT = 10;
 	struct ListenerEntry
 	{
 		Listener listener;
