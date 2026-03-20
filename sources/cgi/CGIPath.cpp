@@ -1,22 +1,7 @@
-#ifndef CGI_HPP
-#define CGI_HPP
+#include "Logger.hpp"
+#include "CGIPath.hpp"
 
-#include <string>
-#include "HttpMethodRegistry.hpp"
-#include <optional>
-#include <unordered_set>
-#include <unordered_map>
-
-struct CGIPath
-{
-	std::string							pass_to;
-	std::unordered_set<std::string>		extensions;
-	std::filesystem::path				path = "/";
-	size_t								max_body_size;
-	std::optional<HttpMethodRegistry>	methods_registry;
-};
-
-inline std::ostream& operator<<(std::ostream& os, const CGIPath& cgi)
+std::ostream& operator<<(std::ostream& os, const CGIPath& cgi)
 {
 	if (cgi.methods_registry.has_value())
 		cgi.methods_registry->printAllowedMethods();
@@ -28,7 +13,7 @@ inline std::ostream& operator<<(std::ostream& os, const CGIPath& cgi)
 	return os;
 }
 
-inline std::string to_string(std::unordered_set<std::string> extensions)
+std::string to_string(std::unordered_set<std::string> extensions)
 {
 	if (extensions.empty()) return "";
 
@@ -41,7 +26,7 @@ inline std::string to_string(std::unordered_set<std::string> extensions)
 	return result;
 }
 
-inline std::string to_string(const CGIPath& cgi)
+std::string to_string(const CGIPath& cgi)
 {
 	std::string result = "";
 	result += "    Pass_to: " + cgi.pass_to + "\n";
@@ -54,6 +39,3 @@ inline std::string to_string(const CGIPath& cgi)
 		result += "    methods_registry: " + cgi.methods_registry.value().to_string() + "\n";
 	return result;
 }
-
-#endif /* CGIPath_HPP */
-

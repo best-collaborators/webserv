@@ -51,27 +51,27 @@ private:
 	e_parse_result			_parseListenDirective();
 
 	// Parsing orchestration
-    e_parse_result _parseAllServerBlocks(std::ifstream &ifs);
-    e_parse_result _parseSingleServerBlock(std::ifstream &ifs, std::string &line, bool &extra_line);
-    e_parse_result _dispatchServerDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
+	e_parse_result _parseAllServerBlocks(std::ifstream &ifs);
+	e_parse_result _parseSingleServerBlock(std::ifstream &ifs, std::string &line, bool &extra_line);
+	e_parse_result _dispatchServerDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
 
-    // Directive handlers
-    e_parse_result _checkDuplicateField(size_t bit_index, const std::string &field_name, std::bitset<8UL> &assigned_fields);
-    e_parse_result _handleListenDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
-    e_parse_result _handleServerNameDirective(std::string &line, bool &extra_line);
-    e_parse_result _handleErrorPagesDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
-    e_parse_result _handleRootDirective(std::string &line, bool &extra_line);
-    e_parse_result _handleIndexDirective(std::string &line, bool &extra_line);
-    e_parse_result _handleLocationsDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
-    e_parse_result _handleCGIDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
+	// Directive handlers
+	e_parse_result _checkDuplicateField(size_t bit_index, const std::string &field_name, std::bitset<8UL> &assigned_fields);
+	e_parse_result _handleListenDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
+	e_parse_result _handleServerNameDirective(std::string &line, bool &extra_line);
+	e_parse_result _handleErrorPagesDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
+	e_parse_result _handleRootDirective(std::string &line, bool &extra_line);
+	e_parse_result _handleIndexDirective(std::string &line, bool &extra_line);
+	e_parse_result _handleLocationsDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
+	e_parse_result _handleCGIDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
 
-    // Validation
-    e_parse_result _validateServerBlocks();
-    e_parse_result _validateRequiredFields(const ServerBlock &s_block);
-    e_parse_result _validateIndexPath(const ServerBlock &s_block);
-    e_parse_result _validateErrorPages(ServerBlock &s_block);
-    e_parse_result _validateLocations(ServerBlock &s_block);
-    e_parse_result _validateCGI(ServerBlock &s_block);
+	// Validation
+	e_parse_result _validateServerBlocks();
+	e_parse_result _validateRequiredFields(const ServerBlock &s_block);
+	e_parse_result _validateIndexPath(const ServerBlock &s_block);
+	e_parse_result _validateErrorPages(ServerBlock &s_block);
+	e_parse_result _validateLocations(ServerBlock &s_block);
+	e_parse_result _validateCGI(ServerBlock &s_block);
 
 	std::string _extractDirectiveValue(std::string &line, size_t keyword_length);
 
@@ -83,13 +83,13 @@ private:
 	e_parse_result _parseLocationRoot(std::string &line, Location &location, std::bitset<8> &fields);
 	e_parse_result _parseLocationRedirect(std::string &line, Location &location, std::bitset<8> &fields);
 	e_parse_result _parseLocationAutoindex(std::string &line, Location &location, std::bitset<8> &fields);
-    e_parse_result _parseLocationMaxBodySize(std::string &line, Location &location, std::bitset<8> &fields);
+	e_parse_result _parseLocationMaxBodySize(std::string &line, Location &location, std::bitset<8> &fields);
 
 	// CGI directive sub-parsers
 	e_parse_result _dispatchCGIDirective(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
 	e_parse_result _parseCGIPath(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
 	e_parse_result _parseCGIExtensions(std::string &line, CGIPath &cgi, std::bitset<8> &fields);
-    e_parse_result _parseCGIMaxBodySize(std::string &line, CGIPath &location, std::bitset<8> &fields);
+	e_parse_result _parseCGIMaxBodySize(std::string &line, CGIPath &location, std::bitset<8> &fields);
 };
 
 #endif /* CONFIGURATION_FILE_PARSER_HPP */

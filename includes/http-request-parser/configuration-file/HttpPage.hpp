@@ -3,11 +3,12 @@
 
 #include <string>
 #include <filesystem>
+
 #include "HttpStatus.hpp"
 
 struct HttpPage
 {
-	std::filesystem::path path;
+	std::filesystem::path	path;
 	HttpStatus::e_code		status_code;
 };
 

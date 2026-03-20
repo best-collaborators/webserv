@@ -6,7 +6,8 @@ INCL = \
 	-I$(INC_DIR)/http-request-parser/request-validation \
 	-I$(INC_DIR)/http-request-parser/configuration-file \
 	-I$(INC_DIR)/http-request-parser/response \
-	-I$(INC_DIR)/sockets
+	-I$(INC_DIR)/sockets \
+	-I$(INC_DIR)/cgi
 
 NAME = webserv
 
@@ -18,6 +19,7 @@ OBJ_DIR = build
 
 SRCS = \
 	$(SRC_DIR)/http-request-parser/configuration-file/ConfigurationFileParser.cpp \
+	$(SRC_DIR)/http-request-parser/configuration-file/ListenData.cpp \
 	$(SRC_DIR)/http-request-parser/RequestGenerator.cpp \
 	$(SRC_DIR)/http-request-parser/RequestParser.cpp \
 	$(SRC_DIR)/http-request-parser/FileUploadHandler.cpp \
@@ -56,10 +58,11 @@ SRCS = \
 	$(SRC_DIR)/sockets/Server.cpp \
 	$(SRC_DIR)/sockets/PipeFD.cpp \
 	$(SRC_DIR)/sockets/ChildSignalHandler.cpp \
-	$(SRC_DIR)/sockets/CGIRequestConfig.cpp \
-	$(SRC_DIR)/sockets/CGIHandler.cpp \
-	$(SRC_DIR)/sockets/CGIValidator.cpp \
-	$(SRC_DIR)/sockets/CGIExecutor.cpp
+	$(SRC_DIR)/cgi/CGIRequestConfig.cpp \
+	$(SRC_DIR)/cgi/CGIHandler.cpp \
+	$(SRC_DIR)/cgi/CGIValidator.cpp \
+	$(SRC_DIR)/cgi/CGIExecutor.cpp \
+	$(SRC_DIR)/cgi/CGIPath.cpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)

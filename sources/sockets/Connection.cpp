@@ -206,7 +206,7 @@ IoEvent Connection::_tryInitCGI() noexcept
 
 	try
 	{
-		CGIConfig	config = cgi::buildConfig(headers, file);
+		CGIConfig	config = CGIConfigBuilder::build(headers, file);
 		_cgi_handler.emplace(config);
 	}
 	catch(const std::exception& e)

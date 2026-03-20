@@ -36,3 +36,11 @@ void Logger::displayLog(e_log_level level, const std::string& message, const std
 				<< message
 				<< std::endl;
 }
+
+namespace Log {
+	void debug(const std::string& msg, const std::string& mod) { Logger::displayLog(Logger::e_log_level::DEBUG,    msg, mod); }
+	void info(const std::string& msg, const std::string& mod) { Logger::displayLog(Logger::e_log_level::INFO,     msg, mod); }
+	void warning(const std::string& msg, const std::string& mod) { Logger::displayLog(Logger::e_log_level::WARNING,  msg, mod); }
+	void error(const std::string& msg, const std::string& mod) { Logger::displayLog(Logger::e_log_level::ERROR,    msg, mod); }
+	void critical(const std::string& msg, const std::string& mod) { Logger::displayLog(Logger::e_log_level::CRITICAL, msg, mod); }
+}

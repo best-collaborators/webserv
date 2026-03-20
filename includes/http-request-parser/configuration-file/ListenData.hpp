@@ -9,22 +9,13 @@ struct ListenData
 	short		port;
 	std::string	ip_address;
 
-	bool operator==(const ListenData& other) const {
-		return port == other.port && ip_address == other.ip_address;
-	}
+	bool operator==(const ListenData& other) const;
 };
 
 struct ListenDataHash {
-	std::size_t operator()(const ListenData& loc) const {
-		return std::hash<int>()(loc.port) ^ 
-			   (std::hash<std::string>()(loc.ip_address) << 1);
-	}
+	std::size_t operator()(const ListenData& loc) const;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const ListenData& ld)
-{
-	os << "ListenData { ip: " << ld.ip_address << ", port: " << ld.port << " }";
-	return os;
-}
+std::ostream& operator<<(std::ostream& os, const ListenData& ld);
 
 #endif /* LISTEN_DATA_HPP */
