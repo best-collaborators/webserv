@@ -13,13 +13,13 @@ private:
 	std::string					_full_filename;
 	bool 						_is_dir = false;
 	bool 						_autoindex = false;
-	std::string					_extension;
+	std::string					_extension = "";
 	std::optional<std::string>	_pass_to;
 	HttpPage					_return_page;
 	HttpMethodRegistry			_method_registry;
-	size_t						_max_body_size;
+	size_t						_max_body_size = 0;
 	bool						_is_index;
-	std::string					_path_info;
+	std::string					_path_info = "";
 
 public:
 	File(/* args */);
@@ -48,5 +48,7 @@ public:
 	const std::string					&getPathInfo() const;
 	void								setPathInfo(const std::string &path_info);
 };
+
+std::ostream& operator<<(std::ostream& os, const File& file);
 
 #endif /* FILE_HPP */

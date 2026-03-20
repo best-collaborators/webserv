@@ -46,6 +46,8 @@ public:
 	const File			&getFile() const;
 	void				setFile(const File &file);
 
+	File				&getFile();
+
 	std::string			 getContentType() const;
 
 	void				 print_http_request_values() const;

@@ -114,3 +114,8 @@ void Request::setFile(const File& file)
 {
 	_file = file;
 }
+
+File &Request::getFile()
+{
+	return _file;
+}

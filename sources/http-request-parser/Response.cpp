@@ -219,15 +219,19 @@ void Response::handle_regular_response()
 	auto file = _request->getFile();
 	error_map error_pages = _request->getServerBlock()->_error_pages;
 
-	if (_status_code == HttpStatus::e_code::NO_CONTENT
-	|| _status_code == HttpStatus::e_code::CREATED)
-	{
+	if (_request->get_method() == HttpMethod::e_code::OPTIONS
+		|| _status_code == HttpStatus::e_code::NO_CONTENT
+		|| _status_code == HttpStatus::e_code::CREATED) {
+
+		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body.clear();
-		_body = serve_html_webserv_page();
-		_content_length = _body.size();
-		_content_type = HttpContentType::e_code::TEXT_HTML;
+		_content_length = 0;
 		return;
 	}
+
+	_body = serve_html_webserv_page();
+	_content_length = _body.size();
+	_content_type = HttpContentType::e_code::TEXT_HTML;
 
 	if (is_success())
 		serve_file(file.getFullFilename());
@@ -297,7 +301,7 @@ void Response::build_headers()
 			<< _request->getFile().getReturnPage().path.string() << "\r\n";
 
 	oss << "Connection: "
-		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Keep-Alive")
+		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Close")
 		<< "\r\n\r\n";
 
 	_header_str = oss.str();

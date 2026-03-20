@@ -579,15 +579,16 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 		}
 		seen_paths.insert(path);
 
-		if (l.getRoot().empty()) {
-			l.setRoot(std::filesystem::weakly_canonical(s_block._root.string() + l.getPath().string()));
-		}
-		if (!std::filesystem::is_directory(l.getRoot())) l.setRoot(s_block._root.string());
+		std::filesystem::path root;
 
-		if (!std::filesystem::is_directory(l.getRoot())) {
-			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.getRoot().string(), "config");
-			return ERROR;
+		if (l.getRoot().empty()) {
+			root = s_block._root.string() + l.getPath().string();
+		} else {
+			root = l.getRoot();
 		}
+
+		root = std::filesystem::weakly_canonical(root);
+		l.setRoot(root);
 
 		std::filesystem::path full = std::filesystem::weakly_canonical(l.getRoot().string() + "/" + l.getDefaultFile());
 		if (full.string().find(l.getRoot().c_str(), 0, l.getRoot().string().size() - 1) == std::string::npos) {
