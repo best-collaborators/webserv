@@ -63,6 +63,11 @@ std::ostream& operator<<(std::ostream& os, const Location& location)
 		Logger::displayLog(Logger::e_log_level::INFO, "Root: " + location.getRoot().string(), "config");
 	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + std::to_string(location.getMaxBodySize()), "config");
 
+	if (!location.getReturnPage().path.empty())
+		Logger::displayLog(Logger::e_log_level::INFO, "Return page: "
+				+ std::to_string((int)location.getReturnPage().status_code)
+				+ " "
+				+ location.getReturnPage().path.string(), "config");
 	std::string autoindex_enabled = (location.getAutoindex() ? "true" : "false");
 	Logger::displayLog(Logger::e_log_level::INFO, "Autoindex: " + autoindex_enabled, "config");
 
@@ -77,10 +82,14 @@ std::string Location::to_string() const noexcept
 		result += "    Methods: " + methods_registry.value().to_string() + "\n";
 	if (!default_file.empty())
 		result += "    Index: " + default_file + "\n";
-	Logger::displayLog(Logger::e_log_level::INFO, "Max body size: " + std::to_string(getMaxBodySize()), "config");
+	result += "    Max body size: " + std::to_string(getMaxBodySize());
 	if (!root.empty())
 		result += "    Root: " + root.string() + "\n";
-	
+	if (!return_page.path.empty())
+	result += "Return page: "
+			+ std::to_string((int)return_page.status_code)
+			+ " "
+			+ return_page.path.string() + "\n";
 	result += "    Autoindex: " + std::string(autoindex ? "true" : "false") + "\n";
 	
 	return result;

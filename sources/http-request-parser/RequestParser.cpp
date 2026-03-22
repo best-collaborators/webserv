@@ -14,9 +14,9 @@ void RequestParser::parse_headers()
 	RequestLineValidator line_validator(_parse_context);
 	line_validator.parse();
 
-	if (!_parse_context.request.isGoodStatusCode()) { return; }
+	if (_parse_context.request.isBad()) { return; }
 
 	HttpHeaderParser header_parser(_parse_context);
 	header_parser.parse();
-	if (!_parse_context.request.isGoodStatusCode()) { return; }
+	if (_parse_context.request.isBad()) { return; }
 }

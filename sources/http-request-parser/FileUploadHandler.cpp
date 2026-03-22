@@ -27,7 +27,7 @@ void FileUploadHandler::_getFileName()
 
 		const std::string content_type = _request.getContentType();
 
-		std::string_view extension;
+		std::string extension;
 		if (content_type.empty())
 			extension = ".bin";
 		else 
@@ -44,7 +44,6 @@ void FileUploadHandler::write_into_file( const std::string &_body )
 
 	_getFileName();
 
-	fs::create_directories(_filename.parent_path());
 	std::fstream fout(_filename, std::ios::binary | std::ios::out);
 	if (!fout) {
 		std::cerr << "[http] Error happened while writing into " << _filename << std::endl;

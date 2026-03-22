@@ -117,13 +117,13 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 	else if (_request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
 	{
 		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
-		_request.set_status_code(HttpStatus::e_code::CONTENT_TOO_LARGE);
+		_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 		return BodyState::Overflow;
 	}
 	else if (_stored_body_bytes > _request.getFile().getMaxBodySize())
 	{
 		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
-		_request.set_status_code(HttpStatus::e_code::CONTENT_TOO_LARGE);
+		_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 		return BodyState::Overflow;
 	}
 	return BodyState::Incomplete;
@@ -168,11 +168,6 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 	{
 		case BodyState::Incomplete:
 			Log::debug("Request received (partial buffer)", "request-reader");
-			std::cout << "BUFFER" << std::endl;
-			std::cout << std::string(10, '-') << std::endl;
-			std::cout << buffer << std::endl;
-			std::cout << std::string(10, '-') << std::endl;
-			std::cout << buffer.size() << std::endl;
 			return ReaderState::AwaitingBody;
 
 		case BodyState::Complete:
@@ -206,7 +201,7 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
 			Log::debug("Request received. Body too long.", "request-reader");
-			_request.set_status_code(HttpStatus::e_code::CONTENT_TOO_LARGE);
+			_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 			return ReaderState::Error;
 
 		case BodyState::Invalid:

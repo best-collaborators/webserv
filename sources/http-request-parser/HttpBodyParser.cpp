@@ -29,7 +29,6 @@ void HttpBodyParser::_handleRawUpload()
 {
 	FileUploadHandler file_uploader(_parse_context.request.getFile().getFullFilename(), _parse_context.request);
 	file_uploader.write_into_file(_parse_context.raw_bits);
-	_parse_context.request.set_status_code(HttpStatus::e_code::CREATED);
 }
 
 void HttpBodyParser::parse()

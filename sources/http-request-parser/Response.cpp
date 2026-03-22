@@ -42,37 +42,18 @@ std::string Response::serve_html_webserv_page(const std::string &msg)
 		   "</html>\n";
 }
 
-Response::e_response_type Response::is_set_default_page(const error_map &error_pages)
-{
-	auto method = _request->get_method();
-	if (error_pages.count(_status_code)) {
-		return CUSTOM_ERROR_PAGE;
-	}
-
-	if (method == HttpMethod::e_code::OPTIONS || _status_code == HttpStatus::e_code::NO_CONTENT) {
-		_status_code = HttpStatus::e_code::NO_CONTENT;
-		_body.clear();
-	}
-	else if (HttpStatus::is_redirect(_status_code)
-		  || HttpStatus::is_bad(_status_code)
-		  || method == HttpMethod::e_code::POST) {
-			return DEFAULT_ERROR_PAGE;
-	}
-	return FILE;
-}
-
-bool Response::is_ifstream_successful(std::ifstream &ifs)
+bool Response::is_ifstream_successful(std::ifstream &ifs, std::filesystem::path path)
 {
 	if (ifs.is_open()) return true;
 
 	switch (errno)
 	{
 		case 2:
-			Log::error("No such file or directory" + _body, "response");
+			Log::error("No such file or directory " + path.string(), "response");
 			_status_code = HttpStatus::e_code::NOT_FOUND;
 			break;
 		default:
-			Log::error("File system error" + _body, "response");
+			Log::error("File system error" + path.string(), "response");
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
@@ -106,7 +87,7 @@ void Response::read_body_partially(const std::string &filename)
 	}
 
 	std::ifstream ifs (filename, std::ios::binary);
-	if (!is_ifstream_successful(ifs)) return;
+	if (!is_ifstream_successful(ifs, filename)) return;
 
 	const std::size_t current_size = _body.size();
 	const std::size_t size_to_read = _buffer - current_size;
@@ -114,6 +95,7 @@ void Response::read_body_partially(const std::string &filename)
 	std::vector<char> buffer(size_to_read);
 
 	ifs.seekg(get_file_read_position());
+	std::cout << "get_file_read_position(): " << get_file_read_position() << "\n";
 	ifs.read(buffer.data(), size_to_read);
 	const std::streamsize curr_bytes_read = ifs.gcount();
 
@@ -146,7 +128,7 @@ std::streampos Response::get_file_size(const std::string &filename)
 	}
 
 	std::ifstream ifs(filename, std::ios::binary);
-	if (!is_ifstream_successful(ifs)) {
+	if (!is_ifstream_successful(ifs, filename)) {
 		std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
 		return 0;
 	}
@@ -219,19 +201,16 @@ void Response::handle_regular_response()
 	auto file = _request->getFile();
 	error_map error_pages = _request->getServerBlock()->_error_pages;
 
-	if (_request->get_method() == HttpMethod::e_code::OPTIONS
-		|| _status_code == HttpStatus::e_code::NO_CONTENT
+	if (_request->get_method() == HttpMethod::e_code::OPTIONS)
+		_status_code = HttpStatus::e_code::NO_CONTENT;
+
+	if (_status_code == HttpStatus::e_code::NO_CONTENT
 		|| _status_code == HttpStatus::e_code::CREATED) {
 
-		_status_code = HttpStatus::e_code::NO_CONTENT;
 		_body.clear();
 		_content_length = 0;
 		return;
 	}
-
-	_body = serve_html_webserv_page();
-	_content_length = _body.size();
-	_content_type = HttpContentType::e_code::TEXT_HTML;
 
 	if (is_success())
 		serve_file(file.getFullFilename());
@@ -265,6 +244,7 @@ void Response::serve_error_page(const error_map& error_pages)
 	{
 		_body = serve_html_webserv_page();
 		_content_length = _body.size();
+		_content_type = HttpContentType::e_code::TEXT_HTML;
 	}
 }
 
@@ -301,7 +281,7 @@ void Response::build_headers()
 			<< _request->getFile().getReturnPage().path.string() << "\r\n";
 
 	oss << "Connection: "
-		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Close")
+		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Keep-Alive")
 		<< "\r\n\r\n";
 
 	_header_str = oss.str();
@@ -315,11 +295,11 @@ void Response::build_full_response()
 
 	if (!_body.empty())
 	{
-		oss << _body << "\r\n\r\n";
+		oss << _body;
 	}
 
 	_body = oss.str();
-	_response_length = _body.size();
+	_response_length = _header_str.size() + _content_length;
 	Log::debug("RESPONSE: " + _body, "http-parser");
 }
 

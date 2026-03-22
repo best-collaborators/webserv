@@ -69,7 +69,6 @@ void MultipartDataParser::_createMultipartDataFormFiles()
 		}
 		data.clear();
 	}
-	_parse_context.request.set_status_code(HttpStatus::e_code::OK);
 }
 
 HttpStatus::e_code MultipartDataParser::_parseMultipartFormData(std::string &buffer, MultipartFormData &multipart_form_data)

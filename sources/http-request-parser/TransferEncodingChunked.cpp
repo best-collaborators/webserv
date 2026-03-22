@@ -28,7 +28,7 @@ void TransferEncodingChunkedParser::parse()
 		_chunk_size = request.chunkHandler().getExpectedSize();
 		if (_chunk_size > request.getFile().getMaxBodySize() ||
 			request.get_body().size() > request.getFile().getMaxBodySize()) {
-			request.set_status_code(HttpStatus::e_code::CONTENT_TOO_LARGE);
+			request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 			request.chunkHandler().finalize();
 			Log::warning("Body size is too large", "http-parser");
 			return ;

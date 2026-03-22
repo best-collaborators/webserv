@@ -50,8 +50,7 @@ private:
 	std::string				get_file_last_modified_date(const std::string &filename);
 	std::_Put_time<char>	get_date_GMT();
 	std::string				serve_html_webserv_page(const std::string &msg = "");
-	e_response_type			is_set_default_page(const error_map &error_pages);
-	bool					is_ifstream_successful(std::ifstream &ifs);
+	bool					is_ifstream_successful(std::ifstream &ifs, std::filesystem::path path);
 	void					set_content_type(std::string filename);
 	std::streampos			get_file_size(const std::string &filename);
 	std::streampos			get_file_read_position();

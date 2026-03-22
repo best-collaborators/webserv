@@ -160,10 +160,12 @@ void HttpHeaderParser::parse()
 {
 	HttpStatus::e_code headers_validation_status = _validateRequestHeaders();
 	if (HttpStatus::is_bad(headers_validation_status)) {
-		_parse_context.request.set_status_code(headers_validation_status);
+		if (!HttpStatus::is_redirect(_parse_context.request.get_status_code()))
+			_parse_context.request.set_status_code(headers_validation_status);
 		return ;
 	}
-	_parse_context.request.set_status_code(HttpStatus::e_code::OK);
+	if (!HttpStatus::is_redirect(_parse_context.request.get_status_code()))
+		_parse_context.request.set_status_code(HttpStatus::e_code::OK);
 }
 
 HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
@@ -183,7 +185,7 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 
 		if (test_length > _parse_context.request.getFile().getMaxBodySize()) {
 			std::cerr << "413 Request Entity Too Large" << std::endl;
-			return HttpStatus::e_code::CONTENT_TOO_LARGE;
+			return HttpStatus::e_code::PAYLOAD_TOO_LARGE;
 		}
 	}
 	catch(const std::exception& e) {

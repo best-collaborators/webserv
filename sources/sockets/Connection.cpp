@@ -44,7 +44,6 @@ void	Connection::_formResponse()
 	size_t content_length = _request_reader.getContentLength();
 	_buffer_manager.consume(content_length);
 	_response_formed = true;
-	_request_reader.reset();
 }
 
 void	Connection::_formCGIResponse()
@@ -220,13 +219,13 @@ IoEvent Connection::_tryInitCGI() noexcept
 
 IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 {
-	Log::info("Peer closed fd " + std::to_string(_fd), "Connection");
 	if (read_bytes < 0)
 	{
 		return _getSocketState();
 	}
 	else if (read_bytes == 0)
 	{
+		Log::info("Peer closed fd " + std::to_string(_fd), "Connection");
 		return IoEvent::Closed;
 	}
 

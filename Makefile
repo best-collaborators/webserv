@@ -12,7 +12,7 @@ INCL = \
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -DDEBUG_FLAG -g -O0 -std=c++17 -Iincludes $(INCL)
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -DDEBUG_FLAG -fsanitize=address -g -std=c++17 -Iincludes $(INCL)
 
 SRC_DIR = sources
 OBJ_DIR = build
@@ -92,4 +92,6 @@ re: fclean all
 debug: CXXFLAGS += -DDEBUG_FLAG -g -O0
 debug: re
 
-.PHONY: all clean fclean re debug
+memory: CXXFLAGS += -fsanitize=address -g
+
+.PHONY: all clean fclean re debug memory
