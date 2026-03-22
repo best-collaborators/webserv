@@ -44,7 +44,6 @@ void	Connection::_formResponse()
 	size_t content_length = _request_reader.getContentLength();
 	_buffer_manager.consume(content_length);
 	_response_formed = true;
-	_request_reader.reset();
 }
 
 void	Connection::_formCGIResponse()
@@ -220,32 +219,32 @@ IoEvent Connection::_tryInitCGI() noexcept
 
 IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 {
-	Log::info("Peer closed fd " + std::to_string(_fd), "Connection");
 	if (read_bytes < 0)
 	{
 		return _getSocketState();
 	}
 	else if (read_bytes == 0)
 	{
+		Log::info("Peer closed fd " + std::to_string(_fd), "Connection");
 		return IoEvent::Closed;
 	}
 
 	_buffer_manager.append(_read_bytes);
-	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
+	HttpRequestReader::ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
 	resetLastActivity();
 
 	switch (reader_state)
 	{
-	case CGI:
+	case HttpRequestReader::ReaderState::CGI:
 		return _tryInitCGI();
 
-	case AwaitingHeaders:
-	case AwaitingBody:
+	case HttpRequestReader::ReaderState::AwaitingHeaders:
+	case HttpRequestReader::ReaderState::AwaitingBody:
 		return IoEvent::Pending;
 
-	case Complete:
-	case Error:
+	case HttpRequestReader::ReaderState::Complete:
+	case HttpRequestReader::ReaderState::Error:
 		return IoEvent::Received;
 	
 	default:
@@ -306,6 +305,8 @@ IoEvent	Connection::_sendData() noexcept
 	size_t msg_len = _response_writer.currResponseLength();
 	size_t total_msg_len = _response_writer.totalLength();
 	const char *body =  _response_writer.getResponseData();
+
+	Log::debug("Sending " + std::to_string(msg_len) + " bytes out of " + std::to_string(total_msg_len), "Connection");
 
 	ssize_t curr_sent_bytes = send(_fd, body, msg_len, 0);
 

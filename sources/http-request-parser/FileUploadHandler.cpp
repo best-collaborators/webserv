@@ -3,7 +3,7 @@
 size_t FileUploadHandler::_uploaded_files_count = 0;
 bool FileUploadHandler::_initialized = false;
 
-FileUploadHandler::FileUploadHandler( std::string upload_dir, Request &request, std::string filename ) : 
+FileUploadHandler::FileUploadHandler( fs::path upload_dir, Request &request, std::string filename ) : 
 _upload_dir(upload_dir),  _filename(filename), _request(request) {
 
 	if (!_initialized) initialize_count(upload_dir);
@@ -11,25 +11,33 @@ _upload_dir(upload_dir),  _filename(filename), _request(request) {
 
 void FileUploadHandler::_getFileName()
 {
-	if (!_filename.empty()) return ;
+	if (!_filename.empty()) {
+		_filename = _upload_dir / _filename;
+		return ;
+	}
+
+	const File &file = _request.getFile();
+	if (!file.isDir()) {
+		_filename = file.getFullFilename();
+		return;
+	}
 
 	if (_request.get_header_count("x-filename")) {
 		_filename = _request.get_header_value("x-filename");
 	}
 	else {
 		_filename = std::to_string(_uploaded_files_count % http::limits::upload_file_modulo) + "-upload";
-		
+
 		const std::string content_type = _request.getContentType();
 
-		std::string_view extension;
+		std::string extension;
 		if (content_type.empty())
 			extension = ".bin";
 		else 
 			extension = HttpContentType::get_extension_by_content_type(content_type);
-
-		_filename.append(extension);
+		_filename.replace_extension(extension);
 	}
-	_filename.insert(_filename.begin(), _upload_dir.begin(), _upload_dir.end());
+	_filename = _upload_dir / _filename;
 }
 
 void FileUploadHandler::write_into_file( const std::string &_body )
@@ -39,6 +47,7 @@ void FileUploadHandler::write_into_file( const std::string &_body )
 
 	_getFileName();
 
+	std::cerr << "[http] Writing into " << _filename << std::endl;
 	std::fstream fout(_filename, std::ios::binary | std::ios::out);
 	if (!fout) {
 		std::cerr << "[http] Error happened while writing into " << _filename << std::endl;

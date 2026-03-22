@@ -166,7 +166,7 @@ namespace {
 }
 
 
-void ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, HttpMethodRegistry &methods_registry)
+ConfigurationFileParser::e_parse_result ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, HttpMethodRegistry &methods_registry)
 {
 	Trimmer::trim(methods_str, '"');
 	std::stringstream ss;
@@ -174,8 +174,11 @@ void ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, Ht
 	std::string temp;
 	while (getline(ss, temp, '|')) {
 		Trimmer::trim(temp);
+		if (temp != "GET" && temp != "DELETE" && temp != "POST" && temp != "OPTIONS")
+			return ERROR; 
 		methods_registry.setAllowedMethod(HttpMethod::fromString(temp));
 	}
+	return OK;
 }
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMethods(std::string &line, std::optional<HttpMethodRegistry> &registry, std::bitset<8> &fields)
@@ -191,7 +194,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	}
 	if (!registry.has_value())
 		registry.emplace();
-	_updateAllowedMethods(methods_str, registry.value());
+	if (registry.has_value())
+		_updateAllowedMethods(methods_str, registry.value());
 	fields.set(0);
 	return OK;
 }
@@ -263,6 +267,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDir
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::ifstream &ifs, std::string &line)
 {
 	_extractDirectiveValue(line, 0);
+	if (!isValidHeaderFormat(line, "pass_to", true)) return ERROR;
+
 	_extractDirectiveValue(line, 7);
 	std::string pass_to = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (pass_to.empty()) {
@@ -427,12 +433,12 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 	while (getline(ifs, line))
 	{
 		if (!_isStreamGood(ifs)) return ERROR;
-		if (_isStreamFinished(ifs)) break;
 		if (isEmptyLine(line)) continue;
 		if (!_validateAndConsumeIndent(line, 3, '\t', false)) break;
 
 		if (_dispatchLocationDirective(line, location, location_assigned_fields) == ERROR)
 			return ERROR;
+		if (_isStreamFinished(ifs)) break;
 	}
 
 	if (!_current_server_block._locations.has_value())
@@ -448,8 +454,12 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseListen(std::string &line)
 {
 	std::string copy = line;
-	std::string ip_addr = RegexMatcher::get_regex_value(copy, HttpRegexPatterns::IP_ADDR_PORT(), 2);
-	std::string port = RegexMatcher::get_regex_value(line, HttpRegexPatterns::IP_ADDR_PORT(), 3);
+	std::string ip_addr;
+	std::string port;
+
+	ip_addr = RegexMatcher::get_regex_value(copy, HttpRegexPatterns::IP_ADDR_PORT(), 2);
+	if (!ip_addr.empty())
+		port = RegexMatcher::get_regex_value(line, HttpRegexPatterns::IP_ADDR_PORT(), 3);
 
 	if (ip_addr.empty() || port.empty()) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Invalid listen parameters", "config");
@@ -457,7 +467,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseListen(st
 	}
 
 	_current_server_block._listen_data.ip_address = ip_addr;
-
 	try {
 		_current_server_block._listen_data.port = std::stoi(port);
 	}
@@ -517,10 +526,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequiredFields(const ServerBlock &s_block)
 {
 	// bits 0=listen, 1=server_name, 4=root are required
-	static const std::vector<size_t> required = {0, 1, 4};
-	for (size_t i : required) {
-		if (!s_block._assigned_fields.test(i)) {
-			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field " + std::to_string(i), "config");
+	static const std::vector<std::pair<short, std::string>> required = {{0, "listen"}, {1, "server_name"}, {4, "root"}};
+	for (auto &p : required) {
+		if (!s_block._assigned_fields.test(p.first)) {
+			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field " + p.second, "config");
 			return ERROR;
 		}
 	}
@@ -529,6 +538,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequir
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexPath(const ServerBlock &s_block)
 {
+	if (!s_block._index.has_value()) return OK;
+
 	std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
 	full_index_path = std::filesystem::weakly_canonical(full_index_path);
 	if (full_index_path.string().find(s_block._root) == std::string::npos) {
@@ -568,12 +579,16 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 		}
 		seen_paths.insert(path);
 
-		if (!std::filesystem::is_directory(l.getRoot())) l.setRoot(s_block._root.string());
+		std::filesystem::path root;
 
-		if (!std::filesystem::is_directory(l.getRoot())) {
-			Logger::displayLog(Logger::e_log_level::ERROR, "Is not a dir: " + l.getRoot().string(), "config");
-			return ERROR;
+		if (l.getRoot().empty()) {
+			root = s_block._root.string() + l.getPath().string();
+		} else {
+			root = l.getRoot();
 		}
+
+		root = std::filesystem::weakly_canonical(root);
+		l.setRoot(root);
 
 		std::filesystem::path full = std::filesystem::weakly_canonical(l.getRoot().string() + "/" + l.getDefaultFile());
 		if (full.string().find(l.getRoot().c_str(), 0, l.getRoot().string().size() - 1) == std::string::npos) {

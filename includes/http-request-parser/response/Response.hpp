@@ -50,8 +50,7 @@ private:
 	std::string				get_file_last_modified_date(const std::string &filename);
 	std::_Put_time<char>	get_date_GMT();
 	std::string				serve_html_webserv_page(const std::string &msg = "");
-	e_response_type			is_set_default_page(const error_map &error_pages);
-	bool					is_ifstream_successful(std::ifstream &ifs);
+	bool					is_ifstream_successful(std::ifstream &ifs, std::filesystem::path path);
 	void					set_content_type(std::string filename);
 	std::streampos			get_file_size(const std::string &filename);
 	std::streampos			get_file_read_position();
@@ -65,6 +64,23 @@ public:
 
 	HttpStatus::e_code	status_code() const noexcept;
 	std::string			form_response( const Request *request, const std::string &body, bool isCGI = false );
+
+	// ====== Core flow ======
+	void init_response(const Request* request);
+	void handle_regular_response();
+	void handle_autoindex();
+	void handle_cgi(const std::string& body);
+
+	bool should_generate_autoindex();
+	bool is_success();
+
+	void serve_file(const std::string& filename);
+	void serve_error_page(const error_map& error_pages);
+	bool is_valid_file(const std::string& filename);
+
+	void build_headers();
+	void build_full_response();
+
 	size_t				get_total_response_length() const noexcept;
 	size_t				get_current_length() const noexcept;
 	const char			*getResponseData() const noexcept;

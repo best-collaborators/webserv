@@ -8,16 +8,13 @@ public:
 	// Request line patterns
 	static const std::regex& METHOD();
 	static const std::regex& FILEPATH();
-	static const std::regex& VERSION();
 
 	// Header patterns
-	static const std::regex& HEADER();
 	static const std::regex& CONTENT_DISPOSITION();
 	static const std::regex& CONTENT_TYPE();
 	static const std::regex& BOUNDARY();
 
 	// Encoding patterns
-	static const std::regex& PERCENT_ENCODING();
 	static const std::regex& HEX_VALUE();
 
 	// CGI patterns

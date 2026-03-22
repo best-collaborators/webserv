@@ -24,7 +24,7 @@ private:
 
 	HttpStatus::e_code	_status_code;
 	ChunkHandler		_chunk_handler;
-	bool				_is_cgi;
+	bool				_is_cgi = false;
 
 	ServerBlock const * _server_block;
 	File				_file;
@@ -46,6 +46,8 @@ public:
 	const File			&getFile() const;
 	void				setFile(const File &file);
 
+	File				&getFile();
+
 	std::string			 getContentType() const;
 
 	void				 print_http_request_values() const;
@@ -55,7 +57,7 @@ public:
 	ChunkHandler&		 chunkHandler();
 	void				 reset();
 
-	bool				isGoodStatusCode() const;
+	bool				isBad() const;
 
 	bool				isCGI();
 	void				setIsCGI(bool is_cgi);

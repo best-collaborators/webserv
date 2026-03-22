@@ -107,3 +107,20 @@ void File::setPathInfo(const std::string &path_info)
 	_path_info = path_info;
 }
 
+std::ostream& operator<<(std::ostream& os, const File& file)
+{
+	os << "File: " << file.getFullFilename() << "\n"
+	   << "  Relative Path: " << file.getRelativePath() << "\n"
+	   << "  Is Directory: " << (file.isDir() ? "true" : "false") << "\n"
+	   << "  Autoindex: " << (file.getAutoindex() ? "true" : "false") << "\n"
+	   << "  Extension: " << file.getExtension() << "\n"
+	   << "  Is Index: " << (file.isIndex() ? "true" : "false") << "\n"
+	   << "  Path Info: " << file.getPathInfo() << "\n"
+	   << "  Max Body Size: " << file.getMaxBodySize() << "\n";
+	
+	if (file.getPassTo().has_value()) {
+		os << "  Pass To: " << file.getPassTo().value() << "\n";
+	}
+	
+	return os;
+}

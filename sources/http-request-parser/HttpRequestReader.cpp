@@ -31,7 +31,7 @@ HeaderState HttpRequestReader::_handleHeaderMethod(std::string &read_buffer) noe
 	if (!HttpMethod::hasBody(_request.get_method())) {
 
 		if (_request.get_content_length() != 0 || read_buffer.size() > 0) {
-			Log::error("Error (GET/OPTIONS/HEAD requests cannot have body)", "parser");
+			Log::error("Error (GET/OPTIONS/HEAD requests cannot have body):\n" + read_buffer, "parser");
 			return HeaderState::Error;
 		}
 	}
@@ -58,16 +58,12 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 		return HeaderState::Redirect;
 	}
 
-	if (_request.get_method() != HttpMethod::e_code::POST && read_buffer.size() != 0) {
-		return HeaderState::Error;
-	}
-
-	Log::error("_request.isCGI() " + std::to_string(_request.isCGI()), "parser");
+	Log::debug("_request.isCGI() " + std::to_string(_request.isCGI()), "parser");
 	if (_request.isCGI() && _request.get_method() != HttpMethod::e_code::POST) return HeaderState::CGI;
 	return _handleHeaderMethod(read_buffer);
 }
 
-ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
+HttpRequestReader::ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 {
 	switch (_checkHeaderState(read_buffer))
 	{
@@ -105,6 +101,13 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 	}
 	_stored_body_bytes = read_buffer.size();
 
+	if (_request.get_header_count(http::headers::CONTENT_LENGTH)) {
+		if (_stored_body_bytes >= _request.get_content_length()) {
+			return BodyState::Complete;
+		} else {
+			return BodyState::Incomplete;
+		}
+	}
 	if (_request.get_header_count(http::headers::TRANSFER_ENCODING)) {
 		return BodyState::Chunked;
 	}
@@ -114,13 +117,13 @@ BodyState HttpRequestReader::_checkBodyState(std::string &read_buffer, size_t by
 	else if (_request.get_header_count(http::headers::CONTENT_LENGTH) && _stored_body_bytes > _request.get_content_length())
 	{
 		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
-		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
+		_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 		return BodyState::Overflow;
 	}
 	else if (_stored_body_bytes > _request.getFile().getMaxBodySize())
 	{
 		Log::debug("Read buffer size: " + std::to_string(read_buffer.size()), "request-reader");
-		_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
+		_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 		return BodyState::Overflow;
 	}
 	return BodyState::Incomplete;
@@ -159,7 +162,7 @@ BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 	return BodyState::Incomplete;
 }
 
-ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_read) noexcept
+HttpRequestReader::ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_read) noexcept
 {
 	switch (_checkBodyState(buffer, bytes_read))
 	{
@@ -198,7 +201,7 @@ ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_re
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
 			Log::debug("Request received. Body too long.", "request-reader");
-			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
+			_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 			return ReaderState::Error;
 
 		case BodyState::Invalid:
@@ -219,11 +222,10 @@ void HttpRequestReader::reset()
 	_request.reset();
 }
 
-ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
+HttpRequestReader::ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
 {
 	if (_curr_state == ReaderState::AwaitingHeaders)
 		_curr_state = _processHeader(buffer);
-
 	if (_curr_state == ReaderState::AwaitingBody)
 		_curr_state = _processBody(buffer, bytes_read);
 

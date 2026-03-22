@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-Request::Request(ServerBlock const * server_block) : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)), _server_block(server_block) {}
+Request::Request(ServerBlock const * server_block) : _method(HttpMethod::e_code::INVALID), _status_code(HttpStatus::code_from_number(0)), _is_cgi(false), _server_block(server_block) {}
 
 HttpStatus::e_code Request::get_status_code() const
 {
@@ -49,9 +49,9 @@ std::string Request::getContentType() const
 	return get_header_value(http::headers::CONTENT_TYPE);
 }
 
-bool Request::isGoodStatusCode() const
+bool Request::isBad() const
 {
-	return HttpStatus::is_good(_status_code);
+	return HttpStatus::is_bad(_status_code);
 }
 
 bool Request::isCGI()
@@ -113,4 +113,9 @@ const File& Request::getFile() const
 void Request::setFile(const File& file)
 {
 	_file = file;
+}
+
+File &Request::getFile()
+{
+	return _file;
 }

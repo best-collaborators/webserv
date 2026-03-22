@@ -42,37 +42,18 @@ std::string Response::serve_html_webserv_page(const std::string &msg)
 		   "</html>\n";
 }
 
-Response::e_response_type Response::is_set_default_page(const error_map &error_pages)
-{
-	auto method = _request->get_method();
-	if (error_pages.count(_status_code)) {
-		return CUSTOM_ERROR_PAGE;
-	}
-
-	if (method == HttpMethod::e_code::OPTIONS || _status_code == HttpStatus::e_code::NO_CONTENT) {
-		_status_code = HttpStatus::e_code::NO_CONTENT;
-		_body.clear();
-	}
-	else if (HttpStatus::is_redirect(_status_code)
-		  || HttpStatus::is_bad(_status_code)
-		  || method == HttpMethod::e_code::POST) {
-			return DEFAULT_ERROR_PAGE;
-	}
-	return FILE;
-}
-
-bool Response::is_ifstream_successful(std::ifstream &ifs)
+bool Response::is_ifstream_successful(std::ifstream &ifs, std::filesystem::path path)
 {
 	if (ifs.is_open()) return true;
 
 	switch (errno)
 	{
 		case 2:
-			Log::error("No such file or directory" + _body, "response");
+			Log::error("No such file or directory " + path.string(), "response");
 			_status_code = HttpStatus::e_code::NOT_FOUND;
 			break;
 		default:
-			Log::error("File system error" + _body, "response");
+			Log::error("File system error" + path.string(), "response");
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
@@ -106,7 +87,7 @@ void Response::read_body_partially(const std::string &filename)
 	}
 
 	std::ifstream ifs (filename, std::ios::binary);
-	if (!is_ifstream_successful(ifs)) return;
+	if (!is_ifstream_successful(ifs, filename)) return;
 
 	const std::size_t current_size = _body.size();
 	const std::size_t size_to_read = _buffer - current_size;
@@ -114,6 +95,7 @@ void Response::read_body_partially(const std::string &filename)
 	std::vector<char> buffer(size_to_read);
 
 	ifs.seekg(get_file_read_position());
+	std::cout << "get_file_read_position(): " << get_file_read_position() << "\n";
 	ifs.read(buffer.data(), size_to_read);
 	const std::streamsize curr_bytes_read = ifs.gcount();
 
@@ -146,7 +128,7 @@ std::streampos Response::get_file_size(const std::string &filename)
 	}
 
 	std::ifstream ifs(filename, std::ios::binary);
-	if (!is_ifstream_successful(ifs)) {
+	if (!is_ifstream_successful(ifs, filename)) {
 		std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
 		return 0;
 	}
@@ -158,7 +140,24 @@ std::streampos Response::get_file_size(const std::string &filename)
 	return _content_length;
 }
 
-std::string Response::form_response( const Request *request, const std::string &body, bool isCGI)
+std::string Response::form_response(const Request *request, const std::string &body, bool isCGI)
+{
+	init_response(request);
+
+	if (should_generate_autoindex())
+		handle_autoindex();
+	else if (is_success() && isCGI)
+		handle_cgi(body);
+	else
+		handle_regular_response();
+
+	build_headers();
+	build_full_response();
+
+	return _body;
+}
+
+void Response::init_response(const Request* request)
 {
 	_response_length = 0;
 	_content_length = 0;
@@ -167,119 +166,141 @@ std::string Response::form_response( const Request *request, const std::string &
 	_is_default_page = false;
 
 	_request = request;
+	_status_code = _request->get_status_code();
+}
+
+bool Response::should_generate_autoindex()
+{
+	auto file = _request->getFile();
+	return (_status_code != HttpStatus::e_code::NO_CONTENT
+			&& !HttpStatus::is_redirect(_status_code)
+			&& file.isDir() && file.getAutoindex());
+}
+
+void Response::handle_autoindex()
+{
+	auto file = _request->getFile();
+	_body = ListingGenerator::getListingPage(file);
+	_content_type = HttpContentType::e_code::TEXT_HTML;
+	_content_length = _body.size();
+}
+
+bool Response::is_success()
+{
+	return HttpStatus::is_good(_status_code);
+}
+
+void Response::handle_cgi(const std::string& body)
+{
+	_body = serve_html_webserv_page(body);
+	_content_length = _body.size();
+}
+
+void Response::handle_regular_response()
+{
 	auto file = _request->getFile();
 	error_map error_pages = _request->getServerBlock()->_error_pages;
-	_status_code = _request->get_status_code();
 
-	if (_status_code != HttpStatus::e_code::NO_CONTENT && file.isDir() && file.getAutoindex()) {
-		_body = ListingGenerator::getListingPage(file);
-		_content_type = HttpContentType::e_code::TEXT_HTML;
-		_content_length = _body.size();
-		
+	if (_request->get_method() == HttpMethod::e_code::OPTIONS)
+		_status_code = HttpStatus::e_code::NO_CONTENT;
+
+	if (_status_code == HttpStatus::e_code::NO_CONTENT
+		|| _status_code == HttpStatus::e_code::CREATED) {
+
+		_body.clear();
+		_content_length = 0;
+		return;
 	}
-	else if (HttpStatus::is_good(_status_code) && isCGI)
+
+	if (is_success())
+		serve_file(file.getFullFilename());
+	else
+		serve_error_page(error_pages);
+}
+
+void Response::serve_file(const std::string& filename)
+{
+	Log::info("File to send back: " + filename, "response");
+
+	set_content_type(filename);
+	get_file_size(filename);
+	read_body_partially(filename);
+}
+
+void Response::serve_error_page(const error_map& error_pages)
+{
+	std::string filename;
+
+	if (error_pages.count(_status_code))
+		filename = error_pages.at(_status_code);
+
+	if (!filename.empty() && is_valid_file(filename))
 	{
-		_body = serve_html_webserv_page(body);
-		_content_length = _body.size();
+		set_content_type(filename);
+		get_file_size(filename);
+		read_body_partially(filename);
 	}
 	else
 	{
-		e_response_type response_type = is_set_default_page(error_pages);
-		switch (response_type)
-		{
-			case FILE:
-			{
-				std::string filename = file.getFullFilename();
-
-				Log::info("File to send back:" + filename, "response");
-
-				get_file_size(filename);
-				if (HttpStatus::is_good(_status_code)) {
-					set_content_type(filename);
-					read_body_partially(filename);
-				}
-				else {
-					_body.clear();
-					std::string filename = error_pages.at(_status_code);
-					Log::info("Custom error page: " + filename, "response");
-					
-					std::filesystem::path normalized_path = std::filesystem::weakly_canonical(filename);
-					std::ifstream ifs(normalized_path, std::ios::binary);
-					if (!is_ifstream_successful(ifs)) {
-						std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
-						_body = serve_html_webserv_page();
-						_content_length = _body.size();
-					}
-					else {
-						std::streampos fbegin = ifs.tellg();
-						ifs.seekg(0, ifs.end);
-						_content_length = ifs.tellg() - fbegin;
-						ifs.close();
-						set_content_type(filename);
-						read_body_partially(filename);
-					}
-				}
-				break;
-			}
-			case DEFAULT_ERROR_PAGE:
-				_body = serve_html_webserv_page();
-				_content_length = _body.size();
-				break;
-			case CUSTOM_ERROR_PAGE:
-			{
-				std::string filename = error_pages.at(_status_code);
-				Log::info("Custom error page: " + filename, "response");
-				
-				get_file_size(filename);
-				if (HttpStatus::is_good(_status_code)) {
-					set_content_type(filename);
-					read_body_partially(filename);
-				}
-				break;
-			}
-			default:
-				break;
-		}
+		_body = serve_html_webserv_page();
+		_content_length = _body.size();
+		_content_type = HttpContentType::e_code::TEXT_HTML;
 	}
+}
 
-	std::ostringstream ostringstream;
+bool Response::is_valid_file(const std::string& filename)
+{
+	std::filesystem::path path = std::filesystem::weakly_canonical(filename);
+	std::ifstream ifs(path, std::ios::binary);
 
-	ostringstream << "HTTP/1.1"  << " "
-		<< _status_code << "\r\n"
+	return ifs.good() && !std::filesystem::is_directory(path);
+}
+
+void Response::build_headers()
+{
+	std::ostringstream oss;
+
+	oss << "HTTP/1.1 " << _status_code << "\r\n"
 		<< "Server: webserv/42.0.0\r\n"
 		<< "Access-Control-Allow-Origin: *\r\n"
 		<< "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
 		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	if (!HttpStatus::is_redirect(_status_code) && _status_code != HttpStatus::e_code::NO_CONTENT) {
-		ostringstream  << "Content-Type: " << HttpContentType::to_string(_content_type) << "\r\n";
-		ostringstream << "Content-Length: " << _content_length << "\r\n";
+	if (!HttpStatus::is_redirect(_status_code) &&
+		_status_code != HttpStatus::e_code::NO_CONTENT &&
+		_status_code != HttpStatus::e_code::CREATED)
+	{
+		oss << "Content-Type: "
+			<< HttpContentType::to_string(_content_type) << "\r\n"
+			<< "Content-Length: " << _content_length << "\r\n";
 	}
 
-	if (HttpStatus::is_redirect(_status_code)) {
-		ostringstream << "Location: " << file.getReturnPage().path.string() << "\r\n";
-	}
+	if (HttpStatus::is_redirect(_status_code))
+		oss << "Location: "
+			<< _request->getFile().getReturnPage().path.string() << "\r\n";
 
-	//For cache
-	// if (get_header_value(http::headers::METHOD) != "POST" && _status_code != HttpStatus::e_code::CREATED &&/*  _status_code < 300 */)
-	// 	ostringstream << "Last-Modified: " << get_file_last_modified_date(get_header_value(http::headers::REQUEST_TARGET)) << "\r\n";
+	oss << "Connection: "
+		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Keep-Alive")
+		<< "\r\n\r\n";
 
-	if (HttpStatus::is_bad(_status_code))
-		ostringstream << "Connection: close" << "\r\n";
+	_header_str = oss.str();
+}
 
-	ostringstream << "\r\n";
-	_header_str = ostringstream.str();
+void Response::build_full_response()
+{
+	std::ostringstream oss;
+
+	oss << _header_str;
 
 	if (!_body.empty())
-		ostringstream << _body;
+	{
+		oss << _body;
+	}
 
-	_body = ostringstream.str();
-
+	_body = oss.str();
 	_response_length = _header_str.size() + _content_length;
 	Log::debug("RESPONSE: " + _body, "http-parser");
-
-	return _body;
 }
 
 HttpStatus::e_code Response::status_code() const noexcept 
