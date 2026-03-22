@@ -13,7 +13,6 @@ struct CGIPath
 {
 	std::string							pass_to;
 	std::unordered_set<std::string>		extensions;
-	std::filesystem::path				path = "/";
 	size_t								max_body_size;
 	std::optional<HttpMethodRegistry>	methods_registry;
 };

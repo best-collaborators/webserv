@@ -88,10 +88,10 @@ namespace {
 	bool isDirectoryRedirect(const std::string &server_root,
 							const std::string &request_target,
 							Request &request,
-							const std::string &loc_path)
+							std::string loc_path)
 	{
 		std::filesystem::path full =
-			std::filesystem::weakly_canonical(server_root) / request_target;
+			std::filesystem::weakly_canonical(server_root + request_target);
 
 		bool isDir = std::filesystem::is_directory(full);
 
@@ -197,7 +197,7 @@ namespace {
 	{
 		File file;
 		std::string remaining_path = request_target.substr(loc.getPath().string().size());
-		std::string full_name = loc.getRoot().string() + remaining_path;
+		std::string full_name = loc.getRoot().string() + "/" + remaining_path;
 		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
 
 		bool isDir = std::filesystem::is_directory(norm_path_request);
@@ -244,7 +244,7 @@ namespace {
 		{
 			std::string path = l.getPath().string();
 			if (path.size() > 2 &&
-				path.size() > matched_loc.getPath().string().size() &&
+				path.size() >= matched_loc.getPath().string().size() &&
 				!request_target.compare(0, path.size(), path)) {
 					matched_loc = l;
 				}
@@ -273,24 +273,23 @@ namespace {
 		return RequestLineValidator::e_parse_result::NO_FILE_IN_CONFIG;
 	}
 
-	RequestLineValidator::e_parse_result isMatchedCGI(ServerBlock server_block, const std::string &full_filename, Request &request)
+	RequestLineValidator::e_parse_result isMatchedCGI(ServerBlock server_block, const std::filesystem::path &full_filename, Request &request)
 	{
 		Log::debug("Check for matches in CGI", "parser");
+
+		std::string extension = full_filename.extension().string();
+		if (extension.empty()) return RequestLineValidator::e_parse_result::MATCH_FOUND;
+
 		CGIPath matched_cgi;
 		for (auto &cgi : server_block._cgi.value())
 		{
-			std::string path = cgi.path;
-			if (path.size() >= matched_cgi.path.string().size()
-				&& !full_filename.compare(0, path.size(), path)) {
-					matched_cgi = cgi;
-				}
+			if (cgi.extensions.count(extension)) {
+				matched_cgi = cgi;
+			}
 		}
 		if (matched_cgi.pass_to.empty())
 			return RequestLineValidator::e_parse_result::MATCH_FOUND;
 
-		if (!matched_cgi.extensions.count(std::filesystem::path(full_filename).extension())) {
-			return RequestLineValidator::e_parse_result::MATCH_FOUND;
-		}
 		Log::debug("CGI MATCH: \n" + to_string(matched_cgi), "http-parser");
 		if (isRegularFile(matched_cgi, request, full_filename)) {
 			return RequestLineValidator::e_parse_result::CGI;

@@ -200,20 +200,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	return OK;
 }
 
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIPath(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
-{
-	_extractDirectiveValue(line, 4);
-	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
-	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "CGI path is invalid: " + line, "config");
-		return ERROR;
-	}
-
-	cgi.path = line;
-	fields.set(1);
-	return OK;
-}
-
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIExtensions(std::string &line, CGIPath &cgi, std::bitset<8> &fields)
 {
 	try {
@@ -253,8 +239,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchCGIDir
 {
 	if (isValidHeaderFormat(line, "allowed_methods", true))
 		return _parseAllowedMethods(line, cgi.methods_registry, fields);
-	if (isValidHeaderFormat(line, "path", true))
-		return _parseCGIPath(line, cgi, fields);
 	if (isValidHeaderFormat(line, "extensions", true))
 		return _parseCGIExtensions(line, cgi, fields);
 	if (isValidHeaderFormat(line, "max_body_size", true))
@@ -585,6 +569,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 			root = s_block._root.string() + l.getPath().string();
 		} else {
 			root = l.getRoot();
+			if (!std::filesystem::is_directory(root)) root = s_block._root / root;
 		}
 
 		root = std::filesystem::weakly_canonical(root);
@@ -602,17 +587,17 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateCGI(ServerBlock &s_block)
 {
 	if (!s_block._cgi.has_value()) return OK;
-	std::unordered_set<std::string> seen_paths;
+	std::unordered_set<std::string> seen_ext;
 
 	for (auto &cgi : s_block._cgi.value()) {
-
-		std::string path = cgi.path;
-		if (seen_paths.count(path)) {
-			Logger::displayLog(
-				Logger::e_log_level::ERROR, "Duplicate location path: " + path, "config");
-			return ERROR;
+		for (auto &ext : cgi.extensions) {
+			if (seen_ext.count(ext)) {
+				Logger::displayLog(
+					Logger::e_log_level::ERROR, "Duplicate location ext: " + ext, "config");
+				return ERROR;
+			}
+			seen_ext.insert(ext);
 		}
-		seen_paths.insert(path);
 	}
 	return OK;
 }
