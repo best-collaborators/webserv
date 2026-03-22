@@ -230,21 +230,21 @@ IoEvent	Connection::_handleReceiveState( ssize_t read_bytes ) noexcept
 	}
 
 	_buffer_manager.append(_read_bytes);
-	ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
+	HttpRequestReader::ReaderState reader_state = _request_reader.read(_buffer_manager.getBuffer(), _read_bytes);
 
 	resetLastActivity();
 
 	switch (reader_state)
 	{
-	case CGI:
+	case HttpRequestReader::ReaderState::CGI:
 		return _tryInitCGI();
 
-	case AwaitingHeaders:
-	case AwaitingBody:
+	case HttpRequestReader::ReaderState::AwaitingHeaders:
+	case HttpRequestReader::ReaderState::AwaitingBody:
 		return IoEvent::Pending;
 
-	case Complete:
-	case Error:
+	case HttpRequestReader::ReaderState::Complete:
+	case HttpRequestReader::ReaderState::Error:
 		return IoEvent::Received;
 	
 	default:

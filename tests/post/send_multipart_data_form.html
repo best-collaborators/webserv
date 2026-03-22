@@ -45,7 +45,7 @@
       formData.append("file", fileInput.files[0]);
     }
 
-    fetch("http://127.0.0.1:3490/TEST.CGI", {
+    fetch("http://127.0.0.1:3490/post_body/", {
       method: "POST",
       body: formData
     })

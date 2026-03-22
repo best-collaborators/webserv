@@ -2,7 +2,6 @@
 #define HTTP_REQUEST_HANDLER
 
 #include "Request.hpp"
-#include "ReaderState.hpp"
 #include "HeaderState.hpp"
 #include "BodyState.hpp"
 
@@ -12,26 +11,16 @@
 
 class HttpRequestReader
 {
-private:
-	Request		_request;
-
-	size_t		_stored_body_bytes = 0;
-	ReaderState	_curr_state = ReaderState::AwaitingHeaders;
-
-	HeaderState	_checkHeaderState(std::string &read_buffer) noexcept;
-	BodyState	_checkBodyState(std::string &buffer, size_t bytes_read) noexcept;
-
-	void		_handleCompleteBody(std::string &buffer) noexcept;
-	BodyState	_handleChunkedBody(std::string &buffer) noexcept;
-	
-	void		_parseHeaders(std::string &read_buffer) noexcept;
-	void		_consumeHeader(std::string &read_buffer) noexcept;
-
-	HeaderState	_handleHeaderMethod(std::string &read_buffer) noexcept;
-
-	bool		_headersComplete(const std::string &read_buffer) const noexcept;
-
 public:
+	enum ReaderState
+	{
+		AwaitingHeaders,
+		AwaitingBody,
+		Complete,
+		Error,
+		CGI
+	};
+
 	HttpRequestReader() = delete;
 	~HttpRequestReader() = default;
 
@@ -61,6 +50,26 @@ public:
 
 	std::unordered_map<std::string, std::string> getHeaders();
 	void printHeaders();
+
+private:
+	Request		_request;
+
+	size_t		_stored_body_bytes = 0;
+	ReaderState	_curr_state = ReaderState::AwaitingHeaders;
+
+	HeaderState	_checkHeaderState(std::string &read_buffer) noexcept;
+	BodyState	_checkBodyState(std::string &buffer, size_t bytes_read) noexcept;
+
+	void		_handleCompleteBody(std::string &buffer) noexcept;
+	BodyState	_handleChunkedBody(std::string &buffer) noexcept;
+	
+	void		_parseHeaders(std::string &read_buffer) noexcept;
+	void		_consumeHeader(std::string &read_buffer) noexcept;
+
+	HeaderState	_handleHeaderMethod(std::string &read_buffer) noexcept;
+
+	bool		_headersComplete(const std::string &read_buffer) const noexcept;
+
 };
 
 #endif /* HTTP_REQUEST_HANDLER */

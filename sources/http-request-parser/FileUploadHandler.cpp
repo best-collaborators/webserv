@@ -11,7 +11,10 @@ _upload_dir(upload_dir),  _filename(filename), _request(request) {
 
 void FileUploadHandler::_getFileName()
 {
-	if (!_filename.empty()) return ;
+	if (!_filename.empty()) {
+		_filename = _upload_dir / _filename;
+		return ;
+	}
 
 	const File &file = _request.getFile();
 	if (!file.isDir()) {
@@ -44,6 +47,7 @@ void FileUploadHandler::write_into_file( const std::string &_body )
 
 	_getFileName();
 
+	std::cerr << "[http] Writing into " << _filename << std::endl;
 	std::fstream fout(_filename, std::ios::binary | std::ios::out);
 	if (!fout) {
 		std::cerr << "[http] Error happened while writing into " << _filename << std::endl;

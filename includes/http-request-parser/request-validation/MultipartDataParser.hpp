@@ -26,7 +26,7 @@ private:
 		std::string boundary;
 		std::string boundary_marker;
 		std::string closing_boundary_marker;
-		bool is_end;
+		bool is_end = false;
 	};
 
 	std::vector <MultipartFormData>		_multipartFormDatas;

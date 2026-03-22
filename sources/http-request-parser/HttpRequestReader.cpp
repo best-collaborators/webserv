@@ -63,7 +63,7 @@ HeaderState HttpRequestReader::_checkHeaderState(std::string &read_buffer) noexc
 	return _handleHeaderMethod(read_buffer);
 }
 
-ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
+HttpRequestReader::ReaderState HttpRequestReader::_processHeader(std::string &read_buffer) noexcept
 {
 	switch (_checkHeaderState(read_buffer))
 	{
@@ -162,7 +162,7 @@ BodyState HttpRequestReader::_handleChunkedBody(std::string &buffer) noexcept
 	return BodyState::Incomplete;
 }
 
-ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_read) noexcept
+HttpRequestReader::ReaderState HttpRequestReader::_processBody(std::string &buffer, size_t bytes_read) noexcept
 {
 	switch (_checkBodyState(buffer, bytes_read))
 	{
@@ -222,11 +222,10 @@ void HttpRequestReader::reset()
 	_request.reset();
 }
 
-ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
+HttpRequestReader::ReaderState HttpRequestReader::read(std::string &buffer, size_t bytes_read)
 {
 	if (_curr_state == ReaderState::AwaitingHeaders)
 		_curr_state = _processHeader(buffer);
-
 	if (_curr_state == ReaderState::AwaitingBody)
 		_curr_state = _processBody(buffer, bytes_read);
 
