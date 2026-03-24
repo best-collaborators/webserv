@@ -1,6 +1,6 @@
 #include "CGIHandler.hpp"
 
-CGIHandler::CGIHandler( CGIConfig & config )
+CGIHandler::CGIHandler( CGIConfig & config ) : _max_body_size(config.max_body_size)
 {
 	CGIExecutor	executor(config);
 
@@ -98,7 +98,7 @@ IoEvent CGIHandler::readFromCGI() noexcept
 
 			Request _request;
 			ParseContext parse_data = { .request = _request, .raw_bits = buffer_copy };
-			HttpHeaderParser parser(parse_data);
+			HttpHeaderParser parser(parse_data, _max_body_size);
 			parser.parse();
 
 			_content_length = parse_data.request.get_content_length();

@@ -124,7 +124,6 @@ namespace {
 		if (remaining_path.size() > 1)
 			std::string full_filename = return_path + "/" + remaining_path;
 
-		std::cerr << "111 => " << full_filename << std::endl;
 		file.setReturnPage({.path = full_filename, .status_code = status_code});
 		file.setPathInfo(remaining_path);
 
@@ -201,7 +200,7 @@ namespace {
 		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
 
 		bool isDir = std::filesystem::is_directory(norm_path_request);
-		std::cout << norm_path_request << " " << isDir << std::endl;
+		// std::cout << norm_path_request << " " << isDir << std::endl;
 		if (isDir) return false;
 
 		file.setFullFilename(full_name);

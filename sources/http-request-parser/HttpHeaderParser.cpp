@@ -49,6 +49,9 @@ namespace {
 HttpHeaderParser::HttpHeaderParser( ParseContext &parse_context )
 : _parse_context(parse_context) { }
 
+HttpHeaderParser::HttpHeaderParser( ParseContext &parse_context, size_t max_body_size )
+: _parse_context(parse_context), _max_body_size(max_body_size) { }
+
 bool HttpHeaderParser::_isValidHeaderLength(const std::string &buffer) const {
 	return buffer.length() <= http::limits::max_header_value_length;
 }
@@ -158,6 +161,8 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 
 void HttpHeaderParser::parse()
 {
+	Log::critical(std::to_string(_parse_context.request.getFile().getMaxBodySize()));
+
 	HttpStatus::e_code headers_validation_status = _validateRequestHeaders();
 	if (HttpStatus::is_bad(headers_validation_status)) {
 		if (!HttpStatus::is_redirect(_parse_context.request.get_status_code()))
@@ -171,7 +176,7 @@ void HttpHeaderParser::parse()
 HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 
 	if (_parse_context.request.get_header_count(http::headers::TRANSFER_ENCODING)) {
-		std::cerr << "400 Bad Request transfer-encoding + content-length" << std::endl;
+		Log::error("400 Bad Request transfer-encoding + content-length", "parser");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 	try {
@@ -183,8 +188,9 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 			return HttpStatus::e_code::BAD_REQUEST;
 		}
 
-		if (test_length > _parse_context.request.getFile().getMaxBodySize()) {
-			std::cerr << "413 Request Entity Too Large" << std::endl;
+		size_t body_size = std::max(_max_body_size, _parse_context.request.getFile().getMaxBodySize());
+		if (test_length > body_size) {
+			std::cerr << "413 Request Entity Too Large: " << test_length << " out " << _parse_context.request.getFile().getMaxBodySize() << std::endl;
 			return HttpStatus::e_code::PAYLOAD_TOO_LARGE;
 		}
 	}

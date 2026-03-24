@@ -81,7 +81,7 @@ HttpRequestReader::ReaderState HttpRequestReader::_processHeader(std::string &re
 			return ReaderState::Complete;
 
 		case HeaderState::Error:
-			Log::error("Request headers invalid." + std::to_string(_request.isCGI()), "request-reader");
+			Log::error("Request headers invalid: " + std::to_string(_request.isCGI()), "request-reader");
 			return ReaderState::Error;
 
 		case HeaderState::CGI:

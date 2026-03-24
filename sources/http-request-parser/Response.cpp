@@ -95,7 +95,6 @@ void Response::read_body_partially(const std::string &filename)
 	std::vector<char> buffer(size_to_read);
 
 	ifs.seekg(get_file_read_position());
-	std::cout << "get_file_read_position(): " << get_file_read_position() << "\n";
 	ifs.read(buffer.data(), size_to_read);
 	const std::streamsize curr_bytes_read = ifs.gcount();
 
@@ -267,14 +266,13 @@ void Response::build_headers()
 		<< "Access-Control-Allow-Headers: Content-Type, X-Filename\r\n"
 		<< "Date: " << get_date_GMT() << "\r\n";
 
-	if (!HttpStatus::is_redirect(_status_code) &&
-		_status_code != HttpStatus::e_code::NO_CONTENT &&
+	if (_status_code != HttpStatus::e_code::NO_CONTENT &&
 		_status_code != HttpStatus::e_code::CREATED)
 	{
 		oss << "Content-Type: "
-			<< HttpContentType::to_string(_content_type) << "\r\n"
-			<< "Content-Length: " << _content_length << "\r\n";
-	}
+			<< HttpContentType::to_string(_content_type) << "\r\n";
+		}
+	oss << "Content-Length: " << _content_length << "\r\n";
 
 	if (HttpStatus::is_redirect(_status_code))
 		oss << "Location: "

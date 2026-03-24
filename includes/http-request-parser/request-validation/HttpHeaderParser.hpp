@@ -18,7 +18,8 @@
 class HttpHeaderParser : public IParser
 {
 private:
-	ParseContext	&_parse_context;
+	ParseContext		&_parse_context;
+	size_t				_max_body_size;
 
 	HttpStatus::e_code  _validateRequestHeaders();
 	HttpStatus::e_code  _contentLengthValidation();
@@ -40,6 +41,7 @@ private:
 
 public:
 	HttpHeaderParser( ParseContext &parse_context );
+	HttpHeaderParser( ParseContext &parse_context, size_t max_body_size );
 	~HttpHeaderParser() = default;
 
 	void parse();

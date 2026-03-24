@@ -18,6 +18,7 @@ private:
 	PipeFD			_write_fd;
 	PipeFD			_read_fd;
 
+	size_t			_max_body_size;
 	size_t			_content_length = 0;
 	size_t			_header_end_offset = 0;
 	bool			_headers_parsed = false;

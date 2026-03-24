@@ -121,6 +121,7 @@ CGIConfig CGIConfigBuilder::build(
 	std::string full_filename = file.getFullFilename();
 
 	return CGIConfig{
+		file.getMaxBodySize(),
 		pass_to,
 		full_filename,
 		buildEnvp(headers)
