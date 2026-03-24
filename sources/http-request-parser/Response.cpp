@@ -279,7 +279,7 @@ void Response::build_headers()
 			<< _request->getFile().getReturnPage().path.string() << "\r\n";
 
 	oss << "Connection: "
-		<< (HttpStatus::is_bad(_status_code) ? "Close" : "Keep-Alive")
+		<< (HttpStatus::is_good(_status_code) ? "Keep-Alive" : "Close")
 		<< "\r\n\r\n";
 
 	_header_str = oss.str();

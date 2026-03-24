@@ -265,7 +265,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 	cgi.pass_to = std::filesystem::weakly_canonical(pass_to);
 
 	if (access(cgi.pass_to.c_str(), X_OK) || std::filesystem::is_directory(cgi.pass_to)){
-		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + cgi.pass_to, "config");
 		return ERROR;
 	}
 
