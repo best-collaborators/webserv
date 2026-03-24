@@ -48,7 +48,7 @@ const SCRIPT_NAME    = env.SCRIPT_NAME || '';
 const SERVER_NAME    = env.SERVER_NAME || '';
 const SERVER_PORT    = env.SERVER_PORT || '';
 
-console.error("CGI started:", METHOD, SCRIPT_NAME);
+// console.error("CGI started:", METHOD, SCRIPT_NAME);
 
 // ============================
 // 2. HELPERS
@@ -210,25 +210,24 @@ readStdin(() => {
 
     sendHeaders("text/html");
 
-    process.stdout.write("1234567890");
-    // process.stdout.write("<h1>Stateless Node CGI</h1>");
+    process.stdout.write("<h1>Stateless Node CGI</h1>");
 
-    // process.stdout.write("<h2>Environment</h2><pre>");
-    // process.stdout.write(escapeHTML(JSON.stringify({
-    //     METHOD,
-    //     SCRIPT_NAME,
-    //     SERVER_NAME,
-    //     SERVER_PORT
-    // }, null, 2)));
-    // process.stdout.write("</pre>");
+    process.stdout.write("<h2>Environment</h2><pre>");
+    process.stdout.write(escapeHTML(JSON.stringify({
+        METHOD,
+        SCRIPT_NAME,
+        SERVER_NAME,
+        SERVER_PORT
+    }, null, 2)));
+    process.stdout.write("</pre>");
 
-    // process.stdout.write("<h2>GET</h2><pre>");
-    // process.stdout.write(escapeHTML(JSON.stringify(GET, null, 2)));
-    // process.stdout.write("</pre>");
+    process.stdout.write("<h2>GET</h2><pre>");
+    process.stdout.write(escapeHTML(JSON.stringify(GET, null, 2)));
+    process.stdout.write("</pre>");
 
-    // process.stdout.write("<h2>POST</h2><pre>");
-    // process.stdout.write(escapeHTML(JSON.stringify(POST, null, 2)));
-    // process.stdout.write("</pre>");
+    process.stdout.write("<h2>POST</h2><pre>");
+    process.stdout.write(escapeHTML(JSON.stringify(POST, null, 2)));
+    process.stdout.write("</pre>");
 
-    // process.stdout.write("</body></html>");
+    process.stdout.write("</body></html>");
 });

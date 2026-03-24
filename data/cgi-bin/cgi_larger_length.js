@@ -48,14 +48,14 @@ const SCRIPT_NAME    = env.SCRIPT_NAME || '';
 const SERVER_NAME    = env.SERVER_NAME || '';
 const SERVER_PORT    = env.SERVER_PORT || '';
 
-console.error("CGI started:", METHOD, SCRIPT_NAME);
+// console.error("CGI started:", METHOD, SCRIPT_NAME);
 
 // ============================
 // 2. HELPERS
 // ============================
 
 function sendHeaders(type = "text/html") {
-    const fakeLength = 999999; // intentionally too small
+    const fakeLength = 999999; // intentionally too big
 
     process.stdout.write(`Content-Type: ${type}\r\n`);
     process.stdout.write(`Content-Length: ${fakeLength}\r\n`);

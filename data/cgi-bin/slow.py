@@ -2,8 +2,7 @@
 import time
 import sys
 
-print("Content-Type: text/plain")
-print()
+print("Content-Type: text/plain\r\n\r")
 sys.stdout.flush()
 
 # Delay body

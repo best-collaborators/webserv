@@ -36,14 +36,14 @@ $SCRIPT_NAME    = $_SERVER['SCRIPT_NAME'] ?? '';
 $SERVER_NAME    = $_SERVER['SERVER_NAME'] ?? '';
 $SERVER_PORT    = $_SERVER['SERVER_PORT'] ?? '';
 
-error_log("CGI started: $METHOD $SCRIPT_NAME");
+// error_log("CGI started: $METHOD $SCRIPT_NAME");
 
 // ============================
 // 2. HELPERS
 // ============================
 
 function send_headers($type = "text/html") {
-    header("Content-Type: $type");
+    fwrite(STDOUT, "Content-Type: $type\r\n\r\n");
 }
 
 function escape_html($str) {

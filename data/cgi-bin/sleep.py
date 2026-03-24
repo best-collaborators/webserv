@@ -2,8 +2,7 @@
 import time
 
 # Send valid CGI headers first (optional)
-print("Content-Type: text/plain")
-print()
+print("Content-Type: text/plain\r\n\r")
 
 # Now hang forever
 while True:

@@ -48,7 +48,7 @@ const SCRIPT_NAME    = env.SCRIPT_NAME || '';
 const SERVER_NAME    = env.SERVER_NAME || '';
 const SERVER_PORT    = env.SERVER_PORT || '';
 
-console.error("CGI started:", METHOD, SCRIPT_NAME);
+// console.error("CGI started:", METHOD, SCRIPT_NAME);
 
 // ============================
 // 2. HELPERS
