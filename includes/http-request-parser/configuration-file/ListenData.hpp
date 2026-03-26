@@ -6,7 +6,7 @@
 
 struct ListenData
 {
-	short		port;
+	int			port;
 	std::string	ip_address;
 
 	bool operator==(const ListenData& other) const;
