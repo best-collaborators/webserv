@@ -18,11 +18,12 @@ std::string to_string(std::unordered_set<std::string> extensions)
 	if (extensions.empty()) return "";
 
 	std::string result = "";
-	result += "    Extensions: {";
+	result += "Extensions: { ";
 	for (const auto& name : extensions) {
-		result += "\n    " + name;
+		result += name + " ";
 	}
-	result += "\n  }\n";
+	result.erase(result.size() - 1);
+	result += " }";
 	return result;
 }
 

@@ -18,13 +18,13 @@ std::string RegexMatcher::get_regex_value(std::string &line, std::regex regex_me
 	std::regex_search(line, matches, regex_method);
 	if (matches.empty()) {
 		if (show_msg)
-			Logger::displayLog(Logger::e_log_level::ERROR, "No match found: " + line, "config");
+			Logger::displayLog(Logger::e_log_level::DEBUG, "No regex match found", "config");
 		return "";
 	}
 
 	if (match_number >= matches.size()) {
 		if (show_msg)
-			Logger::displayLog(Logger::e_log_level::ERROR, "Invalid match group index: " + line, "config");
+			Logger::displayLog(Logger::e_log_level::DEBUG, "Invalid match group index: " + line, "config");
 		return "";
 	}
 

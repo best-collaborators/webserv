@@ -29,7 +29,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseMaxBodySi
 		if (pos != line.size()) throw std::logic_error("Body size has wrong format");
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Body size is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Body size is invalid. (Correct format:  max_body_size: 100)", "config");
 		return ERROR;
 	}
 	return OK;
@@ -44,11 +44,11 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseRoot(std:
 		if (!std::filesystem::is_directory(validated_path)) throw std::logic_error("Root is invalid");
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Root is invalid. (Correct format:  root: /path_to_root_dir)", "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Root: " + line, "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Root: " + line, "config");
 	_current_server_block._root = std::filesystem::weakly_canonical(line);
 	return OK;
 }
@@ -58,31 +58,18 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseIndex(std
 	try {
 		_extractDirectiveValue(line, 5);
 		line = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
+		Log::warning(line);
 		if (line.empty()) {
 			throw std::logic_error("Index path is invalid");
 		}
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Index is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Index is invalid. Correct format:  index: /data/index.html", "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Index: " + line, "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Root index: " + line, "config");
 	_current_server_block._index = line;
-	return OK;
-}
-
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseServerName(std::string &line)
-{
-	_extractDirectiveValue(line, 11);
-	std::string server_name_validated = RegexMatcher::get_regex_value(line, HttpRegexPatterns::NON_WHITESPACE(), 1);
-
-	if (server_name_validated.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Invalid server name", "config");
-		return ERROR;
-	}
-	_current_server_block._server_name = server_name_validated;
-	Logger::displayLog(Logger::e_log_level::INFO, "Server name: " + _current_server_block._server_name, "config");
 	return OK;
 }
 
@@ -100,15 +87,14 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseErrorPage
 		if (HttpStatus::is_good(status_code)) throw std::logic_error("Invalid code"); 
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + er_page_str, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid. Correct format:  400: /BadRequestPage.html", "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Status code: " + status_code_str, "config");
-	Logger::displayLog(Logger::e_log_level::INFO, "Error page: " + er_page_str, "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Error page: " + er_page_str + "Status code: " + status_code_str, "config");
 
 	if (_current_server_block._error_pages.count(status_code)) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is duplicate: " + status_code_str, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is duplicate", "config");
 		return ERROR;
 	}
 	_current_server_block._error_pages[status_code] = path;
@@ -188,9 +174,12 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllowedMe
 	_extractDirectiveValue(line, 15);
 	std::string methods_str = RegexMatcher::get_regex_value(line, HttpRegexPatterns::ALLOWED_METHODS(), 0);
 	if (methods_str.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Allowed methods are invalid: " + line, "config");
+		Logger::displayLog(
+			Logger::e_log_level::ERROR,
+			"Allowed methods are invalid. Correct format examples:\n1. allowed_methods: \"GET|POST\"\n2. allowed_methods: \"POST\"",
+			"config"
+		);
 		return ERROR;
-
 	}
 	if (!registry.has_value())
 		registry.emplace();
@@ -208,16 +197,24 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGIExtens
 		Trimmer::trim(line, '"');
 		cgi.extensions = split(line);
 
+		for (const auto &ex: cgi.extensions) {
+			if (ex[0] != '.') {
+				throw std::logic_error("Extensions are invalid");
+			}
+		}
 		if (cgi.extensions.empty()) {
 			throw std::logic_error("Extensions are invalid");
 		}
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Extensions are invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Extensions are invalid. "
+			"Correct format examples:\n1. extensions: \".js|.py\"\n2. extensions: \".py\"",
+			"config"
+		);
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, to_string(cgi.extensions), "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, to_string(cgi.extensions), "config");
 	fields.set(2);
 	return OK;
 }
@@ -256,7 +253,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 	_extractDirectiveValue(line, 7);
 	std::string pass_to = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (pass_to.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "CGI pass_to is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "CGI pass_to is invalid. Correct format: - pass_to: /pass/to/executable", "config");
 		return ERROR;
 	}
 
@@ -268,6 +265,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseCGI(std::
 		Logger::displayLog(Logger::e_log_level::ERROR, "pass_to is not executable: " + cgi.pass_to, "config");
 		return ERROR;
 	}
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Pass to executable: " + cgi.pass_to, "config");
 
 	while (getline(ifs, line))
 	{
@@ -321,7 +319,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 	if (_checkDuplicateField(2, "root", fields) == ERROR) return ERROR;
 	_extractDirectiveValue(line, 4);
 
-	location.setRoot(std::filesystem::weakly_canonical(line));
+	std::cout << line << std::endl;
+	std::string root_norm = std::filesystem::weakly_canonical(line);
+	if (std::filesystem::is_directory(root_norm)) location.setRoot(root_norm);
+	else location.setRoot(line);
 	fields.set(2);
 	return OK;
 }
@@ -338,7 +339,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 		page.status_code = HttpStatus::e_code(std::stoi(line.substr(0, 3)));
 	}
 	catch(const std::exception& e) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid", "config");
 		return ERROR;
 	}
 	location.setReturnPage(page);
@@ -353,7 +354,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationA
 	_extractDirectiveValue(line, 9);
 
 	if (line != "on" && line != "off") {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Autoindex is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Autoindex is invalid. "
+			"Correct format: \n1. autoindex: on\n2. autoindex: off", "config");
 		return ERROR;
 	}
 
@@ -406,7 +408,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocations
 	_extractDirectiveValue(line, 4);
 	std::string path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
 	if (path.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid: " + line, "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Location path is invalid. Correct format: - path: /location_path", "config");
 		return ERROR;
 	}
 
@@ -446,21 +448,25 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseListen(st
 		port = RegexMatcher::get_regex_value(line, HttpRegexPatterns::IP_ADDR_PORT(), 3);
 
 	if (ip_addr.empty() || port.empty()) {
-		Logger::displayLog(Logger::e_log_level::ERROR, "Invalid listen parameters", "config");
+		Logger::displayLog(Logger::e_log_level::ERROR, "Invalid listen parameters. Correct format: 127.0.0.1:8000", "config");
 		return ERROR;
 	}
 
 	_current_server_block._listen_data.ip_address = ip_addr;
 	try {
-		_current_server_block._listen_data.port = std::stoi(port);
+		size_t pos;
+		_current_server_block._listen_data.port = std::stoi(port, &pos);
+		if (pos != port.size()) {
+			throw std::logic_error("Port is invalid");
+		}
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Port is invalid: " + port, "config");
 		return ERROR;
 	}
 
-	Logger::displayLog(Logger::e_log_level::INFO, "Ip address: " + ip_addr, "config");
-	Logger::displayLog(Logger::e_log_level::INFO, "Port: " + port, "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Ip address: " + ip_addr, "config");
+	Logger::displayLog(Logger::e_log_level::DEBUG, "Port: " + port, "config");
 	return OK;
 }
 
@@ -509,8 +515,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateServer
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateRequiredFields(const ServerBlock &s_block)
 {
-	// bits 0=listen, 1=server_name, 4=root are required
-	static const std::vector<std::pair<short, std::string>> required = {{0, "listen"}, {1, "server_name"}, {4, "root"}};
+	static const std::vector<std::pair<short, std::string>> required = {{0, "listen"}, {4, "root"}};
 	for (auto &p : required) {
 		if (!s_block._assigned_fields.test(p.first)) {
 			Logger::displayLog(Logger::e_log_level::ERROR, "Missing field " + p.second, "config");
@@ -526,6 +531,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexP
 
 	std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
 	full_index_path = std::filesystem::weakly_canonical(full_index_path);
+	Logger::displayLog(Logger::e_log_level::WARNING, full_index_path, "config");
 	if (full_index_path.string().find(s_block._root) == std::string::npos) {
 		Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
 		return ERROR;
@@ -539,7 +545,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateErrorP
 		err_page.second = s_block._root.string() + err_page.second;
 		std::filesystem::path full = std::filesystem::weakly_canonical(err_page.second);
 		if (full.string().find(s_block._root) == std::string::npos) {
-			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
+			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory.", "config");
 			return ERROR;
 		}
 	}
@@ -593,7 +599,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateCGI(Se
 		for (auto &ext : cgi.extensions) {
 			if (seen_ext.count(ext)) {
 				Logger::displayLog(
-					Logger::e_log_level::ERROR, "Duplicate location ext: " + ext, "config");
+					Logger::e_log_level::ERROR, "Duplicate cgi extension: " + ext, "config");
 				return ERROR;
 			}
 			seen_ext.insert(ext);
@@ -624,16 +630,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleListenDi
 
 	extra_line = false;
 	_current_server_block._assigned_fields.set(0);
-	return OK;
-}
-
-ConfigurationFileParser::e_parse_result ConfigurationFileParser::_handleServerNameDirective(std::string &line, bool &extra_line)
-{
-	if (_checkDuplicateField(1, "server_name", _current_server_block._assigned_fields) == ERROR) return ERROR;
-	if (_parseServerName(line) == ERROR) return ERROR;
-
-	extra_line = false;
-	_current_server_block._assigned_fields.set(1);
 	return OK;
 }
 
@@ -739,9 +735,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_dispatchServer
 	if (isValidHeaderFormat(line, "listen", false))
 		return _handleListenDirective(ifs, line, extra_line);
 
-	if (isValidHeaderFormat(line, "server_name", true))
-		return _handleServerNameDirective(line, extra_line);
-
 	if (isValidHeaderFormat(line, "error_pages", false))
 		return _handleErrorPagesDirective(ifs, line, extra_line);
 
@@ -811,7 +804,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 			auto [it, inserted] = _server_blocks.emplace(_current_server_block._listen_data, _current_server_block);
 
 			if (!inserted) {
-				Logger::displayLog(Logger::e_log_level::ERROR, "Duplicate (port,id) detected!", "config");
+				Logger::displayLog(Logger::e_log_level::ERROR, "Duplicate (port,id) detected", "config");
 				return ERROR;
 			}
 		}
@@ -827,7 +820,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 {
 	std::ifstream ifs(_filename);
-	if (ifs.bad()) {
+	if (!ifs.good()) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Cannot access " + _filename, "config");
 		return ERROR;
 	}

@@ -34,7 +34,6 @@ private:
 	server_block_map		&_server_blocks;
 
 	e_parse_result			_parseListen(std::string &line);
-	e_parse_result			_parseServerName(std::string &line);
 	e_parse_result			_parseErrorPages(std::string &line);
 	e_parse_result			_parseMaxBodySize(std::string &line);
 	e_parse_result			_parseRoot(std::string &line);
@@ -58,7 +57,6 @@ private:
 	// Directive handlers
 	e_parse_result _checkDuplicateField(size_t bit_index, const std::string &field_name, std::bitset<8UL> &assigned_fields);
 	e_parse_result _handleListenDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
-	e_parse_result _handleServerNameDirective(std::string &line, bool &extra_line);
 	e_parse_result _handleErrorPagesDirective(std::ifstream &ifs, std::string &line, bool &extra_line);
 	e_parse_result _handleRootDirective(std::string &line, bool &extra_line);
 	e_parse_result _handleIndexDirective(std::string &line, bool &extra_line);

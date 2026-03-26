@@ -28,5 +28,6 @@ struct ServerBlock
 };
 
 std::ostream& operator<<(std::ostream& os, const ServerBlock& block);
+std::string to_string(const ServerBlock& block);
 
 #endif /* SERVER_BLOCK_HPP */

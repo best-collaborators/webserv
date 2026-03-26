@@ -15,7 +15,7 @@ const std::regex HttpRegexPatterns::NON_WHITESPACE_PATTERN("^ *(\\S+) *$");
 const std::regex HttpRegexPatterns::WHITESPACE_PATTERN("^\\s*$");
 const std::regex HttpRegexPatterns::LOCATION_PATH_PATTERN("^ *(\\/(?!.*\\.\\.)([A-Za-z0-9._\\-\\/]*))$");
 const std::regex HttpRegexPatterns::ALLOWED_METHODS_PATTERN("^ *\" *(GET|POST|DELETE) *(\\| *(GET|POST|DELETE))* *\" *$");
-const std::regex HttpRegexPatterns::INDEX_PATTERN("^ *[A-Za-z0-9._-]+ *$");
+const std::regex HttpRegexPatterns::INDEX_PATTERN("^ */?[A-Za-z0-9._/-]+ *$");
 
 // Request line patterns
 const std::regex& HttpRegexPatterns::METHOD()

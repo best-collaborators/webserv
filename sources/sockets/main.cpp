@@ -15,6 +15,9 @@ int	main(int argc, char **argv)
 	if (parser.parse() == ConfigurationFileParser::e_parse_result::ERROR) {
 		return 1;
 	}
+	for (auto server_block : server_blocks) {
+		Log::info(to_string(server_block.second), "config-file");
+	}
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, &sig_handler);
