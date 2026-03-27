@@ -58,11 +58,11 @@ void	Socket::setDualStack()
 	_checkStatus(status, "[socket] setsockopt(IPV6_V6ONLY) failed");
 }
 
-void	Socket::bind( addrinfo const * address )
+void	Socket::bind( addrinfo const * address, std::string const & ip, std::string const & port )
 {
 	int	status = ::bind(_fd, address->ai_addr, address->ai_addrlen);
 
-	_checkStatus(status, "[socket] bind() failed");
+	_checkStatus(status, "[socket] binding address " + ip + ":" + port + " failed");
 
 	Log::info("Socket bound", "socket");
 }

@@ -21,7 +21,7 @@ Listener::Listener( std::string const & ip, std::string const & port ) : _ip(ip)
 	}
 
 	if (address == nullptr)
-		throw std::runtime_error("[listen] Bind failed for all addresses.");
+		throw std::runtime_error("[listen] Bind failed for " + _ip + ":" + _port);
 
 	_socket.listen();
 
@@ -70,7 +70,14 @@ void	Listener::setupSocket( addrinfo const * address )
 	if (address->ai_family == AF_INET6)
 		_socket.setDualStack();
 
-	_socket.bind(address);
+	try
+	{
+		_socket.bind(address, _ip, _port);
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
 }
 
 Socket	Listener::accept()

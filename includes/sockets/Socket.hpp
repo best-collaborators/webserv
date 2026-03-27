@@ -40,7 +40,7 @@ public:
 	void	setAddressReuse();
 	void	setDualStack();
 
-	void	bind( addrinfo const * address );
+	void	bind( addrinfo const * address, std::string const & ip, std::string const & port );
 	void	listen();
 	Socket	accept();
 
