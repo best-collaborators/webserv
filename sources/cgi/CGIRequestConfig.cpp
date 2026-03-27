@@ -70,6 +70,7 @@ void CGIConfigBuilder::addTargetEnv(
 	}
 
 	envp["SCRIPT_NAME"] = path;
+	envp["PATH_INFO"] = path;
 	envp["QUERY_STRING"] = queryString;
 }
 
