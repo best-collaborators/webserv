@@ -18,11 +18,18 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(const std::string &msg)
 {
-	if (should_generate_autoindex()) {
-		handle_autoindex();
-		return ;
-	}
 	_content_type = HttpContentType::e_code::TEXT_HTML;
+
+	if (should_generate_autoindex()) {
+
+		auto file = _request->getFile();
+		std::string listening_page = ListingGenerator::getListingPage(file);
+		if (!listening_page.empty()) {
+			_content_length = _body.size();
+			return listening_page;
+		}
+		_status_code = HttpStatus::e_code::NOT_FOUND;
+	}
 
 	return "<!DOCTYPE html>\n"
 		   "<html lang=\"en\">\n"
@@ -176,14 +183,6 @@ bool Response::should_generate_autoindex()
 	return (_status_code != HttpStatus::e_code::NO_CONTENT
 			&& !HttpStatus::is_redirect(_status_code)
 			&& file.isDir() && file.getAutoindex());
-}
-
-void Response::handle_autoindex()
-{
-	auto file = _request->getFile();
-	_body = ListingGenerator::getListingPage(file);
-	_content_type = HttpContentType::e_code::TEXT_HTML;
-	_content_length = _body.size();
 }
 
 bool Response::is_success()
