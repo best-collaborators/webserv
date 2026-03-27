@@ -3,7 +3,7 @@
 std::string ListingGenerator::getListingPage( File const & file )
 {
 	std::string target = file.getRelativePath();
-	std::string full_path = file.getFullFilename();
+	std::string full_path = file.getDirectory();
 
 	if (!_isPathValid(full_path))
 		return "";

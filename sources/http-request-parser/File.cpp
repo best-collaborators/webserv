@@ -8,13 +8,24 @@ File::~File()
 {
 }
 
-const std::string& File::getFullFilename() const {
+const std::filesystem::path& File::getFullFilename() const {
 	return _full_filename;
 }
 
 void File::setFullFilename(const std::string& filename) {
 	_full_filename = filename;
 }
+
+const std::filesystem::path			&File::getDirectory() const
+{
+	return _directory;
+}
+
+void								File::setDirectory(const std::string& filename)
+{
+	_directory = filename;
+}
+
 
 const std::string &File::getRelativePath() const {
 	return _relative_path;
@@ -111,12 +122,15 @@ std::ostream& operator<<(std::ostream& os, const File& file)
 {
 	os << "File: " << file.getFullFilename() << "\n"
 	   << "  Relative Path: " << file.getRelativePath() << "\n"
+	   << "  Directory: " << file.getDirectory() << "\n"
 	   << "  Is Directory: " << (file.isDir() ? "true" : "false") << "\n"
 	   << "  Autoindex: " << (file.getAutoindex() ? "true" : "false") << "\n"
 	   << "  Extension: " << file.getExtension() << "\n"
 	   << "  Is Index: " << (file.isIndex() ? "true" : "false") << "\n"
 	   << "  Path Info: " << file.getPathInfo() << "\n"
-	   << "  Max Body Size: " << file.getMaxBodySize() << "\n";
+	   << "  Max Body Size: " << file.getMaxBodySize() << "\n"
+	   << "  Relocation: " << file.getReturnPage().status_code
+	   << " " << file.getReturnPage().path << "\n";
 	
 	if (file.getPassTo().has_value()) {
 		os << "  Pass To: " << file.getPassTo().value() << "\n";

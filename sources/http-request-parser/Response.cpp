@@ -18,6 +18,10 @@ std::_Put_time<char> Response::get_date_GMT()
 
 std::string Response::serve_html_webserv_page(const std::string &msg)
 {
+	if (should_generate_autoindex()) {
+		handle_autoindex();
+		return ;
+	}
 	_content_type = HttpContentType::e_code::TEXT_HTML;
 
 	return "<!DOCTYPE html>\n"
@@ -143,9 +147,7 @@ std::string Response::form_response(const Request *request, const std::string &b
 {
 	init_response(request);
 
-	if (should_generate_autoindex())
-		handle_autoindex();
-	else if (is_success() && isCGI)
+	if (is_success() && isCGI)
 		handle_cgi(body);
 	else
 		handle_regular_response();
@@ -199,6 +201,10 @@ void Response::handle_regular_response()
 {
 	auto file = _request->getFile();
 	error_map error_pages = _request->getServerBlock()->_error_pages;
+
+	if (HttpStatus::is_redirect(_status_code)) {
+		return ;
+	}
 
 	if (_request->get_method() == HttpMethod::e_code::OPTIONS)
 		_status_code = HttpStatus::e_code::NO_CONTENT;

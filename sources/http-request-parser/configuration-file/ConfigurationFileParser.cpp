@@ -58,7 +58,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseIndex(std
 	try {
 		_extractDirectiveValue(line, 5);
 		line = RegexMatcher::get_regex_value(line, HttpRegexPatterns::INDEX(), 0);
-		Log::warning(line);
 		if (line.empty()) {
 			throw std::logic_error("Index path is invalid");
 		}
@@ -319,10 +318,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 	if (_checkDuplicateField(2, "root", fields) == ERROR) return ERROR;
 	_extractDirectiveValue(line, 4);
 
-	std::cout << line << std::endl;
-	std::string root_norm = std::filesystem::weakly_canonical(line);
-	if (std::filesystem::is_directory(root_norm)) location.setRoot(root_norm);
-	else location.setRoot(line);
+	location.setRoot(line);
 	fields.set(2);
 	return OK;
 }
@@ -335,8 +331,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationR
 
 	HttpPage page;
 	try {
-		page.path = std::filesystem::weakly_canonical(line.substr(3));
 		page.status_code = HttpStatus::e_code(std::stoi(line.substr(0, 3)));
+		line.erase(0, 3);
+		page.path = RegexMatcher::get_regex_value(line, HttpRegexPatterns::LOCATION_PATH());
+		if (page.path.empty()) {
+			Logger::displayLog(Logger::e_log_level::ERROR, "Redirection path is invalid. Correct format: redirect: 301 /new_location_path", "config");
+			return ERROR;
+		}
 	}
 	catch(const std::exception& e) {
 		Logger::displayLog(Logger::e_log_level::ERROR, "Error page status code is invalid", "config");
@@ -531,7 +532,6 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateIndexP
 
 	std::filesystem::path full_index_path = s_block._root.string() + "/" + s_block._index.value();
 	full_index_path = std::filesystem::weakly_canonical(full_index_path);
-	Logger::displayLog(Logger::e_log_level::WARNING, full_index_path, "config");
 	if (full_index_path.string().find(s_block._root) == std::string::npos) {
 		Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
 		return ERROR;
@@ -574,16 +574,15 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_validateLocati
 		if (l.getRoot().empty()) {
 			root = s_block._root.string() + l.getPath().string();
 		} else {
-			root = l.getRoot();
-			if (!std::filesystem::is_directory(root)) root = s_block._root / root;
+			root = s_block._root / l.getRoot();
 		}
 
 		root = std::filesystem::weakly_canonical(root);
 		l.setRoot(root);
 
 		std::filesystem::path full = std::filesystem::weakly_canonical(l.getRoot().string() + "/" + l.getDefaultFile());
-		if (full.string().find(l.getRoot().c_str(), 0, l.getRoot().string().size() - 1) == std::string::npos) {
-			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory: " + full.string(), "config");
+		if (full.string().find(s_block._root) == std::string::npos) {
+			Logger::displayLog(Logger::e_log_level::CRITICAL, "File escapes root directory", "config");
 			return ERROR;
 		}
 	}

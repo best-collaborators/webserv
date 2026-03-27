@@ -147,11 +147,11 @@ namespace {
 		if (!loc.getDefaultFile().empty()) {
 			return std::filesystem::weakly_canonical(full_name + "/" + loc.getDefaultFile());
 		}
-		else if (loc.getAutoindex() || request.get_method() == HttpMethod::e_code::POST) {
-			return norm_path.string() + "/";
-		} 
 		else if (index.has_value()) {
 			return std::filesystem::weakly_canonical(full_name + "/" + index.value());
+		}
+		else if (loc.getAutoindex() || request.get_method() == HttpMethod::e_code::POST) {
+			return norm_path.string() + "/";
 		}
 		return "";
 	}
@@ -171,6 +171,8 @@ namespace {
 			isDir = true;
 		if (!isDir) return file;
 
+
+		file.setDirectory(full_name);
 		std::filesystem::path full_filename_path = getFullFilename(request, remaining_path, loc, server_block._index);
 
 		file.setIsIndex(!loc.getAutoindex() && request.get_method() != HttpMethod::e_code::POST);
@@ -178,10 +180,7 @@ namespace {
 		file.setAutoindex(loc.getAutoindex());
 		file.setPathInfo(remaining_path);
 
-		if (!loc.getAutoindex())
-			file.setFullFilename(full_filename_path);
-		else
-			file.setFullFilename(full_name);
+		file.setFullFilename(full_filename_path);
 
 		HttpMethodRegistry method_registry;
 		file.setMethodRegistry(loc.getMethodsRegistry().value_or(method_registry));
@@ -200,7 +199,6 @@ namespace {
 		std::filesystem::path norm_path_request = std::filesystem::weakly_canonical(full_name);
 
 		bool isDir = std::filesystem::is_directory(norm_path_request);
-		// std::cout << norm_path_request << " " << isDir << std::endl;
 		if (isDir) return false;
 
 		file.setFullFilename(full_name);
@@ -363,8 +361,12 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 	{
 		res = isMatchedLocations(server_block, request_target, request);
 		if (res == RELOCATION) return res;
-		if (res == NO_FILE_IN_CONFIG)
-			handleNoFileInConfig(server_block, request_target, request);
+		if (res == NO_FILE_IN_CONFIG) {
+			res = handleNoFileInConfig(server_block, request_target, request);
+			if (res == RELOCATION) {
+				return res;
+			}
+		}
 	}
 	std::cout << request.getFile();
 	if (server_block._cgi.has_value())

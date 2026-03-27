@@ -187,7 +187,6 @@ bool MultipartDataParser::_isBoundaryEmpty()
 
 void MultipartDataParser::parse()
 {
-	std::cout << _parse_context.raw_bits << std::endl;
 	if (_isBoundaryEmpty()) return ;
 
 	if (!_isValidMultipartForm()) return ;

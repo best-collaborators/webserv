@@ -161,8 +161,6 @@ HttpStatus::e_code HttpHeaderParser::_validateRequestHeaders()
 
 void HttpHeaderParser::parse()
 {
-	Log::critical(std::to_string(_parse_context.request.getFile().getMaxBodySize()));
-
 	HttpStatus::e_code headers_validation_status = _validateRequestHeaders();
 	if (HttpStatus::is_bad(headers_validation_status)) {
 		if (!HttpStatus::is_redirect(_parse_context.request.get_status_code()))

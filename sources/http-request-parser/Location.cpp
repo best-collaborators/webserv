@@ -86,7 +86,7 @@ std::string Location::to_string() const noexcept
 	if (!root.empty())
 		result += "    Root: " + root.string() + "\n";
 	if (!return_page.path.empty())
-	result += "Return page: "
+	result += "    Return page: "
 			+ std::to_string((int)return_page.status_code)
 			+ " "
 			+ return_page.path.string() + "\n";

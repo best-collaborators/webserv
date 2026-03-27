@@ -10,7 +10,8 @@ class File
 {
 private:
 	std::string					_relative_path;
-	std::string					_full_filename;
+	std::filesystem::path		_full_filename;
+	std::filesystem::path		_directory;
 	bool 						_is_dir = false;
 	bool 						_autoindex = false;
 	std::string					_extension = "";
@@ -21,12 +22,15 @@ private:
 	bool						_is_index;
 	std::string					_path_info = "";
 
+
 public:
 	File(/* args */);
 	~File();
 
-	const std::string					&getFullFilename() const;
+	const std::filesystem::path			&getFullFilename() const;
 	void								setFullFilename(const std::string& filename);
+	const std::filesystem::path			&getDirectory() const;
+	void								setDirectory(const std::string& filename);
 	const std::string					&getRelativePath() const;
 	void								setRelativePath(const std::string& path);
 	bool								isDir() const;
