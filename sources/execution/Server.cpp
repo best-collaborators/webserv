@@ -21,16 +21,30 @@ Server::Server( ConfigurationFileParser::server_block_map server_blocks )
 {
 	for (auto const & [listen, block] : _server_blocks)
 	{
-		Listener listener(listen.ip_address, std::to_string(listen.port));
+		try
+		{
+			Listener listener(listen.ip_address, std::to_string(listen.port));
 
-		int listener_fd = listener.getFD();
+			int listener_fd = listener.getFD();
 
-		_listeners.try_emplace(listener_fd, ListenerEntry(std::move(listener), &block));
+			_listeners.try_emplace(listener_fd, ListenerEntry(std::move(listener), &block));
 
-		if (_poller.add(listener_fd, EPOLLIN) == false)
-			throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
+			if (_poller.add(listener_fd, EPOLLIN) == false)
+				throw std::system_error(errno, std::generic_category(), "[epoll] EPOLL_CTL_ADD listen_fd failed");
 
-		Log::info("Added listen_fd " + std::to_string(listener_fd) + " (EPOLLIN)", "epoll");
+			Log::debug("Added listen_fd " + std::to_string(listener_fd) + " (EPOLLIN)", "epoll");
+		}
+		catch (std::exception const &e)
+		{
+			Log::warning("Failed to setup address " + listen.ip_address + ":" + std::to_string(listen.port) + ": " + e.what(), "listen");
+			continue;
+		}
+	}
+
+	if (_listeners.empty())
+	{
+		const std::string msg = "No listeners could be initialized";
+		throw std::runtime_error(msg);
 	}
 
 	int childHandleFD = _childHandler.getFD();
@@ -41,8 +55,6 @@ Server::Server( ConfigurationFileParser::server_block_map server_blocks )
 
 void Server::run()
 {
-	Log::info("Waiting for connection...", "accept");
-
 	while (g_running)
 	{
 		_handleTimeouts();

@@ -30,7 +30,7 @@ int	main(int argc, char **argv)
 	}
 	catch( std::exception const & e )
 	{
-		std::cerr << e.what() << '\n';
+		Log::critical(e.what(), "server");
 		return 1;
 	}
 

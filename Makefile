@@ -6,13 +6,13 @@ INCL = \
 	-I$(INC_DIR)/http-request-parser/request-validation \
 	-I$(INC_DIR)/http-request-parser/configuration-file \
 	-I$(INC_DIR)/http-request-parser/response \
-	-I$(INC_DIR)/sockets \
+	-I$(INC_DIR)/execution \
 	-I$(INC_DIR)/cgi
 
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -DDEBUG_FLAG -g -std=c++17 -Iincludes $(INCL)
+CXXFLAGS = -Wall -Wextra -Werror -MMD -MP -DDEBUG_FLAG -std=c++17 -Iincludes $(INCL)
 
 SRC_DIR = sources
 OBJ_DIR = build
@@ -50,14 +50,14 @@ SRCS = \
 	$(SRC_DIR)/http-request-parser/Location.cpp \
 	$(SRC_DIR)/http-request-parser/ListingGenerator.cpp \
 	$(SRC_DIR)/Logger.cpp \
-	$(SRC_DIR)/sockets/main.cpp \
-	$(SRC_DIR)/sockets/Socket.cpp \
-	$(SRC_DIR)/sockets/Poller.cpp \
-	$(SRC_DIR)/sockets/Connection.cpp \
-	$(SRC_DIR)/sockets/Listener.cpp \
-	$(SRC_DIR)/sockets/Server.cpp \
-	$(SRC_DIR)/sockets/PipeFD.cpp \
-	$(SRC_DIR)/sockets/ChildSignalHandler.cpp \
+	$(SRC_DIR)/execution/main.cpp \
+	$(SRC_DIR)/execution/Socket.cpp \
+	$(SRC_DIR)/execution/Poller.cpp \
+	$(SRC_DIR)/execution/Connection.cpp \
+	$(SRC_DIR)/execution/Listener.cpp \
+	$(SRC_DIR)/execution/Server.cpp \
+	$(SRC_DIR)/execution/PipeFD.cpp \
+	$(SRC_DIR)/execution/ChildSignalHandler.cpp \
 	$(SRC_DIR)/cgi/CGIRequestConfig.cpp \
 	$(SRC_DIR)/cgi/CGIHandler.cpp \
 	$(SRC_DIR)/cgi/CGIValidator.cpp \

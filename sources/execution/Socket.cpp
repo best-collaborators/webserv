@@ -39,7 +39,7 @@ void	Socket::create( addrinfo const * address )
 
 	_setNonBlocking();
 
-	Log::info("Socket created", "socket");
+	Log::debug("Socket created", "socket");
 }
 
 void	Socket::setAddressReuse()
@@ -64,7 +64,7 @@ void	Socket::bind( addrinfo const * address, std::string const & ip, std::string
 
 	_checkStatus(status, "[socket] binding address " + ip + ":" + port + " failed");
 
-	Log::info("Socket bound", "socket");
+	Log::debug("Socket bound", "socket");
 }
 
 void	Socket::listen()

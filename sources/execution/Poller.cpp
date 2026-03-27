@@ -23,7 +23,7 @@ Poller::Poller(): _epoll_fd(-1), _events(MAX_EVENTS)
 
 	_epoll_fd = status;
 
-	Log::info("Instance created: fd " + std::to_string(_epoll_fd), "epoll");
+	Log::debug("Instance created: fd " + std::to_string(_epoll_fd), "epoll");
 }
 
 Poller::~Poller()
