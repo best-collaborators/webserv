@@ -8,10 +8,14 @@ static void	sig_handler(int signum)
 
 int	main(int argc, char **argv)
 {
-	if (argc < 2) return 1;
+	if (argc > 2) {
+		std::cerr << "Invalid webserv execution. Usage: ./webserv [custom.conf]" << std::endl;
+		return 1;
+	}
 
+	std::string config_filename = argv[1] ? argv[1] : "";
 	std::unordered_map<ListenData, ServerBlock, ListenDataHash> server_blocks;
-	ConfigurationFileParser parser(argv[1], server_blocks);
+	ConfigurationFileParser parser(config_filename, server_blocks);
 	if (parser.parse() == ConfigurationFileParser::e_parse_result::ERROR) {
 		return 1;
 	}

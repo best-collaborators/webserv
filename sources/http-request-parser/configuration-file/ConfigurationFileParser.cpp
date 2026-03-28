@@ -830,6 +830,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::parse()
 {
+	if (_filename.empty()) _filename = "default.conf";
 	std::ifstream ifs(_filename);
 	if (!ifs.good()) {
 		std::cerr << "Cannot access " + _filename << std::endl;
