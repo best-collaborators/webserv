@@ -35,8 +35,8 @@ public:
 	void parse();
 
 private:
-	const char *ERROR_HTTP_METHOD = "LOG: ERROR INVALID REQUEST METHOD";
-	const char *ERROR_HTTP_REQUEST_TARGET = "LOG: ERROR INVALID REQUEST TARGET";
+	const char *ERROR_HTTP_METHOD = "Invalid request method";
+	const char *ERROR_HTTP_REQUEST_TARGET = "Invalid request target";
 
 	ParseContext &_parse_context;
 
