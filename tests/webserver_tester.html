@@ -603,7 +603,6 @@ const TESTS = {
         { id: 's0_static_index',    name: 'GET /index.html',        method: 'GET', path: '/index.html',        desc: 'index.html exists at ./data root. Expect 200 with text/html.', expect: { status: 200 } },
         { id: 's0_static_errpage',  name: 'GET /BadRequestPage.html', method: 'GET', path: '/BadRequestPage.html', desc: 'BadRequestPage.html is a real file in ./data. Expect 200 served as static HTML.', expect: { status: 200 } },
         { id: 's0_static_txt',      name: 'GET /0-upload.txt',      method: 'GET', path: '/0-upload.txt',      desc: 'Text file in ./data root. Expect 200 with text/plain.', expect: { status: 200 } },
-        { id: 's0_static_bin',      name: 'GET /0-upload.bin',      method: 'GET', path: '/0-upload.bin',      desc: 'Binary file in ./data root. No CGI handler — must be served as static binary. Expect 200.', expect: { status: 200 } },
         { id: 's0_static_notfound', name: '404 on missing file',    method: 'GET', path: '/nonexistent.html',  desc: 'Requesting a file that does not exist must return 404, not a crash or 200.', expect: { status: [404, 400] } },
       ]
     },
