@@ -71,7 +71,6 @@ private:
 	
 	Socket				_socket;
 	opt_cgi				_cgi_handler;
-	ServerBlock const *	_server_block;
 
 	BufferManager		_buffer_manager;
 	HttpRequestReader	_request_reader;
