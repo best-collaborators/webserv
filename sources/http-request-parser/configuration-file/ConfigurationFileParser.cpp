@@ -115,41 +115,49 @@ bool isValidHeaderFormat(const std::string& line,
 	return std::regex_match(line, reg);
 }
 
-
-//TODO: change allowed methods regex to split
 namespace {
+	bool isValidTokenChar(char c) {
+		return std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_' || c == '-';
+	}
+
 	std::unordered_set<std::string> split(const std::string& s)
 	{
 		std::unordered_set<std::string> result;
 		size_t start = 0;
-
 		for (size_t i = 0; i <= s.size(); i++)
 		{
 			if (i == s.size() || s[i] == '|')
 			{
 				std::string token = s.substr(start, i - start);
-
+				// Trim leading and trailing whitespace
 				size_t first = token.find_first_not_of(" \t");
 				size_t last = token.find_last_not_of(" \t");
 
-				#ifdef DDEBUG_FLAG
-					std::cout << *token.begin() << std::endl;
-				#endif
-				std::string to_insert = token.substr(first, last - first + 1);
-				if (result.count(to_insert)) {
-					result.clear();
-					break;
-				}
 				if (first != std::string::npos)
-					result.insert(token.substr(first, last - first + 1));
-
+				{
+					std::string trimmed = token.substr(first, last - first + 1);
+					// Check that all characters are valid
+					bool is_valid = !trimmed.empty() &&
+					                 std::all_of(trimmed.begin(), trimmed.end(), isValidTokenChar);
+					if (!is_valid)
+					{
+						result.clear(); // invalid token found
+						break;
+					}
+					// Insert only if not already present
+					if (result.count(trimmed))
+					{
+						result.clear();
+						break;
+					}
+					result.insert(trimmed);
+				}
 				start = i + 1;
 			}
 		}
 		return result;
 	}
 }
-
 
 ConfigurationFileParser::e_parse_result ConfigurationFileParser::_updateAllowedMethods(std::string &methods_str, HttpMethodRegistry &methods_registry)
 {
@@ -778,7 +786,10 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 	while (true)
 	{
 		if (!extra_line)
-			getline(ifs, line);
+		{
+			if (!std::getline(ifs, line))
+				break;
+		}
 
 		Logger::displayLog(Logger::e_log_level::DEBUG, "Current field: " + line, "config");
 		if (!_isStreamGood(ifs)) return ERROR;
@@ -792,7 +803,13 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 			e_parse_result result = _parseSingleServerBlock(ifs, line, extra_line);
 			if (result == ERROR)
 				return ERROR;
-			
+
+			Trimmer::trim(line, '\t');
+			Trimmer::trim(line);
+			if (_isStreamFinished(ifs) && !line.empty()) {
+				std::cerr << "Invalid EOF" << std::endl;
+				return ERROR;
+			}
 			auto [it, inserted] = _server_blocks.emplace(_current_server_block._listen_data, _current_server_block);
 
 			if (!inserted) {
@@ -805,6 +822,8 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseAllServer
 			std::cerr << "Invalid field name: " + line << std::endl;
 			return ERROR;
 		}
+		if (!_isStreamGood(ifs)) return ERROR;
+		if (_isStreamFinished(ifs)) break;
 	}
 	return OK;
 }
