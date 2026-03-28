@@ -6,6 +6,7 @@
 
 #include "PipeFD.hpp"
 #include "CGIConfig.hpp"
+#include "Logger.hpp"
 
 class CGIExecutor
 {

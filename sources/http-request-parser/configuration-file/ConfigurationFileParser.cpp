@@ -305,7 +305,7 @@ ConfigurationFileParser::e_parse_result ConfigurationFileParser::_parseLocationI
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << '\n';
+		Log::error(e.what());
 	}
 	location.setDefaultFile(index_str);
 	fields.set(1);

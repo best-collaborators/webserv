@@ -47,10 +47,11 @@ void FileUploadHandler::write_into_file( const std::string &_body )
 
 	_getFileName();
 
-	std::cerr << "[http] Writing into " << _filename << std::endl;
 	std::fstream fout(_filename, std::ios::binary | std::ios::out);
 	if (!fout) {
-		std::cerr << "[http] Error happened while writing into " << _filename << std::endl;
+		std::string errmsg = "Error happened while writing into ";
+		errmsg += _filename;
+		Log::error(errmsg, "http");
 		_request.set_status_code(HttpStatus::e_code::INTERNAL_SERVER_ERROR);
 		return ;
 	}
@@ -74,8 +75,6 @@ void FileUploadHandler::initialize_count(const std::string& dir)
 	}
 	catch (std::exception &e)
 	{
-		std::cerr << "[data] Cannot retrieve amount of uploaded files" << std::endl;
-		// _request.set_status_code(500);
 	}
 	_initialized = true;
 }

@@ -32,7 +32,7 @@ bool RequestLineValidator::_isValidHttpVersion()
 {
 	if (_parse_context.request.get_header_value("version") != "HTTP/1.1") {
 		_parse_context.request.set_status_code(HttpStatus::e_code::HTTP_VERSION_NOT_SUPPORTED);
-		std::cerr << _parse_context.request.get_status_code() << std::endl;
+		Log::warning("Http version is unsupported");
 		return false;
 	}
 	return true;
@@ -42,7 +42,7 @@ bool RequestLineValidator::_isValidUriLength()
 {
 	if (_parse_context.request.get_header_value(http::headers::REQUEST_TARGET_DECODED).length() > http::limits::max_uri_length) {
 		_parse_context.request.set_status_code(HttpStatus::e_code::URI_TOO_LONG);
-		std::cerr << _parse_context.request.get_status_code() << std::endl;
+		Log::warning("URI too long");
 		return false;
 	}
 	return true;
@@ -53,7 +53,7 @@ bool RequestLineValidator::_isMethodAllowed()
 	auto mr = _parse_context.request.getFile().getMethodRegistry();
 	if (!mr.isAllowed(_parse_context.request.get_header_value(http::headers::METHOD))) {
 		_parse_context.request.set_status_code(HttpStatus::e_code::METHOD_NOT_ALLOWED);
-		std::cerr << _parse_context.request.get_status_code() << std::endl;
+		Log::warning("Method not allowed");
 		return false;
 	}
 	return true;
@@ -368,7 +368,9 @@ RequestLineValidator::e_parse_result RequestLineValidator::_isRequestTargetInCon
 			}
 		}
 	}
-	std::cout << request.getFile();
+	#ifdef DEBUG
+		std::cout << request.getFile();
+	#endif
 	if (server_block._cgi.has_value())
 	{
 		res = isMatchedCGI(server_block, request.getFile().getFullFilename(), request);
@@ -383,7 +385,7 @@ void RequestLineValidator::parse()
 
 	if (!_isValidRequestLine(buffer)){
 		_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
-		std::cerr << _parse_context.request.get_status_code() << " - request line is invalid" << std::endl;
+		Log::warning("Request line is invalid");
 		return ;
 	}
 	_parse_context.request.set_method(_parse_context.request.get_header_value(http::headers::METHOD));

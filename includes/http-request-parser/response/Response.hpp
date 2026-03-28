@@ -33,7 +33,7 @@ private:
 		FILE
 	};
 
-	HttpContentType::e_code	_content_type;
+	HttpContentType::e_code	_content_type = HttpContentType::e_code::APPLICATION_OCTET_STREAM;
 	HttpStatus::e_code		_status_code;
 	const Request			*_request;
 

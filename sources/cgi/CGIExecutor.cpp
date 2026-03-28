@@ -70,13 +70,13 @@ void CGIExecutor::_initChild( CGIConfig & config )
 	
 			if (execve(config.executable.data(), argv.data(), envp.data()) == -1)
 			{
-				std::cerr << "[child-CGI] execve failed" << std::endl;
+				Log::error("execve failed", "child-CGI");
 				_exit(1);
 			}
 		}
 		catch(const std::exception& e)
 		{
-			std::cerr << e.what() << '\n';
+			Log::error(e.what());
 			_exit(1);
 		}
 	}

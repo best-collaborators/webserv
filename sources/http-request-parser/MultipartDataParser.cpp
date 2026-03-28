@@ -70,7 +70,7 @@ void MultipartDataParser::_createMultipartDataFormFiles()
 HttpStatus::e_code MultipartDataParser::_parseMultipartFormData(std::string &buffer, MultipartFormData &multipart_form_data)
 {
 	if (!_checkMultipartHeader(buffer, multipart_form_data)) {
-		std::cerr << "400 Bad Request - bad multipart header" << std::endl;
+		Log::debug("Bad multipart header");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 
@@ -82,7 +82,7 @@ HttpStatus::e_code MultipartDataParser::_parseMultipartFormData(std::string &buf
 	}
 
 	if (!_checkMultipartContentType(buffer, multipart_form_data)) {
-		std::cerr << "400 Bad Request - bad multipart content type" << std::endl;
+		Log::debug("Bad multipart content type");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 	buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);
@@ -99,7 +99,7 @@ HttpStatus::e_code MultipartDataParser::truncate_boundary(
 	std::size_t boundary_pos_end = boundary_pos + boundary_context.boundary_marker.size();
 
 	if (boundary_pos == std::string::npos) {
-		std::cerr << "400 Bad Request - no end boundary" << std::endl;
+		Log::debug("No end boundary");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 
@@ -116,7 +116,7 @@ HttpStatus::e_code MultipartDataParser::truncate_boundary(
 	_parse_context.raw_bits.erase(0, boundary_pos_end + 2);
 
 	if (boundary_context.is_end && _parse_context.raw_bits != "\r\n") {
-		std::cerr << "400 Bad Request - no end boundary" << std::endl;
+		Log::debug("No end boundary");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 	return HttpStatus::e_code::OK;
@@ -132,7 +132,7 @@ bool MultipartDataParser::_isValidMultipartForm()
 	while (_parse_context.raw_bits.size() && !_boundary_context.is_end)
 	{
 		if (_boundary_context.boundary_marker != buffer && _boundary_context.closing_boundary_marker != buffer) {
-			std::cerr << "[HTTP-PARSER/MULTIPART] Wrong boundary => " << _boundary_context.boundary << std::endl;
+			Log::debug("Wrong boundary");
 			_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 			return false;
 		}
@@ -141,7 +141,7 @@ bool MultipartDataParser::_isValidMultipartForm()
 			buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);
 		}
 		else if (_parse_context.raw_bits.empty()) {
-			std::cerr << "[HTTP-PARSER/MULTIPART] Multipart format is invalid." << std::endl;
+			Log::debug("Multipart format is invalid");
 			_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 			return false;
 		}
@@ -149,7 +149,7 @@ bool MultipartDataParser::_isValidMultipartForm()
 
 		HttpStatus::e_code parse_multipart_form_data_status = _parseMultipartFormData(buffer, multipart_form_data);
 		if (HttpStatus::is_bad(parse_multipart_form_data_status)) {
-			std::cerr << "[HTTP-PARSER/MULTIPART] Multipart format is invalid." << std::endl;
+			Log::debug("Multipart format is invalid");
 			_parse_context.request.set_status_code(parse_multipart_form_data_status);
 			return false;
 		}
@@ -157,14 +157,14 @@ bool MultipartDataParser::_isValidMultipartForm()
 			buffer = RequestStringUtils::cut_after_new_line(_parse_context.raw_bits);
 		}
 		else if (_parse_context.raw_bits.empty()) {
-			std::cerr << "[HTTP-PARSER/MULTIPART] Multipart format is invalid." << std::endl;
+			Log::debug("Multipart format is invalid");
 			_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 			return false;
 		}
 
 		HttpStatus::e_code truncated_boundary_status = truncate_boundary(buffer, _boundary_context, multipart_form_data);
 		if (HttpStatus::is_bad(truncated_boundary_status)) {
-			std::cerr << "[HTTP-PARSER/MULTIPART] Error occurred with boundary extraction." << std::endl;
+			Log::debug("Error occurred with boundary extraction");
 			_parse_context.request.set_status_code(truncated_boundary_status);
 			return false;
 		}
@@ -178,7 +178,7 @@ bool MultipartDataParser::_isBoundaryEmpty()
 {
 	_boundary_context.boundary = _getMultipartFormBoundary();
 	if (_boundary_context.boundary.empty()) {
-		std::cerr << "400 Bad Request - boundary empty." << std::endl;
+		Log::debug("Boundary empty");
 		_parse_context.request.set_status_code(HttpStatus::e_code::BAD_REQUEST);
 		return true;
 	}

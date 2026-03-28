@@ -26,6 +26,7 @@ std::string Response::serve_html_webserv_page(const std::string &msg)
 		std::string listening_page = ListingGenerator::getListingPage(file);
 		if (!listening_page.empty()) {
 			_content_length = _body.size();
+			_status_code = HttpStatus::e_code::OK;
 			return listening_page;
 		}
 		_status_code = HttpStatus::e_code::NOT_FOUND;
@@ -60,11 +61,13 @@ bool Response::is_ifstream_successful(std::ifstream &ifs, std::filesystem::path 
 	switch (errno)
 	{
 		case 2:
-			Log::error("No such file or directory " + path.string(), "response");
+			Log::error("No such file or directory "
+				+ std::filesystem::weakly_canonical(path).string(), "response");
 			_status_code = HttpStatus::e_code::NOT_FOUND;
 			break;
 		default:
-			Log::error("File system error" + path.string(), "response");
+			Log::error("File system error"
+				+ std::filesystem::weakly_canonical(path).string(), "response");
 			_status_code = HttpStatus::e_code::SERVICE_UNAVAILABLE;
 			break;
 	}
@@ -139,7 +142,7 @@ std::streampos Response::get_file_size(const std::string &filename)
 
 	std::ifstream ifs(filename, std::ios::binary);
 	if (!is_ifstream_successful(ifs, filename)) {
-		std::cerr << "[response] Impossible to retrieve size of " << normalized_path << std::endl;
+		Log::warning("Impossible to retrieve size of " + normalized_path.string());
 		return 0;
 	}
 
@@ -180,7 +183,8 @@ void Response::init_response(const Request* request)
 bool Response::should_generate_autoindex()
 {
 	auto file = _request->getFile();
-	return (_status_code != HttpStatus::e_code::NO_CONTENT
+	return (_status_code != HttpStatus::e_code::METHOD_NOT_ALLOWED
+			&& _status_code != HttpStatus::e_code::NO_CONTENT
 			&& !HttpStatus::is_redirect(_status_code)
 			&& file.isDir() && file.getAutoindex());
 }
@@ -224,7 +228,7 @@ void Response::handle_regular_response()
 
 void Response::serve_file(const std::string& filename)
 {
-	Log::info("File to send back: " + filename, "response");
+	Log::debug("File to send back: " + filename, "response");
 
 	set_content_type(filename);
 	get_file_size(filename);

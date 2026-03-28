@@ -22,7 +22,7 @@ private:
 	std::string			_version;
 	std::string			_uri;
 
-	HttpStatus::e_code	_status_code;
+	HttpStatus::e_code	_status_code = HttpStatus::e_code::OK;
 	ChunkHandler		_chunk_handler;
 	bool				_is_cgi = false;
 

@@ -128,9 +128,11 @@ std::ostream& operator<<(std::ostream& os, const File& file)
 	   << "  Extension: " << file.getExtension() << "\n"
 	   << "  Is Index: " << (file.isIndex() ? "true" : "false") << "\n"
 	   << "  Path Info: " << file.getPathInfo() << "\n"
-	   << "  Max Body Size: " << file.getMaxBodySize() << "\n"
-	   << "  Relocation: " << file.getReturnPage().status_code
-	   << " " << file.getReturnPage().path << "\n";
+	   << "  Max Body Size: " << file.getMaxBodySize() << "\n";
+	   if (file.getReturnPage().path.empty()) {
+		std::cout << "  Relocation: " << file.getReturnPage().status_code
+		<< " " << file.getReturnPage().path << "\n";
+	   }
 	
 	if (file.getPassTo().has_value()) {
 		os << "  Pass To: " << file.getPassTo().value() << "\n";
