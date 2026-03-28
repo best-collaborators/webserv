@@ -347,7 +347,7 @@ void	Connection::_formCGIResponse()
 
 	if (cgi_status != HttpStatus::e_code::OK)
 	{
-		Log::critical("CGI returned error: " + cgi_buffer, "cgi");
+		Log::error("CGI returned error: " + cgi_buffer, "cgi");
 		_request_reader.setStatusCode(cgi_status);
 		_response_writer.formResponse(_request_reader.request());
 	}
