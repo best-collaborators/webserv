@@ -341,6 +341,7 @@ void	Connection::_formCGIResponse()
 
 	Request request;
 	ParseContext context = { .request = request, .raw_bits = cgi_buffer};
+	request.setFile(_request_reader.getFile());
 	CGIValidator cgi_validator(context);
 	HttpStatus::e_code cgi_status = cgi_validator._validateCGIOutput();
 

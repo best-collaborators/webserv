@@ -200,12 +200,12 @@ HttpRequestReader::ReaderState HttpRequestReader::_processBody(std::string &buff
 
 		//! CHECK RETURN STATUS CLOSE
 		case BodyState::Overflow:
-			Log::debug("Request received. Body too long.", "request-reader");
+			Log::error("Request received. Body too long.", "request-reader");
 			_request.set_status_code(HttpStatus::e_code::PAYLOAD_TOO_LARGE);
 			return ReaderState::Error;
 
 		case BodyState::Invalid:
-			Log::debug("Request received. Request is not suppose to have body.", "request-reader");
+			Log::error("Request received. Request is not suppose to have body.", "request-reader");
 			_request.set_status_code(HttpStatus::e_code::NOT_FOUND);
 			return ReaderState::Error;
 		

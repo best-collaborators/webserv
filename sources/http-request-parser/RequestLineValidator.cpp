@@ -417,7 +417,7 @@ void RequestLineValidator::parse()
 		|| !_isValidUriLength()
 		|| !_isMethodAllowed()) {
 
-			Log::warning("Something is wrong " + std::to_string(static_cast<int>(_parse_context.request.get_status_code())));
+			Log::warning(std::to_string(static_cast<int>(_parse_context.request.get_status_code())));
 			return ;
 		}
 

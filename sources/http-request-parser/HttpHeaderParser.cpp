@@ -47,7 +47,7 @@ namespace {
 }
 
 HttpHeaderParser::HttpHeaderParser( ParseContext &parse_context )
-: _parse_context(parse_context), _max_body_size(0) { }
+: _parse_context(parse_context), _max_body_size(parse_context.request.getFile().getMaxBodySize()) { }
 
 HttpHeaderParser::HttpHeaderParser( ParseContext &parse_context, size_t max_body_size )
 : _parse_context(parse_context), _max_body_size(max_body_size) { }
@@ -86,7 +86,7 @@ bool HttpHeaderParser::_handleDuplicates(const std::string &name,
 		return true;
 
 	if (_isCriticalHeader(name)) {
-		Log::warning("Duplicate header");
+		Log::error("Duplicate header");
 		return false;
 	}
 
@@ -182,20 +182,20 @@ HttpStatus::e_code HttpHeaderParser::_contentLengthValidation(){
 		const std::string content_length_str = _parse_context.request.get_header_value(http::headers::CONTENT_LENGTH);
 		size_t test_length = std::stoull(content_length_str, &pos, 10);
 		if (content_length_str.length() != pos) {
-			Log::debug("Content-length is NAN");
+			Log::error("Content-length is NAN");
 			return HttpStatus::e_code::BAD_REQUEST;
 		}
 
 		size_t body_size = std::max(_max_body_size, _parse_context.request.getFile().getMaxBodySize());
 		if (test_length > body_size) {
-			Log::debug("Request Entity Too Large: " + std::to_string(test_length)
+			Log::error("Request Entity Too Large: " + std::to_string(test_length)
 				+ " out "
 				+ std::to_string(_parse_context.request.getFile().getMaxBodySize()));
 			return HttpStatus::e_code::PAYLOAD_TOO_LARGE;
 		}
 	}
 	catch(const std::exception& e) {
-		Log::debug("Content-length is NAN");
+		Log::error("Content-length is NAN");
 		return HttpStatus::e_code::BAD_REQUEST;
 	}
 
