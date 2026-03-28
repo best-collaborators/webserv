@@ -130,7 +130,7 @@ std::ostream& operator<<(std::ostream& os, const File& file)
 	   << "  Path Info: " << file.getPathInfo() << "\n"
 	   << "  Max Body Size: " << file.getMaxBodySize() << "\n";
 	   if (file.getReturnPage().path.empty()) {
-		std::cout << "  Relocation: " << file.getReturnPage().status_code
+		os << "  Relocation: " << file.getReturnPage().status_code
 		<< " " << file.getReturnPage().path << "\n";
 	   }
 	
