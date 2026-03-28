@@ -30,10 +30,10 @@ siege -c 50 -t 20S http://127.0.0.1:3490/index.html
 
 
 # POST flood (50c 20s)
-# POST requests under load to /post_body/. Tests write-path non-blocking I/O. 0 failed transactions expected.
+# POST requests under load to /post_body. Tests write-path non-blocking I/O. 0 failed transactions expected.
 echo ""
 echo "=== POST flood (50c 20s) ==="
-siege -c 50 -t 20S --content-type 'text/plain' 'http://127.0.0.1:3490/post_body/ POST hello'
+siege -c 50 -t 20S --content-type 'text/plain' 'http://127.0.0.1:3490/post_body POST hello'
 
 
 # CGI under load (20c 20s)
@@ -64,11 +64,43 @@ siege -c 50 -t 30S --header="Connection: keep-alive" http://127.0.0.1:3490/
 
 
 # Large POST body (10c 200r)
-# 512KB body x 10 concurrent, 200 requests. Uses /post_body/ (trailing slash) to avoid redirect. Target: 0 failed requests.
+# 512KB body x 10 concurrent, 200 requests total using Python http.client. No apache required. Target: 0 failed, all 200 OK.
 echo ""
 echo "=== Large POST body (10c 200r) ==="
-python3 -c "open('/tmp/siege_body.txt','w').write('x'*512*1024)"
-ab -n 200 -c 10 -p /tmp/siege_body.txt -T 'text/plain' http://127.0.0.1:3490/post_body/
+cat > /tmp/large_post_test.py << 'PYEOF'
+import http.client, concurrent.futures, time
+
+HOST = "127.0.0.1"
+PORT = 3490
+PATH = "/post_body/"
+BODY = b"x" * 512 * 1024
+CONCURRENCY = 10
+TOTAL = 200
+
+def do_request(_):
+    try:
+        conn = http.client.HTTPConnection(HOST, PORT, timeout=10)
+        conn.request("POST", PATH, body=BODY, headers={"Content-Type": "text/plain"})
+        r = conn.getresponse()
+        r.read()
+        conn.close()
+        return r.status
+    except Exception as e:
+        return str(e)
+
+start = time.time()
+with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
+    results = list(ex.map(do_request, range(TOTAL)))
+elapsed = time.time() - start
+
+ok = sum(1 for r in results if r in (200, 201))
+fail = sum(1 for r in results if r not in (200, 201))
+print(f"Completed {TOTAL} requests in {elapsed:.2f}s")
+print(f"OK (200): {ok}  |  Failed: {fail}")
+print(f"Req/sec: {TOTAL/elapsed:.1f}")
+if fail: print("Errors:", [r for r in results if r not in (200, 201)][:5])
+PYEOF
+python3 /tmp/large_post_test.py
 
 
 # Connection limit (200c 15s)
