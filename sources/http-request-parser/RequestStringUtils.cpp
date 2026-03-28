@@ -35,7 +35,7 @@ bool RequestStringUtils::tryExtractHeaderField(
 {
 	value = RegexMatcher::get_regex_value(buffer, regex_method);
 	if (value == "") {
-		std::cout << errmsg << std::endl;
+		Log::error(errmsg);
 		return false;
 	}
 	value = Trimmer::trim(value);
