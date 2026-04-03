@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebServer Test Panel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #1a1d24;
+    --border: #232730;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #7c6ff7;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --success: #00e5a0;
+    --error: #ff4757;
+    --warn: #ffb347;
+    --info: #7c6ff7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,160,0.015) 2px, rgba(0,229,160,0.015) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .server-tabs {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .server-tab {
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .server-tab.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,160,0.08);
+  }
+
+  .server-tab:hover:not(.active) {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 62px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: var(--surface);
+    padding: 12px 0;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .group-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    padding: 12px 16px 6px;
+    text-transform: uppercase;
+  }
+
+  .test-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.1s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .test-item:hover { background: var(--surface2); }
+  .test-item.active {
+    border-left-color: var(--accent);
+    background: rgba(0,229,160,0.06);
+  }
+
+  .test-item.active .test-name { color: var(--accent); }
+
+  .method-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    min-width: 38px;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .badge-GET    { background: rgba(0,229,160,0.15); color: var(--success); }
+  .badge-POST   { background: rgba(124,111,247,0.15); color: var(--accent3); }
+  .badge-DELETE { background: rgba(255,71,87,0.15); color: var(--error); }
+  .badge-RAW    { background: rgba(255,107,53,0.15); color: var(--accent2); }
+  .badge-SIEGE  { background: rgba(255,179,71,0.15); color: var(--warn); }
+
+  .test-info { flex: 1; min-width: 0; }
+  .test-name { font-size: 0.78rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .test-path { font-size: 0.65rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+    background: var(--border);
+  }
+
+  .status-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .status-dot.fail { background: var(--error); box-shadow: 0 0 6px var(--error); }
+  .status-dot.warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+
+  /* Main panel */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .request-panel {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .request-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .request-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .request-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .url-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 0.82rem;
+  }
+
+  .url-method { color: var(--accent); font-weight: 700; }
+  .url-text { color: var(--text); flex: 1; word-break: break-all; }
+
+  .curl-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    position: relative;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.7;
+  }
+
+  .curl-block .kw { color: var(--accent3); }
+  .curl-block .str { color: var(--accent2); }
+  .curl-block .flag { color: var(--accent); }
+
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+  .send-btn {
+    padding: 10px 24px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: #00ffc4; transform: translateY(-1px); }
+  .send-btn:active { transform: translateY(0); }
+  .send-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+  .send-btn.loading {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  .expect-badge {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .expect-badge strong { color: var(--text); }
+
+  /* Response panel */
+  .response-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  .response-panel::-webkit-scrollbar { width: 4px; }
+  .response-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .response-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--muted);
+  }
+
+  .response-empty .icon {
+    font-size: 2.5rem;
+    opacity: 0.4;
+  }
+
+  .response-empty p { font-size: 0.75rem; }
+
+  .response-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .status-pill {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .status-2xx { background: rgba(0,229,160,0.15); color: var(--success); border: 1px solid rgba(0,229,160,0.3); }
+  .status-3xx { background: rgba(255,179,71,0.15); color: var(--warn); border: 1px solid rgba(255,179,71,0.3); }
+  .status-4xx { background: rgba(255,71,87,0.15); color: var(--error); border: 1px solid rgba(255,71,87,0.3); }
+  .status-5xx { background: rgba(255,71,87,0.15); color: var(--error); border: 1px solid rgba(255,71,87,0.3); }
+  .status-err { background: rgba(124,111,247,0.15); color: var(--accent3); border: 1px solid rgba(124,111,247,0.3); }
+
+  .time-badge {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .verdict {
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .verdict.pass { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); color: var(--success); }
+  .verdict.fail { background: rgba(255,71,87,0.08); border: 1px solid rgba(255,71,87,0.2); color: var(--error); }
+  .verdict.warn { background: rgba(255,179,71,0.08); border: 1px solid rgba(255,179,71,0.2); color: var(--warn); }
+
+  .headers-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .block-title {
+    padding: 8px 14px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .header-row {
+    display: flex;
+    gap: 0;
+    padding: 6px 14px;
+    font-size: 0.72rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-row:last-child { border-bottom: none; }
+  .header-key { color: var(--accent3); min-width: 160px; flex-shrink: 0; }
+  .header-val { color: var(--text); word-break: break-all; }
+
+  .body-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .body-content {
+    padding: 14px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.6;
+  }
+
+  .cors-warning {
+    background: rgba(124,111,247,0.08);
+    border: 1px solid rgba(124,111,247,0.3);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    color: var(--accent3);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .run-all-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--accent3);
+    color: var(--accent3);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-left: 8px;
+  }
+
+  .run-all-btn:hover { background: rgba(124,111,247,0.1); }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* Custom request */
+  .custom-inputs {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .input-row { display: flex; gap: 8px; align-items: center; }
+  .input-label { font-size: 0.7rem; color: var(--muted); min-width: 70px; }
+
+  input[type=text], select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text);
+    flex: 1;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type=text]:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 60px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">WEBSERVER <span>// test panel</span></div>
+  <div class="server-tabs">
+    <button class="server-tab active" onclick="setServer(0)">127.0.0.1:3490</button>
+    <button class="server-tab" onclick="setServer(1)">127.0.0.5:8000</button>
+    <button class="server-tab" onclick="setServer(2)">✎ custom</button>
+  </div>
+  <button class="run-all-btn" id="runAllBtn" onclick="runAll()">▶▶ RUN ALL</button>
+  <span id="runAllProgress" style="font-size:0.7rem;color:var(--muted);margin-left:8px;display:none"></span>
+</header>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main">
+    <div class="request-panel" id="requestPanel"></div>
+    <div class="response-panel" id="responsePanel">
+      <div class="response-empty">
+        <div class="icon">⬡</div>
+        <p>Select a test and fire a request</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SERVERS = [
+  { label: '127.0.0.1:3490', base: 'http://127.0.0.1:3490' },
+  { label: '127.0.0.5:8000', base: 'http://127.0.0.5:8000' },
+  { label: 'custom', base: '' }
+];
+
+let currentServer = 0;
+let currentTest = null;
+let results = {};
+
+const TESTS = {
+  0: [
+    {
+      group: 'Basic Routing',
+      items: [
+        { id: 's0_root', name: 'Root Index', method: 'GET', path: '/', desc: 'Should serve root_index.html from ./data. Expect 200 OK.', expect: { status: 200 } },
+        { id: 's0_new_redirect', name: 'GET /new → dir redirect', method: 'GET', path: '/new', desc: '/new maps to a directory. Server should canonicalize with trailing slash: 301 → /new/.', expect: { status: 301, header: { key: 'location', val: '/new/' } } },
+        { id: 's0_new_slash', name: 'GET /new/ → fallback index', method: 'GET', path: '/new/', desc: '/new has no location-level index, so it inherits the server-level index: root_index.html from root: ./data. Should return 200 serving ./data/root_index.html.', expect: { status: 200 } },
+        { id: 's0_notfound', name: '404 Not Found', method: 'GET', path: '/does_not_exist', desc: 'Should trigger the 400 or 404 error page. Server has a 400 error page configured.', expect: { status: [400, 404] } },
+      ]
+    },
+    {
+      group: 'Redirect',
+      items: [
+        { id: 's0_redirect', name: '301 Redirect /old → /new', method: 'GET', path: '/old', desc: 'Location /old has redirect 301 /new. Expect HTTP 301 with Location: /new header.', expect: { status: 301, header: { key: 'location', val: '/new' } } },
+      ]
+    },
+    {
+      group: 'Method Enforcement',
+      items: [
+        { id: 's0_post_root', name: 'POST / (allowed)', method: 'POST', path: '/', desc: 'Root allows GET|POST. POST should be accepted.', expect: { status: [200, 201, 204] }, body: 'test', ct: 'text/plain' },
+        { id: 's0_delete_root', name: 'DELETE on GET-only route', method: 'DELETE', path: '/', desc: 'Root only allows GET. DELETE should return 405 Method Not Allowed.', expect: { status: 405 } },
+        { id: 's0_post_body', name: 'POST /post_body', method: 'POST', path: '/post_body', desc: 'Route allows GET|POST with max_body_size 100GB. Should accept a POST.', expect: { status: [200, 201, 204] }, body: 'hello world', ct: 'text/plain' },
+      ]
+    },
+    {
+      group: 'Body Size Limits',
+      items: [
+        { id: 's0_videos_ok', name: 'POST /videos (small body)', method: 'POST', path: '/videos', desc: 'Max body size 1GB. A small payload should be accepted.', expect: { status: [200, 201, 204] }, body: 'small payload', ct: 'text/plain' },
+      ]
+    },
+    {
+      group: 'Directory / Custom Root',
+      items: [
+        { id: 's0_directory', name: 'GET /directory/', method: 'GET', path: '/directory/', desc: 'Direct access with trailing slash — no redirect. Root overridden to YoupiBanane, index: youpi.bad_extension. Expect 200.', expect: { status: 200 } },
+        { id: 's0_youpibannane', name: 'GET /YoupiBanane/', method: 'GET', path: '/YoupiBanane/', desc: 'Direct access with trailing slash — no redirect. Same index: youpi.bad_extension, inherits server root ./data. Expect 200.', expect: { status: 200 } },
+      ]
+    },
+    {
+      group: 'Autoindex',
+      items: [
+        { id: 's0_ai_new',       name: 'GET /new/ — listing', method: 'GET', path: '/new/', desc: 'Suggested: add autoindex: on to /new. No location-level index file — if server-level index.html is absent in ./data/new/, autoindex should render a directory listing. Expect 200 with HTML listing.', expect: { status: 200 } },
+        { id: 's0_ai_videos',    name: 'GET /videos/ — listing fallback', method: 'GET', path: '/videos/', desc: 'Suggested: add autoindex: on to /videos. Has index: 0-upload.txt — if that file is missing, autoindex should kick in as fallback. Expect 200 with listing or 200 with index file.', expect: { status: 200 } },
+      ]
+    },
+    {
+      group: 'CGI — Node.js (.js)',
+      items: [
+        { id: 's0_cgi_js_basic',   name: 'cgi.js — basic script',    method: 'GET',  path: '/cgi-bin/cgi.js',              desc: 'Basic Node.js CGI script via /usr/bin/node. Expect 200 with CGI output.',                                                                   expect: { status: 200 } },
+        { id: 's0_cgi_js_post',    name: 'cgi.js — POST body',        method: 'POST', path: '/cgi-bin/cgi.js',              desc: 'POST with form body forwarded to Node.js via stdin. Expect 200.',                                                                          expect: { status: 200 }, body: 'name=test&value=42', ct: 'application/x-www-form-urlencoded' },
+        { id: 's0_cgi_js_larger',  name: 'cgi_larger_length.js',      method: 'GET',  path: '/cgi-bin/cgi_larger_length.js',desc: 'Script returns a Content-Length larger than the actual body. Server should handle gracefully — either truncate/pad or return 502/200.',    expect: { status: [200, 502] } },
+        { id: 's0_cgi_js_smaller', name: 'cgi_smaller_length.js',     method: 'GET',  path: '/cgi-bin/cgi_smaller_length.js',desc: 'Script returns a Content-Length smaller than the actual body. Server should truncate at declared length. Expect 200.',                   expect: { status: [200, 502] } },
+      ]
+    },
+    {
+      group: 'CGI — Python (.py)',
+      items: [
+        { id: 's0_cgi_py_headers', name: 'headers.py — response headers', method: 'GET',  path: '/cgi-bin/headers.py', desc: 'Python script that outputs custom headers. Verify headers are forwarded correctly in the response. Expect 200.',                            expect: { status: 200 } },
+        { id: 's0_cgi_py_chunk',   name: 'chunk.py — 5 chunks x 1s (within timeout)', method: 'GET',  path: '/cgi-bin/chunk.py',   desc: 'Sends headers then streams 5 chunks with 1s delay each = ~5s total. CGI_TIMEOUT is 10s — completes within limit. Expect 200. If 500, timeout is firing too early.',                        expect: { status: 200 } },
+        { id: 's0_cgi_py_sleep',   name: 'sleep.py — infinite loop (exceeds timeout)', method: 'GET', path: '/cgi-bin/sleep.py', desc: 'Sends headers then loops forever (while True: sleep(1)). CGI_TIMEOUT is 10s — server kills the process and returns 504 Gateway Timeout. If this hangs past 12s, timeout is broken.', expect: { status: 504 } },
+        { id: 's0_cgi_py_slow',    name: 'slow.py — 5s delay (within CGI timeout)',    method: 'GET', path: '/cgi-bin/slow.py', desc: 'Sends headers then sleeps 5s before writing body. CGI_TIMEOUT is 10s — completes within limit. Expect 200. If 500, timeout is firing too early.',                                          expect: { status: 200 } },
+      ]
+    },
+    {
+      group: 'CGI — PHP (.php)',
+      items: [
+        { id: 's0_cgi_php_get',  name: 'cgi.php — GET',        method: 'GET',  path: '/cgi-bin/cgi.php', desc: 'PHP script via /usr/bin/php. Expect 200 with rendered output.',                                   expect: { status: 200 } },
+        { id: 's0_cgi_php_post', name: 'cgi.php — POST body',  method: 'POST', path: '/cgi-bin/cgi.php', desc: 'POST with form data forwarded to PHP via stdin. Expect 200.',                                     expect: { status: 200 }, body: 'field=hello&num=1', ct: 'application/x-www-form-urlencoded' },
+      ]
+    },
+    {
+      group: 'CGI — Binary / Edge Cases',
+      items: [
+        { id: 's0_cgi_noext',     name: 'Unknown extension → 404', method: 'GET', path: '/cgi-bin/nonexistent.xyz',  desc: 'Extension .xyz has no CGI handler and no matching file. Expect 404.',  expect: { status: 404 } },
+      ]
+    },
+    {
+      group: 'Error Pages',
+      items: [
+        { id: 's0_err400', name: '400 Error Page', method: 'GET', path: '/trigger_400', desc: 'A malformed request should trigger BadRequestPage.html (status 400).', expect: { status: [400, 404] } },
+      ]
+    },
+    {
+      group: 'Static File Serving',
+      items: [
+        { id: 's0_static_index',    name: 'GET /index.html',        method: 'GET', path: '/index.html',        desc: 'index.html exists at ./data root. Expect 200 with text/html.', expect: { status: 200 } },
+        { id: 's0_static_errpage',  name: 'GET /BadRequestPage.html', method: 'GET', path: '/BadRequestPage.html', desc: 'BadRequestPage.html is a real file in ./data. Expect 200 served as static HTML.', expect: { status: 200 } },
+        { id: 's0_static_txt',      name: 'GET /0-upload.txt',      method: 'GET', path: '/0-upload.txt',      desc: 'Text file in ./data root. Expect 200 with text/plain.', expect: { status: 200 } },
+        { id: 's0_static_notfound', name: '404 on missing file',    method: 'GET', path: '/nonexistent.html',  desc: 'Requesting a file that does not exist must return 404, not a crash or 200.', expect: { status: [404, 400] } },
+      ]
+    },
+    {
+      group: 'File Upload (POST)',
+      items: [
+        { id: 's0_upload_text',   name: 'Upload text file',           method: 'POST', path: '/videos/', desc: 'Upload a plain text file via POST to /videos. Expect 200 or 201. Subject requires clients be able to upload files.', expect: { status: [200, 201] }, body: '--boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\nContent-Type: text/plain\r\n\r\nhello world\r\n--boundary--', ct: 'multipart/form-data; boundary=boundary' },
+        { id: 's0_upload_json',   name: 'Upload JSON body',           method: 'POST', path: '/post_body/', desc: 'POST JSON payload to /post_body. Expect 200 or 201.', expect: { status: [200, 201] }, body: '{"key":"value","num":42}', ct: 'application/json' },
+        { id: 's0_upload_large',  name: 'Upload near body limit',     method: 'POST', path: '/post_body/', desc: '/post_body has max_body_size 100GB. Sending 1MB should be well within limits. Expect 200 or 201.', expect: { status: [200, 201] }, body: 'x'.repeat(1024*1024), ct: 'text/plain' },
+        { id: 's0_upload_exceed', name: 'Exceed /videos body limit',  method: 'POST', path: '/videos/',    desc: '/videos max_body_size is 1GB. Sending 1500 bytes exceeds nothing — but sending > 1GB would 413. This sends 2KB to verify acceptance.', expect: { status: [200, 201] }, body: 'x'.repeat(2048), ct: 'text/plain' },
+        { id: 's0_upload_root',   name: 'POST to / (allowed)',        method: 'POST', path: '/',           desc: '/ allows GET|POST. A POST with body must be accepted, not 405.', expect: { status: [200, 201, 204] }, body: 'data=test', ct: 'application/x-www-form-urlencoded' },
+      ]
+    },
+    {
+      group: 'DELETE Method',
+      items: [
+        { id: 's0_delete_missing',  name: 'DELETE non-existent file',   method: 'DELETE', path: '/videos/no_such_file.txt', desc: 'DELETE on a path that does not exist. Expect 404.', expect: { status: 404 } },
+        { id: 's0_delete_nomethod', name: 'DELETE on GET-only route',   method: 'DELETE', path: '/new/',                    desc: '/new only allows GET. DELETE must return 405 Method Not Allowed.', expect: { status: 405 } },
+        { id: 's0_delete_nomethod2', name: 'DELETE on /old (GET-only)', method: 'DELETE', path: '/old/',                    desc: '/old only allows GET. Uses trailing slash to skip directory redirect. DELETE must return 405.', expect: { status: 405 } },
+      ]
+    },
+    {
+      group: 'HTTP Status Codes',
+      items: [
+        { id: 's0_status_200',  name: '200 OK — root',          method: 'GET',    path: '/',                   desc: 'Subject: HTTP response status codes must be accurate. Root must return exactly 200.', expect: { status: 200 } },
+        { id: 's0_status_301',  name: '301 Redirect — /old',    method: 'GET',    path: '/old',                desc: '301 Moved Permanently with Location header. Must not return 302 or 200.', expect: { status: 301, header: { key: 'location', val: '/new' } } },
+        { id: 's0_status_404',  name: '404 Not Found',          method: 'GET',    path: '/ghost',              desc: 'Nonexistent route must return 404, not 200 or 500.', expect: { status: [404, 400] } },
+        { id: 's0_status_405',  name: '405 Method Not Allowed', method: 'DELETE', path: '/new/',               desc: 'Disallowed method must return 405, not 403 or 500.', expect: { status: 405 } },
+        { id: 's0_status_server_header', name: 'Server header present', method: 'GET', path: '/',             desc: 'Server must send a Server: header in every response (good practice, nginx does it).', expect: { status: 200 }, checkBody: '' },
+      ]
+    },
+    {
+      group: 'Stress Tests — Siege',
+      items: [
+        { id: 'siege_basic',       siege: true, name: 'Basic availability (25c 30s)',        expect: 'Availability 100%', cmd: 'siege -c 25 -t 30S http://127.0.0.1:3490/',                                                                                                                    desc: '25 concurrent users hammering / for 30s. Server must stay alive and serve all requests. Target: 100% availability, 0 failed transactions.' },
+        { id: 'siege_highload',    siege: true, name: 'High concurrency (100c 30s)',          expect: 'Availability ~100%', cmd: 'siege -c 100 -t 30S http://127.0.0.1:3490/',                                                                                                                  desc: '100 concurrent connections. Tests epoll/poll scalability. Availability should stay near 100%. Any drop indicates a blocking call or fd leak.' },
+        { id: 'siege_static',      siege: true, name: 'Static file throughput (50c 20s)',     expect: 'Availability 100%', cmd: 'siege -c 50 -t 20S http://127.0.0.1:3490/index.html',                                                                                                         desc: 'Static file serving under load. Should saturate bandwidth before dropping requests. Verify response time stays stable.' },
+        { id: 'siege_post',        siege: true, name: 'POST flood (50c 20s)',                 expect: 'Availability 100%', cmd: "siege -c 50 -t 20S --content-type 'text/plain' 'http://127.0.0.1:3490/post_body POST hello'",                                                                 desc: 'POST requests under load to /post_body. Tests write-path non-blocking I/O. 0 failed transactions expected.' },
+        { id: 'siege_cgi',         siege: true, name: 'CGI under load (20c 20s)',             expect: 'Availability 100%', cmd: 'siege -c 20 -t 20S http://127.0.0.1:3490/cgi-bin/cgi.py',                                                                                                     desc: '20 concurrent CGI (python) requests. Each forks a process — tests that server does not exhaust fds or processes. No failed transactions.' },
+        { id: 'siege_mixed',       siege: true, name: 'Mixed URLs (50c 30s)',                 expect: 'Availability 100%', cmd: 'siege -c 50 -t 30S -f /tmp/siege_urls.txt',                                                                                                                   desc: 'Multiple URLs in rotation. Creates /tmp/siege_urls.txt with GET /, /index.html, /0-upload.txt, /new/. Tests routing under concurrent load.' },
+        { id: 'siege_keepalive',   siege: true, name: 'Keep-alive connections (50c 30s)',     expect: 'Availability 100%', cmd: 'siege -c 50 -t 30S --header="Connection: keep-alive" http://127.0.0.1:3490/',                                                                                 desc: 'Forces keep-alive. Tests that server reuses connections correctly and does not leak sockets. Watch for fd exhaustion in server logs.' },
+        { id: 'siege_slowpost', siege: true, name: 'Large POST body (10c 200r)', expect: '200/201 failed: 0', cmd: "python3 /tmp/large_post_test.py", desc: '512KB body x 10 concurrent, 200 requests total using Python http.client. No apache required. Target: 0 failed, all 200 OK.' },
+        { id: 'siege_connlimit',   siege: true, name: 'Connection limit (200c 15s)',          expect: 'No crash', cmd: 'siege -c 200 -t 15S http://127.0.0.1:3490/',                                                                                                                           desc: '200 concurrent — pushes fd and epoll limits. Server must not crash or hang. Some 503/timeout acceptable but process must stay alive.' },
+        { id: 'siege_cgi_timeout', siege: true, name: 'CGI timeout under load (20c 30s)', expect: '0% availability OK — siege counts 504 as failure', cmd: 'siege -c 20 -t 30S http://127.0.0.1:3490/cgi-bin/sleep.py', desc: 'Hammers sleep.py (infinite loop). Every request returns 504 after CGI_TIMEOUT (10s). Siege counts 504 as failed so 0% availability is expected. Key checks: longest_transaction ≈10s (timeout fires on time), server does not crash, no zombies (ps aux | grep python).' },
+        { id: 'siege_s2_basic',    siege: true, name: 'Server 2 — basic load (25c 20s)',      expect: 'Availability 100%', cmd: 'siege -c 25 -t 20S http://127.0.0.5:8000/',                                                                                                                   desc: 'Basic availability test for the second server (127.0.0.5:8000). Verifies both servers handle concurrent load independently.' },
+      ]
+    },
+    {
+      group: 'Raw Socket — Malformed HTTP',
+      items: [
+        { id: 'raw_lf',       raw: true, name: 'Only LF line endings',        expect: '400', payload: "GET / HTTP/1.1\nHost: example.com\n\n",                                                                                                                                            desc: 'Uses \\n instead of \\r\\n. RFC requires CRLF. Should be rejected with 400.' },
+        { id: 'raw_cr',       raw: true, name: 'Only CR line endings',         expect: '400', payload: "GET / HTTP/1.1\rHost: example.com\r\r",                                                                                                                                            desc: 'Uses bare \\r as line separator. Malformed — expect 400.' },
+        { id: 'raw_mixed',    raw: true, name: 'Mixed line endings',           expect: '400 or 200', payload: "GET / HTTP/1.1\r\nHost: example.com\n\n",                                                                                                                                   desc: 'Request line uses CRLF but headers end with LF only. Lenient parsers may accept, strict ones reject.' },
+        { id: 'raw_nocrlf',   raw: true, name: 'Missing final CRLF',          expect: '400 / timeout', payload: "GET / HTTP/1.1\r\nHost: example.com\r\n",                                                                                                                                desc: 'No blank line terminator — server should wait for more data or timeout. Never respond 200.' },
+        { id: 'raw_nocolon',  raw: true, name: 'Missing colon in header',     expect: '400', payload: "GET / HTTP/1.1\r\nHost example.com\r\n\r\n",                                                                                                                                       desc: 'Header has no colon separator. Expect 400.' },
+        { id: 'raw_spacecolon', raw: true, name: 'Space before colon',        expect: '400', payload: "GET / HTTP/1.1\r\nHost : example.com\r\n\r\n",                                                                                                                                     desc: 'RFC 7230 forbids whitespace between header name and colon. Expect 400.' },
+        { id: 'raw_noversion', raw: true, name: 'Missing HTTP version',       expect: '400', payload: "GET /\r\nHost: example.com\r\n\r\n",                                                                                                                                               desc: 'Request line has no HTTP version. Expect 400.' },
+        { id: 'raw_badmethod', raw: true, name: 'Invalid method chars',       expect: '400 or 405', payload: "G@T / HTTP/1.1\r\nHost: example.com\r\n\r\n",                                                                                                                              desc: 'Method contains @ which is not a valid token char. Expect 400.' },
+        { id: 'raw_absuri',   raw: true, name: 'Absolute URI in request',     expect: '400 or 200', payload: "GET http://evil.com/ HTTP/1.1\r\nHost: example.com\r\n\r\n",                                                                                                               desc: 'Absolute-form URI. A forward proxy accepts this; an origin server should reject with 400.' },
+        { id: 'raw_dupcl',    raw: true, name: 'Duplicate Content-Length',    expect: '400', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 5\r\nContent-Length: 10\r\n\r\n12345",                                                                                    desc: 'Two CL headers with different values — potential smuggling vector. RFC 7230 §3.3.2 requires rejection with 400.' },
+        { id: 'raw_tecl',     raw: true, name: 'Conflicting TE + CL',         expect: '400 or 200', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n4\r\nWiki\r\n0\r\n\r\n",                                                    desc: 'Both TE:chunked and Content-Length present. RFC says TE takes precedence and CL must be removed. Ambiguous — expect 400 ideally.' },
+        { id: 'raw_fold',     raw: true, name: 'Obsolete header folding',     expect: '400', payload: "GET / HTTP/1.1\r\nHost: example.com\r\nX-Test: value\r\n more\r\n\r\n",                                                                                                           desc: 'Header folding (obs-fold) is obsolete since RFC 7230. Server should reject with 400.' },
+        { id: 'raw_longhead', raw: true, name: 'Very long header (10KB)',     expect: '400 or 431', payload: "GET / HTTP/1.1\r\nHost: example.com\r\nX-Long: " + "A".repeat(10000) + "\r\n\r\n",                                                                                         desc: 'Single header value of 10000 bytes. Server should enforce a header size limit. Expect 400 or 431.' },
+        { id: 'raw_null',     raw: true, name: 'Null byte in header',         expect: '400', payload: "GET / HTTP/1.1\r\nHost: example.com\x00\r\n\r\n",                                                                                                                                  desc: 'Null byte embedded in Host header. Must be rejected with 400 — null bytes are never valid in HTTP headers.' },
+        { id: 'raw_badchunk', raw: true, name: 'Invalid chunk size (hex)',    expect: '400', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\nZ\r\nHello\r\n0\r\n\r\n",                                                                               desc: '"Z" is not valid hex. Chunk sizes must be hexadecimal. Expect 400.' },
+        { id: 'raw_nofinal',  raw: true, name: 'Missing final chunk (0\\r\\n)', expect: '400 / hang', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nWiki\r\n",                                                                               desc: 'Chunked body with no terminating 0\\r\\n chunk. Server should wait/timeout, never 200.' },
+        { id: 'raw_chunkmismatch', raw: true, name: 'Chunk size mismatch',   expect: '400', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nWiki\r\n0\r\n\r\n",                                                                                desc: 'Declared chunk size 5 but body is 4 bytes ("Wiki"). Expect 400.' },
+        { id: 'raw_clte',     raw: true, name: 'CL.TE smuggling attempt',     expect: '400', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 13\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nSMUGGLED",                                                               desc: 'Classic CL.TE request smuggling. TE:chunked should take precedence; remaining bytes are a smuggled request. Expect 400.' },
+        { id: 'raw_tecl2',    raw: true, name: 'TE.CL smuggling attempt',     expect: '400', payload: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Length: 13\r\n\r\n0\r\n\r\nSMUGGLED",                                                               desc: 'TE.CL variant. TE should take precedence; CL is ignored; chunked body is just "0" = empty. Expect 400 due to conflicting headers.' },
+        { id: 'raw_spaces',   raw: true, name: 'Extra spaces in request line', expect: '400', payload: "GET    /    HTTP/1.1\r\nHost:    example.com\r\n\r\n",                                                                                                                            desc: 'Multiple spaces between request-line tokens. RFC allows exactly one SP. Expect 400.' },
+        { id: 'raw_tab',      raw: true, name: 'Tab in header name',          expect: '400', payload: "GET / HTTP/1.1\r\nHo\tst:\texample.com\r\n\r\n",                                                                                                                                   desc: 'Tab character in header field name. Field names are tokens — tabs are not valid. Expect 400.' },
+        { id: 'raw_two',      raw: true, name: 'Two pipelined requests',      expect: '200 + 400', payload: "GET / HTTP/1.1\r\nHost:\texample.com\r\n\r\nPOST /videos HTTP/1.1\r\nHost; ffff\r\n\r\n",                                                                                   desc: 'Two pipelined requests in one send. First should be 200, second (malformed Host header) should be 400. Tests pipeline handling.' },
+      ]
+    }
+  ],
+  1: [
+    {
+      group: 'Basic Routing',
+      items: [
+        { id: 's1_root', name: 'Root Index', method: 'GET', path: '/', desc: 'Should serve root_index.html from ./data. Expect 200.', expect: { status: 200 } },
+        { id: 's1_notfound', name: '404 Error Page', method: 'GET', path: '/nonexistent', desc: 'Server has 404 mapped to /BadRequestPage.html. Expect 404.', expect: { status: 404 } },
+      ]
+    },
+    {
+      group: 'Nested Routes',
+      items: [
+        { id: 's1_dir2_get', name: 'GET /some/random/dir2', method: 'GET', path: '/some/random/dir2', desc: 'Allows GET|POST|DELETE. Expect 200 serving index.html.', expect: { status: 200 } },
+        { id: 's1_dir2_post', name: 'POST /some/random/dir2', method: 'POST', path: '/some/random/dir2', desc: 'Allows POST. Should accept body.', expect: { status: [200, 201, 204] }, body: 'data=test', ct: 'text/plain' },
+        { id: 's1_dir2_delete', name: 'DELETE /some/random/dir2', method: 'DELETE', path: '/some/random/dir2', desc: 'DELETE is allowed here. Expect 200 or 204.', expect: { status: [200, 204] } },
+        { id: 's1_rando_get', name: 'GET /some/rando (autoindex)', method: 'GET', path: '/some/rando', desc: 'autoindex: on — should return a directory listing if no index.html.', expect: { status: 200 } },
+      ]
+    },
+    {
+      group: 'Body Size Limit',
+      items: [
+        { id: 's1_rando_small', name: 'POST /some/rando (≤1000 bytes)', method: 'POST', path: '/some/rando', desc: 'max_body_size: 1000. Small payload should be accepted.', expect: { status: [200, 201, 204] }, body: 'x'.repeat(500), ct: 'text/plain' },
+        { id: 's1_rando_big', name: 'POST /some/rando (>1000 bytes)', method: 'POST', path: '/some/rando', desc: 'Should exceed max_body_size of 1000 bytes → expect 413 Payload Too Large.', expect: { status: 413 }, body: 'x'.repeat(1500), ct: 'text/plain' },
+      ]
+    },
+    {
+      group: 'Method Enforcement',
+      items: [
+        { id: 's1_rando_delete', name: 'DELETE /some/rando (not allowed)', method: 'DELETE', path: '/some/rando', desc: '/some/rando only allows GET|POST. DELETE should 405.', expect: { status: 405 } },
+      ]
+    },
+    {
+      group: 'Error Pages',
+      items: [
+        { id: 's1_err404', name: '404 mapped to BadRequestPage.html', method: 'GET', path: '/not/here', desc: '404 should serve /BadRequestPage.html.', expect: { status: 404 } },
+        { id: 's1_err400', name: '400 Error Page', method: 'GET', path: '/bad', desc: '400 should serve /index/400.html.', expect: { status: [400, 404] } },
+      ]
+    },
+    {
+      group: 'DELETE Method',
+      items: [
+        { id: 's1_delete_dir2',     name: 'DELETE /some/random/dir2',       method: 'DELETE', path: '/some/random/dir2',    desc: 'DELETE is allowed on this route. Expect 200 or 204 (or 404 if resource absent).', expect: { status: [200, 204, 404] } },
+        { id: 's1_delete_rando',    name: 'DELETE /some/rando — 405',       method: 'DELETE', path: '/some/rando',          desc: '/some/rando only allows GET|POST. DELETE must return 405.', expect: { status: 405 } },
+        { id: 's1_delete_root',     name: 'DELETE / — no config',           method: 'DELETE', path: '/',                    desc: 'Root has no allowed_methods defined on server 2. Expect 405 or 403.', expect: { status: [405, 403] } },
+      ]
+    },
+    {
+      group: 'File Upload (POST)',
+      items: [
+        { id: 's1_upload_small',  name: 'Upload ≤1000 bytes to /some/rando',  method: 'POST', path: '/some/rando', desc: 'max_body_size: 1000. 800 byte payload must be accepted. Expect 200 or 201.', expect: { status: [200, 201] }, body: 'x'.repeat(800), ct: 'text/plain' },
+        { id: 's1_upload_exceed', name: 'Upload >1000 bytes — 413',           method: 'POST', path: '/some/rando', desc: 'max_body_size: 1000. 1500 byte payload must return 413 Payload Too Large.', expect: { status: 413 }, body: 'x'.repeat(1500), ct: 'text/plain' },
+        { id: 's1_upload_dir2',   name: 'POST to /some/random/dir2',          method: 'POST', path: '/some/random/dir2', desc: 'POST is allowed here with no body size limit set. Expect 200 or 201.', expect: { status: [200, 201] }, body: 'hello=world', ct: 'application/x-www-form-urlencoded' },
+      ]
+    },
+    {
+      group: 'HTTP Status Codes',
+      items: [
+        { id: 's1_status_200',  name: '200 OK — root',       method: 'GET',    path: '/',                desc: 'Root must return 200 OK.', expect: { status: 200 } },
+        { id: 's1_status_404',  name: '404 Not Found',       method: 'GET',    path: '/ghost',           desc: 'Missing resource must return 404. Server 2 maps 404 → /BadRequestPage.html.', expect: { status: 404 } },
+        { id: 's1_status_405',  name: '405 Method Not Allowed', method: 'DELETE', path: '/some/rando',  desc: 'DELETE not in allowed_methods for /some/rando — must return 405.', expect: { status: 405 } },
+        { id: 's1_status_413',  name: '413 Payload Too Large', method: 'POST',  path: '/some/rando',    desc: '1500 bytes exceeds max_body_size: 1000 — must return exactly 413.', expect: { status: 413 }, body: 'x'.repeat(1500), ct: 'text/plain' },
+      ]
+    }
+  ]
+};
+
+function statusClass(code) {
+  if (!code) return 'status-err';
+  if (code < 300) return 'status-2xx';
+  if (code < 400) return 'status-3xx';
+  if (code < 500) return 'status-4xx';
+  return 'status-5xx';
+}
+
+function curlCmd(base, method, path, body, ct) {
+  const url = base + path;
+  let cmd = `<span class="kw">curl</span> <span class="flag">-v</span>`;
+  if (method !== 'GET') cmd += ` <span class="flag">-X</span> <span class="str">${method}</span>`;
+  if (body) cmd += `\n     <span class="flag">-d</span> <span class="str">'${body.substring(0, 60)}${body.length > 60 ? '...' : ''}'</span>`;
+  if (ct) cmd += `\n     <span class="flag">-H</span> <span class="str">'Content-Type: ${ct}'</span>`;
+  cmd += ` <span class="flag">-L</span>\n     <span class="str">'${url}'</span>`;
+  return cmd;
+}
+
+function rawCurl(base, method, path, body, ct) {
+  const url = base + path;
+  let cmd = `curl -v`;
+  if (method !== 'GET') cmd += ` -X ${method}`;
+  if (body) cmd += ` -d '${body.substring(0, 60)}'`;
+  if (ct) cmd += ` -H 'Content-Type: ${ct}'`;
+  cmd += ` -L '${url}'`;
+  return cmd;
+}
+
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (currentServer === 2) {
+    sidebar.innerHTML = `<div class="group-label">Custom Request</div>
+      <div class="test-item active">
+        <div class="method-badge badge-GET">REQ</div>
+        <div class="test-info"><div class="test-name">Custom HTTP Request</div><div class="test-path">Any method & path</div></div>
+      </div>`;
+    renderCustom();
+    return;
+  }
+
+  const tests = TESTS[currentServer];
+  let html = '';
+  tests.forEach(group => {
+    html += `<div class="group-label">${group.group}</div>`;
+    group.items.forEach(t => {
+      const r = results[t.id];
+      const dotClass = r ? (r.pass ? 'ok' : r.warn ? 'warn' : 'fail') : '';
+      const active = currentTest?.id === t.id ? 'active' : '';
+      html += `<div class="test-item ${active}" onclick="selectTest('${t.id}')">
+        <div class="method-badge badge-${t.raw ? 'RAW' : t.siege ? 'SIEGE' : t.method}">${t.raw ? 'RAW' : t.siege ? 'SIEGE' : t.method}</div>
+        <div class="test-info">
+          <div class="test-name">${t.name}${t.skip ? ' ⚡' : ''}</div>
+          <div class="test-path">${t.path}</div>
+        </div>
+        <div class="status-dot ${dotClass}"></div>
+      </div>`;
+    });
+    html += `<div class="section-divider"></div>`;
+  });
+  sidebar.innerHTML = html;
+}
+
+function findTest(id) {
+  for (const s of [0,1]) {
+    for (const g of TESTS[s]) {
+      for (const t of g.items) {
+        if (t.id === id) return t;
+      }
+    }
+  }
+}
+
+function selectTest(id) {
+  const test = findTest(id);
+  currentTest = test;
+  renderSidebar();
+  renderRequest(test);
+  if (results[id]) renderResponse(results[id]);
+  else document.getElementById('responsePanel').innerHTML = `<div class="response-empty"><div class="icon">⬡</div><p>Press Send to run this test</p></div>`;
+}
+
+function renderRequest(test) {
+  const base = SERVERS[currentServer].base;
+  const panel = document.getElementById('requestPanel');
+
+  if (test.siege) {
+    const urlsBlock = `http://127.0.0.1:3490/
+http://127.0.0.1:3490/index.html
+http://127.0.0.1:3490/0-upload.txt
+http://127.0.0.1:3490/new/`;
+    panel.innerHTML = `
+      <div class="request-top">
+        <div class="request-title">${test.name}</div>
+        <button class="send-btn" onclick="downloadSiegeScript()" style="background:var(--warn);color:#000">⬇ SH SCRIPT</button>
+      </div>
+      <div class="request-desc">${test.desc}</div>
+      <div class="curl-block" style="position:relative">
+<span style="color:var(--muted);font-size:0.65rem;display:block;margin-bottom:6px">SIEGE COMMAND</span>${escHtml(test.cmd)}<button class="copy-btn" onclick="copySiege()">copy</button></div>
+      <div class="btn-row">
+        <span class="expect-badge">Expected: <strong>${test.expect}</strong></span>
+        <span class="expect-badge" style="color:var(--warn)">⚡ Terminal only — requires siege installed</span>
+      </div>`;
+    return;
+  }
+
+  if (test.raw) {
+    const displayPayload = test.payload
+      .replace(/\r/g, '\\r').replace(/\n/g, '\\n\n')
+      .replace(/\x00/g, '\\x00');
+    panel.innerHTML = `
+      <div class="request-top">
+        <div class="request-title">${test.name}</div>
+        <button class="send-btn" onclick="downloadPyScript()" style="background:var(--accent2);color:#000">⬇ PY SCRIPT</button>
+      </div>
+      <div class="request-desc">${test.desc}</div>
+      <div class="curl-block" style="position:relative">
+<span style="color:var(--muted);font-size:0.65rem;display:block;margin-bottom:6px">RAW TCP PAYLOAD (127.0.0.1:${base.split(':')[2]})</span>${escHtml(displayPayload)}<button class="copy-btn" onclick="copyRaw()">copy</button></div>
+      <div class="btn-row">
+        <span class="expect-badge">Expected: <strong>${test.expect}</strong></span>
+        <span class="expect-badge" style="color:var(--accent2)">⚡ Terminal only — cannot run in browser</span>
+      </div>`;
+    return;
+  }
+
+  const expectStr = Array.isArray(test.expect.status)
+    ? test.expect.status.join(' or ')
+    : test.expect.status;
+
+  panel.innerHTML = `
+    <div class="request-top">
+      <div class="request-title">${test.name}</div>
+      <button class="send-btn" id="sendBtn" onclick="runTest()" ${test.skip ? 'disabled' : ''}>
+        ${test.skip ? '⚡ SKIPPED' : '▶ SEND'}
+      </button>
+    </div>
+    <div class="request-desc">${test.desc}</div>
+    <div class="url-bar">
+      <span class="url-method">${test.method}</span>
+      <span class="url-text">${base}${test.path}</span>
+    </div>
+    <div class="curl-block" id="curlBlock">${curlCmd(base, test.method, test.path, test.body, test.ct)}
+<button class="copy-btn" onclick="copyCurl()">copy</button></div>
+    <div class="btn-row">
+      <span class="expect-badge">Expected: <strong>${expectStr}</strong></span>
+      ${test.expect.header ? `<span class="expect-badge">Header: <strong>${test.expect.header.key}: ${test.expect.header.val}</strong></span>` : ''}
+    </div>`;
+}
+
+async function runTest() {
+  if (!currentTest) return;
+  const btn = document.getElementById('sendBtn');
+  btn.className = 'send-btn loading';
+  btn.textContent = '⟳ SENDING';
+
+  const base = SERVERS[currentServer].base;
+  const { method, path, body, ct, expect: exp, id } = currentTest;
+  const url = base + path;
+  const start = Date.now();
+
+  // Respect server timeouts: CGI_TIMEOUT=10s (+2s buffer), CONNECTION_TIMEOUT=5s (+2s buffer)
+  const isCgi = /\.(py|php|js|bla)$/.test(path);
+  const fetchTimeout = isCgi ? 12000 : 7000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), fetchTimeout);
+
+  try {
+    const opts = {
+      method,
+      redirect: 'manual',
+      headers: {},
+      signal: controller.signal
+    };
+    if (body) {
+      opts.body = body;
+      if (ct) opts.headers['Content-Type'] = ct;
+    }
+
+    const res = await fetch(url, opts);
+    clearTimeout(timer);
+    const elapsed = Date.now() - start;
+    const resBody = await res.text().catch(() => '');
+    const headers = {};
+    res.headers.forEach((v, k) => headers[k] = v);
+
+    // Status 0 = opaque redirect — browser blocks reading cross-origin 3xx with redirect:manual
+    if (res.status === 0 || res.type === 'opaqueredirect') {
+      const result = { status: 0, headers, body: resBody, elapsed, pass: true, opaqueRedirect: true, id };
+      results[id] = result;
+      renderSidebar();
+      renderResponse(result);
+      btn.className = 'send-btn'; btn.textContent = '▶ SEND';
+      return;
+    }
+
+    // Evaluate
+    const statusOk = Array.isArray(exp.status) ? exp.status.includes(res.status) : res.status === exp.status;
+    let headerOk = true;
+    if (exp.header) {
+      const hv = headers[exp.header.key] || '';
+      headerOk = hv.includes(exp.header.val);
+    }
+    const bodyOk = currentTest.checkBody ? resBody.includes(currentTest.checkBody) : true;
+    const pass = statusOk && headerOk && bodyOk;
+
+    const result = { status: res.status, headers, body: resBody, elapsed, pass, statusOk, headerOk, bodyOk, checkBody: currentTest.checkBody, id };
+    results[id] = result;
+    renderSidebar();
+    renderResponse(result);
+  } catch(e) {
+    clearTimeout(timer);
+    const elapsed = Date.now() - start;
+    const isCgi = /\.(py|php|js|bla)$/.test(path);
+    const limitLabel = isCgi ? 'CGI_TIMEOUT (10s)' : 'CONNECTION_TIMEOUT (5s)';
+    const isAbort = e.name === 'AbortError';
+    const result = {
+      error: isAbort ? `Browser fetch timed out after ${isCgi?12:7}s — server exceeded ${limitLabel} or is not responding` : e.message,
+      elapsed, pass: false, warn: !isAbort, timeout: isAbort, id
+    };
+    results[id] = result;
+    renderSidebar();
+    renderResponse(result);
+  }
+
+  btn.className = 'send-btn';
+  btn.textContent = '▶ SEND';
+}
+
+function renderResponse(r) {
+  const panel = document.getElementById('responsePanel');
+  if (r.opaqueRedirect) {
+    panel.innerHTML = `
+      <div class="response-header">
+        <div class="status-pill status-3xx">3xx REDIRECT</div>
+        <div class="time-badge">${r.elapsed}ms</div>
+      </div>
+      <div class="verdict pass">✓ Server issued a redirect. Browser returned an opaque response (status 0) — this is expected when using redirect: manual on a cross-origin fetch. Check the Location header in your browser DevTools Network tab or use the curl command to verify the exact status code.</div>`;
+    return;
+  }
+
+  if (r.error) {
+    panel.innerHTML = `
+      <div class="response-header">
+        <div class="status-pill status-err">NETWORK ERROR</div>
+        <div class="time-badge">${r.elapsed}ms</div>
+      </div>
+      <div class="cors-warning">
+        ⚠ Could not reach server: <strong>${r.error}</strong><br><br>
+        This is likely a <strong>CORS restriction</strong> or the server is not running. Use the curl command above to test from your terminal instead.
+      </div>`;
+    return;
+  }
+
+  const sc = statusClass(r.status);
+  let verdictClass = r.pass ? 'pass' : 'fail';
+  let verdictIcon = r.pass ? '✓' : '✗';
+  let verdictMsg = r.pass ? `All checks passed. Status ${r.status} matches expectation.` : `Status ${r.status} — `;
+  if (!r.pass) {
+    verdictMsg += !r.statusOk ? `unexpected status code. ` : '';
+    verdictMsg += r.headerOk === false ? `expected header not found. ` : '';
+    verdictMsg += r.bodyOk === false ? `body does not contain "${r.checkBody}" — autoindex listing may be missing or malformed. ` : '';
+  }
+
+  let headersHtml = '';
+  if (r.headers) {
+    Object.entries(r.headers).forEach(([k,v]) => {
+      headersHtml += `<div class="header-row"><span class="header-key">${k}</span><span class="header-val">${v}</span></div>`;
+    });
+  }
+
+  const bodyPreview = r.body ? r.body.substring(0, 2000) + (r.body.length > 2000 ? '\n... (truncated)' : '') : '(empty body)';
+
+  panel.innerHTML = `
+    <div class="response-header">
+      <div class="status-pill ${sc}">${r.status}</div>
+      <div class="time-badge">${r.elapsed}ms</div>
+    </div>
+    <div class="verdict ${verdictClass}">${verdictIcon} ${verdictMsg}</div>
+    ${headersHtml ? `<div class="headers-block"><div class="block-title">Response Headers</div>${headersHtml}</div>` : ''}
+    <div class="body-block">
+      <div class="block-title">Response Body</div>
+      <div class="body-content">${escHtml(bodyPreview)}</div>
+    </div>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyCurl() {
+  const base = SERVERS[currentServer].base;
+  const btn = document.querySelector('.copy-btn');
+  const raw = rawCurl(base, currentTest.method, currentTest.path, currentTest.body, currentTest.ct);
+  navigator.clipboard.writeText(raw).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copyRaw() {
+  const btn = document.querySelector('.copy-btn');
+  navigator.clipboard.writeText(currentTest.payload).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copySiege() {
+  const btn = document.querySelector('.copy-btn');
+  navigator.clipboard.writeText(currentTest.cmd).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function downloadSiegeScript() {
+  const s0 = TESTS[0].flatMap(g => g.items).filter(t => t.siege);
+  const s1 = TESTS[1].flatMap(g => g.items).filter(t => t.siege);
+  const allSiege = [...s0, ...s1];
+
+  const urlsFile = `http://127.0.0.1:3490/
+http://127.0.0.1:3490/index.html
+http://127.0.0.1:3490/0-upload.txt
+http://127.0.0.1:3490/new/`;
+
+  const blocks = allSiege.map(t => {
+    let setup = '';
+    if (t.id === 'siege_mixed') {
+      setup = `cat > /tmp/siege_urls.txt << 'URLS'\n${urlsFile}\nURLS\n`;
+    } else if (t.id === 'siege_slowpost') {
+      setup = `cat > /tmp/large_post_test.py << 'PYEOF'
+import http.client, concurrent.futures, time
+
+HOST = "127.0.0.1"
+PORT = 3490
+PATH = "/post_body/"
+BODY = b"x" * 512 * 1024
+CONCURRENCY = 10
+TOTAL = 200
+
+def do_request(_):
+    try:
+        conn = http.client.HTTPConnection(HOST, PORT, timeout=10)
+        conn.request("POST", PATH, body=BODY, headers={"Content-Type": "text/plain"})
+        r = conn.getresponse()
+        r.read()
+        conn.close()
+        return r.status
+    except Exception as e:
+        return str(e)
+
+start = time.time()
+with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
+    results = list(ex.map(do_request, range(TOTAL)))
+elapsed = time.time() - start
+
+ok = sum(1 for r in results if r in (200, 201))
+fail = sum(1 for r in results if r not in (200, 201))
+print(f"Completed {TOTAL} requests in {elapsed:.2f}s")
+print(f"OK (200): {ok}  |  Failed: {fail}")
+print(f"Req/sec: {TOTAL/elapsed:.1f}")
+if fail: print("Errors:", [r for r in results if r not in (200, 201)][:5])
+PYEOF
+`;
+    }
+    const siegeCmd = t.id === 'siege_slowpost'
+      ? `python3 /tmp/large_post_test.py`
+      : t.cmd;
+    return `\n# ${t.name}\n# ${t.desc}\necho ""\necho "=== ${t.name} ==="\n${setup}${siegeCmd}\n`;
+  }).join('\n');
+
+  const script = `#!/usr/bin/env bash
+# Webserv Siege Stress Tests
+# Generated by webserver test panel
+# Requires: siege (sudo apt install siege)
+
+set -e
+echo "Starting stress tests..."
+echo "Make sure your webserver is running on 127.0.0.1:3490 and 127.0.0.5:8000"
+echo ""
+${blocks}
+echo ""
+echo "=== All stress tests complete ==="
+`;
+
+  const blob = new Blob([script], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stress_tests.sh';
+  a.click();
+}
+
+function downloadPyScript() {
+  const port = SERVERS[currentServer].base.split(':')[2] || '3490';
+  const cases = TESTS[currentServer].flatMap(g => g.items).filter(t => t.raw);
+  const caseLines = cases.map(t => {
+    const safe = JSON.stringify(t.payload);
+    return `    (${JSON.stringify(t.name)}, ${safe}),`;
+  }).join('\n');
+
+  const script = `#!/usr/bin/env python3
+import socket, time
+
+HOST = "127.0.0.1"
+PORT = ${port}
+
+test_cases = [
+${caseLines}
+]
+
+def classify_response(b):
+    if not b: return "NO RESPONSE"
+    try: text = b.decode(errors="ignore")
+    except: return "INVALID RESPONSE"
+    if "400" in text: return "REJECTED (400)"
+    if "200" in text: return "ACCEPTED (200)"
+    if "HTTP" in text: return "OTHER HTTP RESPONSE"
+    return "UNKNOWN"
+
+def run_test(name, payload):
+    print(f"\\n=== {name} ===")
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5)
+            s.connect((HOST, PORT))
+            s.sendall(payload.encode("utf-8", errors="surrogateescape"))
+            try:
+                response = s.recv(4096)
+                print(f"Result: {classify_response(response)}")
+                print(response.decode(errors="replace"))
+            except socket.timeout:
+                print("Result: TIMEOUT")
+    except Exception as e:
+        print(f"Result: ERROR ({e})")
+
+if __name__ == "__main__":
+    for name, payload in test_cases:
+        run_test(name, payload)
+        time.sleep(0.3)
+    print("\\n=== Done ===")
+`;
+
+  const blob = new Blob([script], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'raw_socket_tests.py';
+  a.click();
+}
+
+function setServer(i) {
+  currentServer = i;
+  currentTest = null;
+  document.querySelectorAll('.server-tab').forEach((t,j) => t.classList.toggle('active', j === i));
+  document.getElementById('responsePanel').innerHTML = `<div class="response-empty"><div class="icon">⬡</div><p>Select a test and fire a request</p></div>`;
+  renderSidebar();
+  if (i !== 2) {
+    document.getElementById('requestPanel').innerHTML = `<div class="request-desc" style="padding:4px 0">Select a test from the sidebar ↑</div>`;
+  }
+}
+
+function renderCustom() {
+  const panel = document.getElementById('requestPanel');
+  panel.innerHTML = `
+    <div class="request-top">
+      <div class="request-title">Custom Request</div>
+      <button class="send-btn" onclick="runCustom()">▶ SEND</button>
+    </div>
+    <div class="custom-inputs">
+      <div class="input-row">
+        <span class="input-label">Base URL</span>
+        <input type="text" id="cBase" value="http://127.0.0.1:3490" placeholder="http://host:port">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Method</span>
+        <select id="cMethod">
+          <option>GET</option><option>POST</option><option>DELETE</option><option>PUT</option><option>PATCH</option><option>HEAD</option><option>OPTIONS</option>
+        </select>
+        <input type="text" id="cPath" value="/" placeholder="/path" style="margin-left:8px">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Content-Type</span>
+        <input type="text" id="cCt" placeholder="text/plain" value="">
+      </div>
+      <div class="input-row" style="align-items:flex-start">
+        <span class="input-label" style="margin-top:7px">Body</span>
+        <textarea id="cBody" placeholder="Request body (optional)"></textarea>
+      </div>
+    </div>`;
+
+  document.getElementById('responsePanel').innerHTML = `<div class="response-empty"><div class="icon">⬡</div><p>Fill in the form and press Send</p></div>`;
+}
+
+async function runCustom() {
+  const base = document.getElementById('cBase').value.trim();
+  const method = document.getElementById('cMethod').value;
+  const path = document.getElementById('cPath').value.trim();
+  const ct = document.getElementById('cCt').value.trim();
+  const body = document.getElementById('cBody').value;
+
+  const url = base + path;
+  const start = Date.now();
+  try {
+    const opts = { method, redirect: 'manual', headers: {} };
+    if (body) { opts.body = body; if (ct) opts.headers['Content-Type'] = ct; }
+    const res = await fetch(url, opts);
+    const elapsed = Date.now() - start;
+    const resBody = await res.text().catch(() => '');
+    const headers = {};
+    res.headers.forEach((v,k) => headers[k] = v);
+    renderResponse({ status: res.status, headers, body: resBody, elapsed, pass: true, statusOk: true, headerOk: true, id: 'custom' });
+  } catch(e) {
+    const elapsed = Date.now() - start;
+    renderResponse({ error: e.message, elapsed, pass: false, warn: true, id: 'custom' });
+  }
+}
+
+
+async function runAll() {
+  if (currentServer === 2) return;
+  const btn = document.getElementById('runAllBtn');
+  const progress = document.getElementById('runAllProgress');
+  const tests = TESTS[currentServer].flatMap(g => g.items).filter(t => !t.skip && !t.raw && !t.siege);
+  btn.disabled = true;
+  btn.textContent = '⟳ RUNNING';
+  progress.style.display = 'inline';
+
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    progress.textContent = `${i + 1} / ${tests.length}  —  ${t.path}`;
+    selectTest(t.id);
+
+    const base = SERVERS[currentServer].base;
+    const { method, path, body, ct, expect: exp, id } = t;
+    const url = base + path;
+    const start = Date.now();
+    const isCgi = /\.(py|php|js|bla)$/.test(path);
+    const ac = new AbortController();
+    const tm = setTimeout(() => ac.abort(), isCgi ? 12000 : 7000);
+    try {
+      const opts = { method, redirect: 'manual', headers: {}, signal: ac.signal };
+      if (body) { opts.body = body; if (ct) opts.headers['Content-Type'] = ct; }
+      const res = await fetch(url, opts);
+      clearTimeout(tm);
+      const elapsed = Date.now() - start;
+      const resBody = await res.text().catch(() => '');
+      const headers = {};
+      res.headers.forEach((v, k) => headers[k] = v);
+      if (res.status === 0 || res.type === 'opaqueredirect') {
+        results[id] = { status: 0, headers, body: resBody, elapsed, pass: true, opaqueRedirect: true, id };
+      } else {
+        const statusOk = Array.isArray(exp.status) ? exp.status.includes(res.status) : res.status === exp.status;
+        let headerOk = true;
+        if (exp.header) { const hv = headers[exp.header.key] || ''; headerOk = hv.includes(exp.header.val); }
+        const bodyOk = t.checkBody ? resBody.includes(t.checkBody) : true;
+        results[id] = { status: res.status, headers, body: resBody, elapsed, pass: statusOk && headerOk && bodyOk, statusOk, headerOk, bodyOk, checkBody: t.checkBody, id };
+      }
+    } catch(e) {
+      clearTimeout(tm);
+      const elapsed = Date.now() - start;
+      const isAbort = e.name === 'AbortError';
+      results[id] = { error: isAbort ? `Timed out after ${isCgi?12:7}s` : e.message, elapsed, pass: false, warn: !isAbort, timeout: isAbort, id };
+    }
+    renderSidebar();
+    renderResponse(results[id]);
+    await new Promise(r => setTimeout(r, 80)); // small gap between requests
+  }
+
+  const passed = tests.filter(t => results[t.id]?.pass).length;
+  const failed = tests.length - passed;
+  progress.textContent = `✓ ${passed} passed  ${failed > 0 ? '✗ ' + failed + ' failed' : ''}`;
+  progress.style.color = failed > 0 ? 'var(--error)' : 'var(--success)';
+  btn.disabled = false;
+  btn.textContent = '▶▶ RUN ALL';
+}
+
+// Init
+setServer(0);
+document.getElementById('requestPanel').innerHTML = `<div class="request-desc" style="padding:4px 0;color:var(--muted)">← Select a test from the sidebar to begin</div>`;
+</script>
+</body>
+</html>

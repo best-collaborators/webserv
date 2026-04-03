@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>500 - Server Error</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+    }
+
+    h1 {
+      font-size: 100px;
+      margin: 0;
+    }
+
+    h2 {
+      margin: 10px 0;
+      font-weight: normal;
+    }
+
+    p {
+      margin: 20px 0;
+      color: #ddd;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #fff;
+      color: #2a5298;
+      text-decoration: none;
+      border-radius: 25px;
+      transition: 0.3s ease;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background: #f1f1f1;
+    }
+
+    .gear {
+      font-size: 50px;
+      margin-bottom: 20px;
+      animation: spin 3s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="gear">⚙️</div>
+    <h1>500</h1>
+    <h2>Internal Server Error</h2>
+    <p>Oops! Something went wrong on our end. We're working to fix it.</p>
+    <a href="/" class="btn">Go Back Home</a>
+  </div>
+</body>
+</html>

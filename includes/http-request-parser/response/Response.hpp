@@ -1,0 +1,91 @@
+#ifndef RESPONSE_GENERATOR_HPP
+#define RESPONSE_GENERATOR_HPP
+
+#include <cstring>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <sys/stat.h>
+#include <time.h>
+#include <chrono>
+#include <iomanip>
+#include <filesystem>
+#include <vector>
+#include "Request.hpp"
+
+#include "HttpStatus.hpp"
+#include "HttpMethod.hpp"
+#include "HttpHeaders.hpp"
+#include "HttpMessage.hpp"
+#include "File.hpp"
+#include "ListingGenerator.hpp"
+
+class Response : HttpMessage
+{
+private:
+	using error_map = std::unordered_map<HttpStatus::e_code, std::string>;
+
+	enum e_response_type
+	{
+		DEFAULT_ERROR_PAGE,
+		CUSTOM_ERROR_PAGE,
+		FILE
+	};
+
+	HttpContentType::e_code	_content_type = HttpContentType::e_code::APPLICATION_OCTET_STREAM;
+	HttpStatus::e_code		_status_code;
+	const Request			*_request;
+
+	std::size_t				_response_length = 0;
+	std::streampos			_content_length;
+	size_t					_bytes_sent;
+	ssize_t					_bytes_read;
+	size_t					_buffer = 10240;
+
+	bool					_is_default_page = false;
+
+	std::string				_header_str;
+
+	std::string				get_file_last_modified_date(const std::string &filename);
+	std::_Put_time<char>	get_date_GMT();
+	std::string				serve_html_webserv_page(const std::string &msg = "");
+	bool					is_ifstream_successful(std::ifstream &ifs, std::filesystem::path path);
+	void					set_content_type(std::string filename);
+	std::streampos			get_file_size(const std::string &filename);
+	std::streampos			get_file_read_position();
+
+public:
+	Response() = default;
+	Response(const Response &other) = default;
+	Response(Response &&other) = default;
+	Response & operator=( Response && ) noexcept = default;
+	~Response() = default;
+
+	HttpStatus::e_code	status_code() const noexcept;
+	std::string			form_response( const Request *request, const std::string &body, bool isCGI = false );
+
+	// ====== Core flow ======
+	void init_response(const Request* request);
+	void handle_regular_response();
+	void handle_autoindex();
+	void handle_cgi(const std::string& body);
+
+	bool should_generate_autoindex();
+	bool is_success();
+
+	void serve_file(const std::string& filename);
+	void serve_error_page(const error_map& error_pages);
+	bool is_valid_file(const std::string& filename);
+
+	void build_headers();
+	void build_full_response();
+
+	size_t				get_total_response_length() const noexcept;
+	size_t				get_current_length() const noexcept;
+	const char			*getResponseData() const noexcept;
+	void				consume_body(size_t consume_length);
+	void				read_body_partially(const std::string &filename);
+};
+
+#endif /* RESPONSE_GENERATOR_HPP */
